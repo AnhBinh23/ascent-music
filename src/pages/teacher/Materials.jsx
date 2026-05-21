@@ -15,34 +15,40 @@ const TYPE_INFO = {
 };
 
 const SAMPLE = [
-  { id: 1, name: 'Hướng dẫn gam Đô trưởng', type: 'video',  class: 'Piano cơ bản 01', size: '45 MB',  date: '2025-05-15', url: 'https://www.w3schools.com/html/mov_bbb.mp4',    mimeType: 'video/mp4' },
-  { id: 2, name: 'Giáo trình Piano cơ bản',  type: 'pdf',    class: 'Piano cơ bản 01', size: '2.5 MB', date: '2025-05-10', url: 'https://www.w3.org/WAI/WCAG21/Techniques/pdf/sample.pdf', mimeType: 'application/pdf' },
-  { id: 3, name: 'Sheet nhạc bài số 5',       type: 'sheet',  class: 'Piano cơ bản 01', size: '1.2 MB', date: '2025-05-18', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Ode_an_die_Freude_-_Beethoven.jpg/800px-Ode_an_die_Freude_-_Beethoven.jpg', mimeType: 'image/jpeg' },
+  { id: 1, name: 'Hướng dẫn gam Đô trưởng', type: 'video',      class: 'Piano cơ bản 01', size: '45 MB',  date: '2025-05-15', url: 'https://www.w3schools.com/html/mov_bbb.mp4', mimeType: 'video/mp4' },
+  { id: 2, name: 'Giáo trình Piano cơ bản',  type: 'pdf',        class: 'Piano cơ bản 01', size: '2.5 MB', date: '2025-05-10', url: 'https://www.w3.org/WAI/WCAG21/Techniques/pdf/sample.pdf', mimeType: 'application/pdf' },
+  { id: 3, name: 'Sheet nhạc bài số 5',       type: 'sheet',      class: 'Piano cơ bản 01', size: '1.2 MB', date: '2025-05-18', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Ode_an_die_Freude_-_Beethoven.jpg/800px-Ode_an_die_Freude_-_Beethoven.jpg', mimeType: 'image/jpeg' },
   { id: 4, name: 'Bài tập tuần 3',            type: 'assignment', class: 'Piano cơ bản 01', size: '0.5 MB', date: '2025-05-18', url: '', mimeType: '' },
 ];
 
+// ===== FILE VIEWER =====
 const FileViewer = ({ file, onClose }) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   if (!file) return null;
 
   const renderContent = () => {
     if (file.mimeType?.startsWith('video/')) {
       return (
-        <video controls autoPlay className="w-full rounded-xl max-h-[60vh]">
+        <video controls autoPlay className="w-full rounded-xl"
+          style={{ maxHeight: isFullscreen ? '85vh' : '60vh' }}>
           <source src={file.url} type={file.mimeType} />
-          Trình duyệt không hỗ trợ xem video.
         </video>
       );
     }
     if (file.mimeType === 'application/pdf') {
       return (
-        <iframe src={file.url} className="w-full rounded-xl" style={{ height: '60vh' }}
+        <iframe src={file.url} className="w-full rounded-xl"
+          style={{ height: isFullscreen ? '85vh' : '65vh' }}
           title={file.name} />
       );
     }
     if (file.mimeType?.startsWith('image/')) {
       return (
         <img src={file.url} alt={file.name}
-          className="w-full rounded-xl object-contain max-h-[60vh]" />
+          className="w-full rounded-xl object-contain cursor-zoom-in"
+          style={{ maxHeight: isFullscreen ? '85vh' : '65vh' }}
+          onClick={() => setIsFullscreen(!isFullscreen)} />
       );
     }
     return (
@@ -57,18 +63,73 @@ const FileViewer = ({ file, onClose }) => {
   };
 
   return (
-    <Modal isOpen={!!file} onClose={onClose} title={file.name} size="xl">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <Badge label={TYPE_INFO[file.type]?.label} variant={TYPE_INFO[file.type]?.variant} />
-          <span className="text-xs text-gray-400">{file.size} · {file.date}</span>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300
+      ${isFullscreen ? 'p-0' : 'p-4'}`}>
+
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={isFullscreen ? () => setIsFullscreen(false) : onClose} />
+
+      {/* Modal box */}
+      <div className={`relative bg-white flex flex-col transition-all duration-300 z-10
+        ${isFullscreen
+          ? 'w-full h-full rounded-none'
+          : 'rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh]'}`}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Badge label={TYPE_INFO[file.type]?.label} variant={TYPE_INFO[file.type]?.variant} />
+            <p className="font-medium text-gray-800 text-sm truncate">{file.name}</p>
+            <span className="text-xs text-gray-400 whitespace-nowrap">{file.size}</span>
+          </div>
+
+          <div className="flex items-center gap-1 flex-shrink-0 ml-3">
+            {/* Nút fullscreen */}
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? 'Thu nhỏ (Esc)' : 'Mở toàn màn hình'}
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors text-gray-600 text-xl">
+              {isFullscreen ? '🗗' : '🗖'}
+            </button>
+
+            {/* Nút tải về */}
+            <button
+              onClick={() => window.open(file.url, '_blank')}
+              title="Tải về"
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors text-gray-600 text-lg">
+              ⬇️
+            </button>
+
+            {/* Nút đóng */}
+            <button
+              onClick={onClose}
+              title="Đóng"
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors text-gray-500 text-lg font-bold">
+              ✕
+            </button>
+          </div>
         </div>
-        {renderContent()}
+
+        {/* Nội dung */}
+        <div className="flex-1 overflow-auto p-4">
+          {renderContent()}
+        </div>
+
+        {/* Footer hint */}
+        {!isFullscreen && (
+          <div className="px-5 py-2 border-t border-gray-50 text-center">
+            <p className="text-xs text-gray-400">
+              Bấm <span className="font-medium">🗖</span> để mở toàn màn hình
+            </p>
+          </div>
+        )}
       </div>
-    </Modal>
+    </div>
   );
 };
 
+// ===== MAIN COMPONENT =====
 const Materials = () => {
   const { user } = useAuth();
   const isTeacher  = user?.role === 'teacher';
@@ -86,22 +147,19 @@ const Materials = () => {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const sizeMB = (file.size / 1024 / 1024).toFixed(1);
     if (sizeMB > 100) { toast.error('File quá lớn! Tối đa 100MB'); return; }
-
     const url = URL.createObjectURL(file);
     setPreview({ url, mimeType: file.type, name: file.name, size: `${sizeMB} MB` });
     setUploadForm(prev => ({ ...prev, name: prev.name || file.name.replace(/\.[^/.]+$/, '') }));
   };
 
   const handleUpload = async () => {
-    if (!preview) { toast.error('Chưa chọn file!'); return; }
-    if (!uploadForm.name) { toast.error('Nhập tên tài liệu!'); return; }
+    if (!preview)          { toast.error('Chưa chọn file!'); return; }
+    if (!uploadForm.name)  { toast.error('Nhập tên tài liệu!'); return; }
     setUploading(true);
     await new Promise(r => setTimeout(r, 1200));
-
-    const newFile = {
+    setMaterials(prev => [{
       id:       Date.now(),
       name:     uploadForm.name,
       type:     uploadType,
@@ -111,8 +169,7 @@ const Materials = () => {
       url:      preview.url,
       mimeType: preview.mimeType,
       note:     uploadForm.note,
-    };
-    setMaterials(prev => [newFile, ...prev]);
+    }, ...prev]);
     toast.success('✅ Upload thành công!');
     setPreview(null);
     setUploadForm({ name: '', class: 'Piano cơ bản 01', note: '' });
@@ -126,16 +183,13 @@ const Materials = () => {
     toast.success('Đã xóa tài liệu!');
   };
 
-  const filtered = filterType === 'all'
-    ? materials
-    : materials.filter(m => m.type === filterType);
+  const filtered = filterType === 'all' ? materials : materials.filter(m => m.type === filterType);
 
   return (
     <MainLayout title="Tài liệu học tập">
 
-      {/* Header */}
+      {/* Filter & Upload */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
-        {/* Filter */}
         <div className="flex gap-2 flex-1 overflow-x-auto pb-1">
           <button onClick={() => setFilterType('all')}
             className={`px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all
@@ -155,14 +209,13 @@ const Materials = () => {
         )}
       </div>
 
-      {/* Danh sách tài liệu */}
+      {/* Danh sách */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filtered.map(item => {
           const info = TYPE_INFO[item.type];
           return (
             <Card key={item.id}>
               <div className="flex items-start gap-4">
-                {/* Preview nhỏ */}
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
                   {item.mimeType?.startsWith('image/') && item.url ? (
                     <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
@@ -172,36 +225,24 @@ const Materials = () => {
                     <span className="text-3xl">{info?.icon}</span>
                   )}
                 </div>
-
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-800 truncate">{item.name}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{item.class} · {item.size}</p>
                   <p className="text-xs text-gray-400">{item.date}</p>
-
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
                     <Badge label={info?.label} variant={info?.variant} />
-
-                    {/* Nút xem */}
                     {item.url && (
                       <Button size="sm" variant="primary" icon="👁️"
                         onClick={() => setViewing(item)}>
                         Xem
                       </Button>
                     )}
-
-                    {/* Nút tải */}
                     <Button size="sm" variant="secondary" icon="⬇️"
-                      onClick={() => {
-                        if (item.url) window.open(item.url, '_blank');
-                        else toast.info('File chưa có link tải!');
-                      }}>
+                      onClick={() => { if (item.url) window.open(item.url, '_blank'); else toast.info('File chưa có link!'); }}>
                       Tải về
                     </Button>
-
-                    {/* Nút xóa — chỉ giáo viên */}
                     {isTeacher && (
-                      <Button size="sm" variant="ghost"
-                        onClick={() => handleDelete(item.id)}>🗑️</Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(item.id)}>🗑️</Button>
                     )}
                   </div>
                 </div>
@@ -226,13 +267,12 @@ const Materials = () => {
           <Button loading={uploading} icon="📤" onClick={handleUpload}>Upload</Button>
         </>}>
         <div className="flex flex-col gap-4">
-
-          {/* Loại file */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Loại tài liệu</label>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(TYPE_INFO).map(([key, info]) => (
-                <button key={key} type="button" onClick={() => { setUploadType(key); setPreview(null); if (fileRef.current) fileRef.current.value = ''; }}
+                <button key={key} type="button"
+                  onClick={() => { setUploadType(key); setPreview(null); if (fileRef.current) fileRef.current.value = ''; }}
                   className={`p-2.5 rounded-xl text-sm font-medium border transition-all
                     ${uploadType === key ? 'bg-primary-600 text-white border-primary-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                   {info.icon} {info.label}
@@ -241,19 +281,14 @@ const Materials = () => {
             </div>
           </div>
 
-          {/* Chọn file */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Chọn file <span className="text-red-500">*</span></label>
             <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-primary-400 hover:bg-primary-50 transition-all"
               onClick={() => fileRef.current?.click()}>
               {preview ? (
                 <div>
-                  {preview.mimeType?.startsWith('image/') && (
-                    <img src={preview.url} alt="preview" className="max-h-32 mx-auto rounded-lg mb-2 object-contain" />
-                  )}
-                  {preview.mimeType?.startsWith('video/') && (
-                    <video src={preview.url} className="max-h-32 mx-auto rounded-lg mb-2" controls />
-                  )}
+                  {preview.mimeType?.startsWith('image/') && <img src={preview.url} alt="preview" className="max-h-32 mx-auto rounded-lg mb-2 object-contain" />}
+                  {preview.mimeType?.startsWith('video/') && <video src={preview.url} className="max-h-32 mx-auto rounded-lg mb-2" controls />}
                   <p className="text-sm font-medium text-green-600">✅ {preview.name}</p>
                   <p className="text-xs text-gray-400">{preview.size}</p>
                 </div>
@@ -266,18 +301,15 @@ const Materials = () => {
               )}
             </div>
             <input ref={fileRef} type="file" className="hidden"
-              accept={TYPE_INFO[uploadType]?.accept}
-              onChange={handleFileSelect} />
+              accept={TYPE_INFO[uploadType]?.accept} onChange={handleFileSelect} />
           </div>
 
-          {/* Tên tài liệu */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Tên tài liệu <span className="text-red-500">*</span></label>
             <input value={uploadForm.name} onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
               className="input-field" placeholder="VD: Sheet nhạc bài số 5" />
           </div>
 
-          {/* Lớp học */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Lớp học</label>
             <select value={uploadForm.class} onChange={e => setUploadForm({ ...uploadForm, class: e.target.value })} className="input-field">
@@ -288,7 +320,6 @@ const Materials = () => {
             </select>
           </div>
 
-          {/* Ghi chú */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Ghi chú</label>
             <textarea value={uploadForm.note} onChange={e => setUploadForm({ ...uploadForm, note: e.target.value })}
@@ -297,8 +328,9 @@ const Materials = () => {
         </div>
       </Modal>
 
-      {/* Modal xem file */}
+      {/* File Viewer */}
       <FileViewer file={viewing} onClose={() => setViewing(null)} />
+
     </MainLayout>
   );
 };

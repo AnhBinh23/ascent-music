@@ -1,65 +1,117 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 
-const STATUS_VARIANT = { 'Đã thanh toán': 'green', 'Chưa thanh toán': 'red', 'Thanh toán 1 phần': 'orange' };
-
-const SAMPLE = [
-  { month: '05/2025', amount: 800000, paid: 800000, status: 'Đã thanh toán',    method: 'Tiền mặt',     date: '2025-05-01' },
-  { month: '04/2025', amount: 800000, paid: 800000, status: 'Đã thanh toán',    method: 'Chuyển khoản', date: '2025-04-02' },
-  { month: '03/2025', amount: 800000, paid: 400000, status: 'Thanh toán 1 phần',method: 'Tiền mặt',     date: '2025-03-05' },
-  { month: '02/2025', amount: 800000, paid: 0,      status: 'Chưa thanh toán',  method: '',             date: '' },
-];
-
 const MyTuition = () => {
   const { user } = useAuth();
+  const [invoices, setInvoices] = useState([]);
+
+  useEffect(() => {
+    const all = JSON.parse(localStorage.getItem('invoices_v2') || '[]');
+    const mine = all.filter(inv =>
+      inv.student?.name?.toLowerCase() === user?.name?.toLowerCase() ||
+      inv.student?.email?.toLowerCase() === user?.email?.toLowerCase()
+    );
+    setInvoices(mine);
+  }, [user]);
+
+  const unpaid = invoices.filter(i => i.status === 'unpaid');
+  const paid   = invoices.filter(i => i.status === 'paid');
+  const total  = paid.reduce((sum, i) => sum + i.totalFee, 0);
 
   return (
     <MainLayout title="Học phí của tôi">
-      <div className="grid grid-cols-2 gap-4 mb-5">
+
+      <div className="grid grid-cols-3 gap-4 mb-5">
         <div className="card text-center">
-          <p className="text-2xl font-bold text-green-600">
-            {SAMPLE.filter(s => s.status === 'Đã thanh toán').length}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">Tháng đã đóng</p>
+          <p className="text-2xl font-bold text-red-500">{unpaid.length}</p>
+          <p className="text-xs text-gray-500 mt-1">Chưa đóng</p>
         </div>
         <div className="card text-center">
-          <p className="text-2xl font-bold text-red-500">
-            {SAMPLE.filter(s => s.status !== 'Đã thanh toán').length}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">Tháng chưa đóng</p>
+          <p className="text-2xl font-bold text-green-600">{paid.length}</p>
+          <p className="text-xs text-gray-500 mt-1">Đã đóng</p>
+        </div>
+        <div className="card text-center">
+          <p className="text-lg font-bold text-orange-600">{total.toLocaleString('vi-VN')}đ</p>
+          <p className="text-xs text-gray-500 mt-1">Tổng đã đóng</p>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        {SAMPLE.map((item, i) => (
-          <Card key={i}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-gray-800">Tháng {item.month}</p>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Học phí: <span className="font-medium">{item.amount.toLocaleString('vi-VN')}đ</span>
-                </p>
-                {item.method && <p className="text-xs text-gray-400 mt-0.5">{item.method} · {item.date}</p>}
-              </div>
-              <div className="text-right">
-                <Badge label={item.status} variant={STATUS_VARIANT[item.status]} dot />
-                {item.status === 'Thanh toán 1 phần' && (
-                  <p className="text-xs text-orange-500 mt-1">
-                    Còn: {(item.amount - item.paid).toLocaleString('vi-VN')}đ
+      {/* Chưa thanh toán */}
+      {unpaid.length > 0 && (
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-red-600 mb-2">⚠️ Cần thanh toán</p>
+          <div className="flex flex-col gap-3">
+            {unpaid.map(inv => (
+              <Card key={inv.id}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-gray-800">{inv.course.instrument}</p>
+                      <Badge label="⏳ Chưa thanh toán" variant="red" />
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      {inv.course.billingType === 'session'
+                        ? `${inv.course.sessions} buổi · ${inv.course.pricePerSession?.toLocaleString('vi-VN')}đ/buổi`
+                        : `${inv.course.duration} tháng`}
+                    </p>
+                    <p className="text-xs text-gray-400">📅 {inv.course.startDate} → {inv.endDate}</p>
+                    <p className="text-xs text-gray-400">Số HĐ: {inv.id} · Tạo: {inv.createdDate}</p>
+                  </div>
+                  <p className="text-xl font-bold text-red-500">{inv.totalFee.toLocaleString('vi-VN')}đ</p>
+                </div>
+                <div className="mt-3 p-3 bg-red-50 rounded-xl">
+                  <p className="text-xs text-red-600">
+                    📞 Liên hệ trung tâm để thanh toán: <span className="font-medium">0901 234 567</span>
                   </p>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <div className="mt-4 p-4 bg-blue-50 rounded-2xl">
-        <p className="text-sm text-blue-700">💡 Liên hệ trung tâm để thanh toán: <span className="font-medium">0901 234 567</span></p>
-      </div>
+      {/* Lịch sử đã thanh toán */}
+      <p className="text-sm font-semibold text-gray-700 mb-2">📋 Lịch sử thanh toán</p>
+      {invoices.length === 0 ? (
+        <Card>
+          <p className="text-center text-gray-400 py-8">Chưa có hóa đơn nào</p>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {paid.map(inv => (
+            <Card key={inv.id}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold text-gray-800">{inv.course.instrument}</p>
+                    <Badge label="✅ Đã thanh toán" variant="green" />
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {inv.course.billingType === 'session'
+                      ? `${inv.course.sessions} buổi`
+                      : `${inv.course.duration} tháng`}
+                  </p>
+                  <p className="text-xs text-gray-400">📅 {inv.course.startDate} → {inv.endDate}</p>
+                  <p className="text-xs text-green-600 font-medium">
+                    Đã đóng: {inv.paidDate} · {inv.paidMethod}
+                  </p>
+                  <p className="text-xs text-gray-400">Số HĐ: {inv.id}</p>
+                </div>
+                <p className="text-xl font-bold text-green-600">{inv.totalFee.toLocaleString('vi-VN')}đ</p>
+              </div>
+            </Card>
+          ))}
+
+          {/* Tổng cộng */}
+          <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 flex justify-between items-center">
+            <p className="font-semibold text-gray-700">💰 Tổng học phí đã đóng</p>
+            <p className="text-2xl font-bold text-orange-600">{total.toLocaleString('vi-VN')}đ</p>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 };

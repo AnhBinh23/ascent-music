@@ -57,6 +57,17 @@ const menus = {
     { path: '/student/chat',       icon: '💬', label: 'Tin nhắn'       },
     { path: '/student/profile',    icon: '👤', label: 'Hồ sơ của tôi' },
   ],
+  staff: [
+  { path: '/staff',            icon: '🏠', label: 'Tổng quan'        },
+  { path: '/staff/students',   icon: '🎓', label: 'Học viên'         },
+  { path: '/staff/teachers',   icon: '👨‍🏫', label: 'Giáo viên'        },
+  { path: '/staff/enrollment', icon: '📋', label: 'Đăng ký khóa học' },
+  { path: '/staff/schedule',   icon: '📅', label: 'Lịch học'         },
+  { path: '/staff/tuition',    icon: '💰', label: 'Thu học phí'      },
+  { path: '/staff/invoice',    icon: '🧾', label: 'Tạo hóa đơn'     },
+  { path: '/staff/chat',       icon: '💬', label: 'Tin nhắn'         },
+  { path: '/staff/profile',    icon: '👤', label: 'Hồ sơ của tôi'   },
+],
 };
 
 const roleColors = {

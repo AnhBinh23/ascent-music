@@ -51,6 +51,9 @@ import StaffDashboard      from './pages/staff/Dashboard';
 import StaffStudentManage  from './pages/staff/StudentManage';
 import StaffScheduleManage from './pages/staff/ScheduleManage';
 import StaffTuitionCollect from './pages/staff/TuitionCollect';
+import TeacherView  from './pages/staff/TeacherView';
+import InvoicePage  from './pages/staff/InvoicePage';
+import EnrollmentPage from './pages/staff/EnrollmentPage';
 
 // Teacher
 import TeacherDashboard from './pages/teacher/Dashboard';
@@ -134,6 +137,9 @@ function App() {
               <Route path="tuition"  element={<StaffTuitionCollect />} />
               <Route path="chat"     element={<ChatPage />} />
               <Route path="profile"  element={<ProfilePage />} />
+              <Route path="teachers" element={<TeacherView />} />
+              <Route path="invoice"  element={<InvoicePage />} />
+              <Route path="enrollment" element={<EnrollmentPage />} />
             </Route>
 
             {/* Teacher Routes */}
