@@ -1,53 +1,21 @@
-const MOCK_ACCOUNTS = [
-  {
-    id: '1',
-    name: 'Nguyễn Văn Admin',
-    email: 'admin@ascentmusic.vn',
-    password: '123456',
-    role: 'admin',
-    phone: '0901234567',
-  },
-  {
-    id: '2',
-    name: 'Trần Thị Nhân Viên',
-    email: 'nv@ascentmusic.vn',
-    password: '123456',
-    role: 'staff',
-    phone: '0902345678',
-  },
-  {
-    id: '3',
-    name: 'Nguyễn Thị Mai',
-    email: 'gv@ascentmusic.vn',
-    password: '123456',
-    role: 'teacher',
-    phone: '0903456789',
-  },
-  {
-    id: '4',
-    name: 'Nguyễn Văn An',
-    email: 'hv@ascentmusic.vn',
-    password: '123456',
-    role: 'student',
-    phone: '0904567890',
-  },
-];
+import api from './api';
 
 const authService = {
   login: async (email, password) => {
-    await new Promise(r => setTimeout(r, 800));
-    const user = MOCK_ACCOUNTS.find(
-      a => a.email === email && a.password === password
-    );
-    if (!user) throw new Error('Sai email hoặc mật khẩu!');
-    const { password: _, ...userInfo } = user;
-    return userInfo;
+    const data = await api.post('/auth/login', { email, password });
+    localStorage.setItem('ascent_token', data.token);
+    return data.user;
   },
-  getAccounts:    async () => MOCK_ACCOUNTS,
-  createAccount:  async (data) => ({ success: true, data }),
-  updateAccount:  async (id, data) => ({ success: true }),
-  toggleStatus:   async (id, status) => ({ success: true }),
-  changePassword: async (id, pw) => ({ success: true }),
+  logout: () => {
+    localStorage.removeItem('ascent_token');
+    localStorage.removeItem('ascent_user');
+  },
+  getMe: async () => {
+    return await api.get('/auth/me');
+  },
+  changePassword: async (currentPassword, newPassword) => {
+    return await api.put('/auth/password', { currentPassword, newPassword });
+  },
 };
 
 export default authService;

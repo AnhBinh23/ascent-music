@@ -2,25 +2,33 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
-import authService from '../../services/authService';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+
+const ROLE_HOME = {
+  admin:   '/admin',
+  staff:   '/staff',
+  teacher: '/teacher',
+  student: '/student',
+};
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user } = useAuth();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [loading, setLoading] = useState(false);
+  const [form, setForm]               = useState({ email: '', password: '' });
+  const [loading, setLoading]         = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]           = useState({});
 
   React.useEffect(() => {
-    if (isAuthenticated && user) navigate(`/${user.role}`, { replace: true });
+    if (isAuthenticated && user) {
+      navigate(ROLE_HOME[user.role] || '/login', { replace: true });
+    }
   }, [isAuthenticated, user, navigate]);
 
   const validate = () => {
     const errs = {};
-    if (!form.email) errs.email = 'Vui lòng nhập email';
+    if (!form.email)    errs.email    = 'Vui lòng nhập email';
     if (!form.password) errs.password = 'Vui lòng nhập mật khẩu';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -31,12 +39,12 @@ const LoginPage = () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      const userData = await authService.login(form.email, form.password);
-      const redirectPath = login(userData);
+      // Chỉ gọi login 1 lần duy nhất từ AuthContext
+      const userData = await login(form.email, form.password);
       toast.success(`Chào mừng ${userData.name}!`);
-      navigate(redirectPath, { replace: true });
+      navigate(ROLE_HOME[userData.role] || '/login', { replace: true });
     } catch (err) {
-      toast.error('Email hoặc mật khẩu không đúng!');
+      toast.error(err.message || 'Email hoặc mật khẩu không đúng!');
     } finally {
       setLoading(false);
     }
@@ -62,11 +70,12 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
               label="Email" name="email" type="email"
-              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-              placeholder="email@ascentmusic.vn" required error={errors.email} icon="📧"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+              placeholder="email@ascentmusic.vn"
+              required error={errors.email} icon="📧"
             />
 
-            {/* Password với nút hiện/ẩn */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
                 Mật khẩu <span className="text-red-500">*</span>
@@ -80,8 +89,9 @@ const LoginPage = () => {
                   placeholder="••••••••"
                   className={`input-field pl-10 pr-12 ${errors.password ? 'border-red-400' : ''}`}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors text-sm">
+                <button type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
                   {showPassword ? '🙈 Ẩn' : '👁️ Hiện'}
                 </button>
               </div>
@@ -91,6 +101,7 @@ const LoginPage = () => {
             <Button type="submit" fullWidth loading={loading} size="lg" className="mt-2">
               Đăng nhập
             </Button>
+
             <div className="text-center mt-2">
               <Link to="/forgot-password" className="text-sm text-primary-600 hover:underline">
                 Quên mật khẩu?

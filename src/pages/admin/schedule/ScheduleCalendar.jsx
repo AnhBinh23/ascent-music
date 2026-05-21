@@ -28,7 +28,7 @@ const ScheduleCalendar = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   
   const getCell = (day, hour) => schedule.find(s => s.day === day && s.hour === hour);
-
+  const [selectedCell, setSelectedCell] = useState(null);
   const handleCellClick = (day, hour) => {
     const existing = getCell(day, hour);
     if (existing) return;
@@ -44,7 +44,7 @@ const ScheduleCalendar = () => {
       (s.teacher === form.teacher || s.room === form.room)
     );
     if (conflict) { toast.error('⚠️ Trùng lịch giáo viên hoặc phòng học!'); return; }
-    setSchedule(prev => [...prev, { ...form, id: Date.now() }]);
+    
     toast.success('Thêm lịch thành công!');
     setShowModal(false);
   };

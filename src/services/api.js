@@ -1,37 +1,27 @@
-import SHEETS_API_URL from '../config/sheetsConfig';
-import { toast } from 'react-toastify';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-const request = async (action, params = {}, method = 'GET', body = null) => {
-  try {
-    const url = new URL(SHEETS_API_URL);
-    url.searchParams.set('action', action);
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+const getToken = () => localStorage.getItem('ascent_token');
 
-    const options = { method };
-    if (body) {
-      options.headers = { 'Content-Type': 'application/json' };
-      options.body = JSON.stringify(body);
-    }
+const request = async (endpoint, method = 'GET', body = null) => {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(url.toString(), options);
-    const data = await res.json();
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
 
-    if (!data.success) {
-      throw new Error(data.message || 'Có lỗi xảy ra');
-    }
-    return data;
+  const res  = await fetch(`${BASE_URL}${endpoint}`, options);
+  const data = await res.json();
 
-  } catch (error) {
-    toast.error(error.message || 'Lỗi kết nối server');
-    throw error;
-  }
+  if (!res.ok) throw new Error(data.message || 'Có lỗi xảy ra');
+  return data;
 };
 
 const api = {
-  get:    (action, params)       => request(action, params, 'GET'),
-  post:   (action, body)         => request(action, {}, 'POST', body),
-  put:    (action, body)         => request(action, {}, 'PUT', body),
-  delete: (action, params)       => request(action, params, 'DELETE'),
+  get:    (endpoint)        => request(endpoint, 'GET'),
+  post:   (endpoint, body)  => request(endpoint, 'POST',   body),
+  put:    (endpoint, body)  => request(endpoint, 'PUT',    body),
+  delete: (endpoint)        => request(endpoint, 'DELETE'),
 };
 
 export default api;

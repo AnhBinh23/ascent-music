@@ -1,35 +1,55 @@
-import api from './api';
-import { SHEETS } from '../config/sheetsConfig';
+const BASE = process.env.REACT_APP_API_URL;
+const getToken = () => localStorage.getItem('ascent_token');
+
+const headers = () => ({
+  'Content-Type':  'application/json',
+  'Authorization': `Bearer ${getToken()}`,
+});
 
 const studentService = {
-
   getAll: async () => {
-    const data = await api.get('getAll', { sheet: SHEETS.STUDENTS });
+    const res  = await fetch(`${BASE}/students`, { headers: headers() });
+    const data = await res.json();
+    return data.rows || [];
+  },
+
+  search: async (q) => {
+    const res  = await fetch(`${BASE}/students/search?q=${q}`, { headers: headers() });
+    const data = await res.json();
     return data.rows || [];
   },
 
   getById: async (id) => {
-    const data = await api.get('getById', { sheet: SHEETS.STUDENTS, id });
-    return data.row || null;
+    const res  = await fetch(`${BASE}/students/${id}`, { headers: headers() });
+    const data = await res.json();
+    return data.row;
   },
 
-  create: async (studentData) => {
-    return await api.post('create', { sheet: SHEETS.STUDENTS, ...studentData });
+  create: async (student) => {
+    const res  = await fetch(`${BASE}/students`, {
+      method:  'POST',
+      headers: headers(),
+      body:    JSON.stringify(student),
+    });
+    return await res.json();
   },
 
-  update: async (id, studentData) => {
-    return await api.put('update', { sheet: SHEETS.STUDENTS, id, ...studentData });
+  update: async (id, student) => {
+    const res  = await fetch(`${BASE}/students/${id}`, {
+      method:  'PUT',
+      headers: headers(),
+      body:    JSON.stringify(student),
+    });
+    return await res.json();
   },
 
   delete: async (id) => {
-    return await api.delete('delete', { sheet: SHEETS.STUDENTS, id });
+    const res  = await fetch(`${BASE}/students/${id}`, {
+      method:  'DELETE',
+      headers: headers(),
+    });
+    return await res.json();
   },
-
-  getByClass: async (classId) => {
-    const data = await api.get('getByClass', { sheet: SHEETS.STUDENTS, classId });
-    return data.rows || [];
-  },
-
 };
 
 export default studentService;

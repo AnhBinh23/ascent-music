@@ -4,7 +4,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../context/AuthContext';
+
 
 const SAMPLE_CLASSES = [
   {
@@ -29,7 +29,7 @@ const STATUS_OPTIONS = [
 ];
 
 const Attendance = () => {
-  const { user } = useAuth();
+  
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedClass, setSelectedClass] = useState(null);

@@ -1,37 +1,51 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ROLE_HOME } from '../config/roles';
 
 const AuthContext = createContext(null);
 
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Khi app khởi động — đọc user từ localStorage
   useEffect(() => {
-    const savedUser = localStorage.getItem('ascent_user');
-    if (savedUser) {
+    const savedUser  = localStorage.getItem('ascent_user');
+    const savedToken = localStorage.getItem('ascent_token');
+    if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
     }
     setLoading(false);
   }, []);
 
-  const login = (userData) => {
-    const userInfo = {
-      id:       userData.id,
-      name:     userData.name,
-      email:    userData.email,
-      role:     userData.role,
-      avatar:   userData.avatar || null,
-      phone:    userData.phone || '',
-    };
-    setUser(userInfo);
-    localStorage.setItem('ascent_user', JSON.stringify(userInfo));
-    return ROLE_HOME[userData.role] || '/login';
+  const login = async (email, password) => {
+    // Đảm bảo email là string
+    if (typeof email !== 'string') {
+      throw new Error('Email không hợp lệ');
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Đăng nhập thất bại');
+
+      localStorage.setItem('ascent_token', data.token);
+      localStorage.setItem('ascent_user',  JSON.stringify(data.user));
+      setUser(data.user);
+      return data.user;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('ascent_user');
+    localStorage.removeItem('ascent_token');
   };
 
   const updateUser = (updatedData) => {
