@@ -2,7 +2,7 @@ import React from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
-import { useAuth } from '../../context/AuthContext';
+
 
 const DAYS = ['T2','T3','T4','T5','T6','T7','CN'];
 
@@ -14,7 +14,7 @@ const SAMPLE = [
 ];
 
 const MySchedule = () => {
-  const { user } = useAuth();
+  
   const totalSessions = SAMPLE.length;
   const totalStudents = new Set(SAMPLE.flatMap(s => s.students)).size;
 

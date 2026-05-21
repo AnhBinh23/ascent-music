@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
@@ -19,7 +19,7 @@ const SAMPLE = {
 };
 
 const ClassDetail = () => {
-  const { id } = useParams();
+  useParams();
   const navigate = useNavigate();
   const cls = SAMPLE;
 

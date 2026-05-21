@@ -3,13 +3,15 @@ import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Loading from '../../components/ui/Loading';
+import AnnouncementBanner from '../../components/shared/AnnouncementBanner';
+import BirthdayReminder from './students/BirthdayReminder';
 import studentService from '../../services/studentService';
 import teacherService from '../../services/teacherService';
 import tuitionService from '../../services/tuitionService';
 import scheduleService from '../../services/scheduleService';
 
 const StatCard = ({ icon, label, value, sub, color }) => (
-  <div className={`card flex items-center gap-4`}>
+  <div className="card flex items-center gap-4">
     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${color}`}>
       {icon}
     </div>
@@ -22,12 +24,9 @@ const StatCard = ({ icon, label, value, sub, color }) => (
 );
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({
-    students: 0, teachers: 0, classes: 0,
-    revenue: 0, unpaid: 0, todayClasses: 0,
-  });
+  const [stats, setStats]               = useState({ students: 0, teachers: 0, unpaid: 0, todayClasses: 0 });
   const [todaySchedule, setTodaySchedule] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]           = useState(true);
 
   const today = new Date().toLocaleDateString('vi-VN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -42,16 +41,14 @@ const AdminDashboard = () => {
           tuitionService.getUnpaid(),
           scheduleService.getByDate(new Date().toISOString().split('T')[0]),
         ]);
-
         setStats({
-          students: students.length,
-          teachers: teachers.length,
-          unpaid: unpaid.length,
+          students:     students.length,
+          teachers:     teachers.length,
+          unpaid:       unpaid.length,
           todayClasses: schedule.length,
         });
         setTodaySchedule(schedule.slice(0, 5));
-      } catch (err) {
-        // dùng dữ liệu mẫu khi chưa có Google Sheets
+      } catch {
         setStats({ students: 24, teachers: 6, unpaid: 3, todayClasses: 8 });
       } finally {
         setLoading(false);
@@ -64,6 +61,10 @@ const AdminDashboard = () => {
 
   return (
     <MainLayout title="Tổng quan">
+
+      {/* Banner thông báo */}
+      <AnnouncementBanner />
+
       {/* Chào */}
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-800">Xin chào! 👋</h2>
@@ -72,17 +73,13 @@ const AdminDashboard = () => {
 
       {/* Thống kê */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard icon="🎓" label="Học viên" value={stats.students}
-          sub="đang theo học" color="bg-blue-50" />
-        <StatCard icon="👨‍🏫" label="Giáo viên" value={stats.teachers}
-          sub="đang giảng dạy" color="bg-purple-50" />
-        <StatCard icon="🎵" label="Buổi hôm nay" value={stats.todayClasses}
-          sub="lịch học" color="bg-orange-50" />
-        <StatCard icon="⚠️" label="Chưa đóng tiền" value={stats.unpaid}
-          sub="học viên" color="bg-red-50" />
+        <StatCard icon="🎓" label="Học viên"      value={stats.students}     sub="đang theo học"  color="bg-blue-50"   />
+        <StatCard icon="👨‍🏫" label="Giáo viên"     value={stats.teachers}     sub="đang giảng dạy" color="bg-purple-50" />
+        <StatCard icon="🎵" label="Buổi hôm nay"  value={stats.todayClasses} sub="lịch học"       color="bg-orange-50" />
+        <StatCard icon="⚠️" label="Chưa đóng tiền" value={stats.unpaid}       sub="học viên"       color="bg-red-50"    />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Lịch hôm nay */}
         <Card title="Lịch học hôm nay" subtitle={`${stats.todayClasses} buổi`}>
           {todaySchedule.length === 0 ? (
@@ -132,6 +129,10 @@ const AdminDashboard = () => {
           </div>
         </Card>
       </div>
+
+      {/* Sinh nhật & Khóa học sắp hết */}
+      <BirthdayReminder />
+
     </MainLayout>
   );
 };

@@ -1,48 +1,60 @@
-import React from 'react';
+import React, { useRef, useLayoutEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 
+// Nằm ngoài component — không reset khi remount
+let savedScrollPos = 0;
+
 const menus = {
   admin: [
-    { path: '/admin',             icon: '🏠', label: 'Tổng quan' },
-    { path: '/admin/students',    icon: '🎓', label: 'Học viên' },
-    { path: '/admin/teachers',    icon: '👨‍🏫', label: 'Giáo viên' },
-    { path: '/admin/classes',     icon: '🎵', label: 'Lớp học' },
-    { path: '/admin/schedule',    icon: '📅', label: 'Lịch học' },
-    { path: '/admin/tuition',     icon: '💰', label: 'Học phí' },
-    { path: '/admin/rooms',       icon: '🚪', label: 'Phòng học' },
-    { path: '/admin/instruments', icon: '🎸', label: 'Nhạc cụ' },
-    { path: '/admin/reports',     icon: '📊', label: 'Báo cáo' },
-    { path: '/admin/pending',     icon: '🔔', label: 'Duyệt tài khoản' },
-    { path: '/admin/checkin',     icon: '📋', label: 'Chấm công GV' },
-    { path: '/admin/settings',    icon: '⚙️', label: 'Tài khoản' },
-    { path: '/admin/profile',     icon: '👤', label: 'Hồ sơ của tôi' },
+    { path: '/admin',               icon: '🏠', label: 'Tổng quan'       },
+    { path: '/admin/students',      icon: '🎓', label: 'Học viên'        },
+    { path: '/admin/trials',        icon: '📝', label: 'Đăng ký học thử' },
+    { path: '/admin/teachers',      icon: '👨‍🏫', label: 'Giáo viên'       },
+    { path: '/admin/salary',        icon: '💵', label: 'Lương giáo viên' },
+    { path: '/admin/classes',       icon: '🎵', label: 'Lớp học'         },
+    { path: '/admin/schedule',      icon: '📅', label: 'Lịch học'        },
+    { path: '/admin/tuition',       icon: '💰', label: 'Học phí'         },
+    { path: '/admin/rooms',         icon: '🚪', label: 'Phòng học'       },
+    { path: '/admin/instruments',   icon: '🎸', label: 'Nhạc cụ'         },
+    { path: '/admin/reports',       icon: '📊', label: 'Báo cáo'         },
+    { path: '/admin/pending',       icon: '🔔', label: 'Duyệt tài khoản' },
+    { path: '/admin/checkin',       icon: '📋', label: 'Chấm công GV'    },
+    { path: '/admin/notifications', icon: '📨', label: 'Gửi thông báo'   },
+    { path: '/admin/announcements', icon: '📣', label: 'Thông báo App'   },
+    { path: '/admin/chat',          icon: '💬', label: 'Tin nhắn'        },
+    { path: '/admin/settings',      icon: '⚙️', label: 'Tài khoản'       },
+    { path: '/admin/profile',       icon: '👤', label: 'Hồ sơ của tôi'  },
   ],
   staff: [
-    { path: '/staff',          icon: '🏠', label: 'Tổng quan' },
-    { path: '/staff/students', icon: '🎓', label: 'Học viên' },
-    { path: '/staff/schedule', icon: '📅', label: 'Lịch học' },
-    { path: '/staff/tuition',  icon: '💰', label: 'Thu học phí' },
+    { path: '/staff',          icon: '🏠', label: 'Tổng quan'      },
+    { path: '/staff/students', icon: '🎓', label: 'Học viên'       },
+    { path: '/staff/schedule', icon: '📅', label: 'Lịch học'       },
+    { path: '/staff/tuition',  icon: '💰', label: 'Thu học phí'    },
+    { path: '/staff/chat',     icon: '💬', label: 'Tin nhắn'       },
     { path: '/staff/profile',  icon: '👤', label: 'Hồ sơ của tôi' },
   ],
   teacher: [
-    { path: '/teacher',            icon: '🏠', label: 'Tổng quan' },
-    { path: '/teacher/classes',    icon: '🎵', label: 'Lớp của tôi' },
-    { path: '/teacher/schedule',   icon: '📅', label: 'Lịch dạy' },
-    { path: '/teacher/attendance', icon: '✅', label: 'Điểm danh' },
-    { path: '/teacher/lesson-log', icon: '📝', label: 'Nhật ký học' },
-    { path: '/teacher/checkin',    icon: '📋', label: 'Chấm công' },
-    { path: '/teacher/materials',  icon: '📁', label: 'Tài liệu' },
-    { path: '/teacher/profile',    icon: '👤', label: 'Hồ sơ của tôi' },
+    { path: '/teacher',               icon: '🏠', label: 'Tổng quan'      },
+    { path: '/teacher/classes',       icon: '🎵', label: 'Lớp của tôi'   },
+    { path: '/teacher/schedule',      icon: '📅', label: 'Lịch dạy'      },
+    { path: '/teacher/attendance',    icon: '✅', label: 'Điểm danh'     },
+    { path: '/teacher/lesson-log',    icon: '📝', label: 'Nhật ký học'   },
+    { path: '/teacher/checkin',       icon: '📋', label: 'Chấm công'     },
+    { path: '/teacher/notifications', icon: '📨', label: 'Gửi thông báo' },
+    { path: '/teacher/materials',     icon: '📁', label: 'Tài liệu'      },
+    { path: '/teacher/chat',          icon: '💬', label: 'Tin nhắn'      },
+    { path: '/teacher/profile',       icon: '👤', label: 'Hồ sơ của tôi' },
   ],
   student: [
-    { path: '/student',            icon: '🏠', label: 'Tổng quan' },
-    { path: '/student/schedule',   icon: '📅', label: 'Lịch học' },
-    { path: '/student/tuition',    icon: '💰', label: 'Học phí' },
-    { path: '/student/attendance', icon: '✅', label: 'Điểm danh' },
-    { path: '/student/progress',   icon: '📈', label: 'Tiến độ' },
-    { path: '/student/materials',  icon: '📁', label: 'Tài liệu' },
+    { path: '/student',            icon: '🏠', label: 'Tổng quan'      },
+    { path: '/student/schedule',   icon: '📅', label: 'Lịch học'       },
+    { path: '/student/tuition',    icon: '💰', label: 'Học phí'        },
+    { path: '/student/attendance', icon: '✅', label: 'Điểm danh'      },
+    { path: '/student/progress',   icon: '📈', label: 'Tiến độ'        },
+    { path: '/student/materials',  icon: '📁', label: 'Tài liệu'       },
+    { path: '/student/chat',       icon: '💬', label: 'Tin nhắn'       },
     { path: '/student/profile',    icon: '👤', label: 'Hồ sơ của tôi' },
   ],
 };
@@ -63,14 +75,17 @@ const roleLabels = {
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
-  const { sidebarOpen } = useApp();
-  const navigate = useNavigate();
+  const { sidebarOpen }  = useApp();
+  const navigate         = useNavigate();
+  const navRef           = useRef(null);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  useLayoutEffect(() => {
+    if (navRef.current) {
+      navRef.current.scrollTop = savedScrollPos;
+    }
+  });
 
+  const handleLogout = () => { logout(); navigate('/login'); };
   const navItems = menus[user?.role] || [];
 
   return (
@@ -80,6 +95,7 @@ const Sidebar = () => {
       ${sidebarOpen ? 'w-60' : 'w-0 overflow-hidden'}
       md:relative md:flex md:w-60
     `}>
+
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
         <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center text-white text-lg">
@@ -107,7 +123,11 @@ const Sidebar = () => {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3">
+      <nav
+        ref={navRef}
+        className="flex-1 overflow-y-auto px-3 py-3"
+        onScroll={(e) => { savedScrollPos = e.currentTarget.scrollTop; }}
+      >
         {navItems.map((item) => (
           <NavLink
             key={item.path}
@@ -136,6 +156,7 @@ const Sidebar = () => {
           <span>Đăng xuất</span>
         </button>
       </div>
+
     </aside>
   );
 };

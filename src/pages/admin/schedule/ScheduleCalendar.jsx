@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
@@ -26,8 +26,7 @@ const ScheduleCalendar = () => {
   const [schedule, setSchedule] = useState(SAMPLE_SCHEDULE);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [selectedCell, setSelectedCell] = useState(null);
-
+  
   const getCell = (day, hour) => schedule.find(s => s.day === day && s.hour === hour);
 
   const handleCellClick = (day, hour) => {
