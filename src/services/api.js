@@ -1,27 +1,37 @@
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const getToken = () => localStorage.getItem('ascent_token');
 
-const request = async (endpoint, method = 'GET', body = null) => {
-  const headers = { 'Content-Type': 'application/json' };
-  const token = getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
-
-  const res  = await fetch(`${BASE_URL}${endpoint}`, options);
-  const data = await res.json();
-
-  if (!res.ok) throw new Error(data.message || 'Có lỗi xảy ra');
-  return data;
-};
+const headers = () => ({
+  'Content-Type':  'application/json',
+  'Authorization': `Bearer ${getToken()}`,
+});
 
 const api = {
-  get:    (endpoint)        => request(endpoint, 'GET'),
-  post:   (endpoint, body)  => request(endpoint, 'POST',   body),
-  put:    (endpoint, body)  => request(endpoint, 'PUT',    body),
-  delete: (endpoint)        => request(endpoint, 'DELETE'),
+  get: async (endpoint) => {
+    const res  = await fetch(`${BASE}${endpoint}`, { headers: headers() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    return data;
+  },
+  post: async (endpoint, body) => {
+    const res  = await fetch(`${BASE}${endpoint}`, { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    return data;
+  },
+  put: async (endpoint, body) => {
+    const res  = await fetch(`${BASE}${endpoint}`, { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    return data;
+  },
+  delete: async (endpoint) => {
+    const res  = await fetch(`${BASE}${endpoint}`, { method: 'DELETE', headers: headers() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    return data;
+  },
 };
 
 export default api;

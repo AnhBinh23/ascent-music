@@ -1,30 +1,10 @@
 import api from './api';
-import { SHEETS } from '../config/sheetsConfig';
 
 const attendanceService = {
-
-  getByClass: async (classId) => {
-    const data = await api.get('getByClass', { sheet: SHEETS.ATTENDANCE, classId });
-    return data.rows || [];
-  },
-
-  getByStudent: async (studentId) => {
-    const data = await api.get('getByStudent', { sheet: SHEETS.ATTENDANCE, studentId });
-    return data.rows || [];
-  },
-
-  save: async (attendanceList) => {
-    return await api.post('saveAttendance', {
-      sheet: SHEETS.ATTENDANCE,
-      data: attendanceList
-    });
-  },
-
-  getStats: async (studentId) => {
-    const data = await api.get('getAttendanceStats', { sheet: SHEETS.ATTENDANCE, studentId });
-    return data.stats || {};
-  },
-
+  getByClass:   async (classId)   => { const d = await api.get(`/attendance/class/${classId}`);   return d.rows || []; },
+  getByStudent: async (studentId) => { const d = await api.get(`/attendance/student/${studentId}`); return d.rows || []; },
+  getStats:     async (studentId) => { const d = await api.get(`/attendance/stats/${studentId}`);  return d.stats; },
+  save:         async (list)      => api.post('/attendance', { attendanceList: list }),
 };
 
 export default attendanceService;

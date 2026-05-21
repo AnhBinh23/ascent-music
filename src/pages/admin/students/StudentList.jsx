@@ -8,33 +8,26 @@ import Button from '../../../components/ui/Button';
 import SearchBar from '../../../components/shared/SearchBar';
 import Loading from '../../../components/ui/Loading';
 import studentService from '../../../services/studentService';
+import { toast } from 'react-toastify';
 
 const levelVariant = { 'Sơ cấp': 'blue', 'Trung cấp': 'orange', 'Nâng cao': 'purple' };
-
-const SAMPLE = [
-  { id: '1', name: 'Nguyễn Văn An',   dob: '2010-05-12', gender: 'Nam', phone: '0901234567', instrument: 'Piano',    level: 'Sơ cấp',   status: 'active' },
-  { id: '2', name: 'Trần Thị Bình',   dob: '2008-09-20', gender: 'Nữ',  phone: '0912345678', instrument: 'Guitar',   level: 'Trung cấp', status: 'active' },
-  { id: '3', name: 'Lê Minh Châu',    dob: '2012-03-08', gender: 'Nam', phone: '0923456789', instrument: 'Violin',   level: 'Sơ cấp',   status: 'active' },
-  { id: '4', name: 'Phạm Thị Dung',   dob: '2005-11-15', gender: 'Nữ',  phone: '0934567890', instrument: 'Thanh nhạc', level: 'Nâng cao', status: 'inactive' },
-  { id: '5', name: 'Hoàng Văn Em',    dob: '2011-07-22', gender: 'Nam', phone: '0945678901', instrument: 'Piano',    level: 'Trung cấp', status: 'active' },
-];
 
 const StudentList = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [filtered, setFiltered] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [search, setSearch]     = useState('');
+  const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const data = await studentService.getAll();
-        setStudents(data.length ? data : SAMPLE);
-        setFiltered(data.length ? data : SAMPLE);
-      } catch {
-        setStudents(SAMPLE);
-        setFiltered(SAMPLE);
+        setStudents(data);
+        setFiltered(data);
+      } catch (err) {
+        toast.error('Lỗi tải dữ liệu: ' + err.message);
       } finally {
         setLoading(false);
       }
@@ -52,7 +45,7 @@ const StudentList = () => {
   }, [search, students]);
 
   const columns = [
-    { key: 'name',       label: 'Họ tên',
+    { key: 'name', label: 'Họ tên',
       render: (val, row) => (
         <div>
           <p className="font-medium text-gray-800">{val}</p>
@@ -61,20 +54,22 @@ const StudentList = () => {
       )
     },
     { key: 'instrument', label: 'Nhạc cụ' },
-    { key: 'level',      label: 'Trình độ',
+    { key: 'level', label: 'Trình độ',
       render: (val) => <Badge label={val} variant={levelVariant[val] || 'gray'} />
     },
-    { key: 'gender',     label: 'Giới tính' },
-    { key: 'status',     label: 'Trạng thái',
+    { key: 'gender', label: 'Giới tính' },
+    { key: 'status', label: 'Trạng thái',
       render: (val) => <Badge label={val === 'active' ? 'Đang học' : 'Nghỉ học'} variant={val === 'active' ? 'green' : 'gray'} dot />
     },
-    { key: 'id',         label: '',
+    { key: 'id', label: '',
       render: (val) => (
         <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/admin/students/${val}`); }}>
+          <Button size="sm" variant="secondary"
+            onClick={(e) => { e.stopPropagation(); navigate(`/admin/students/${val}`); }}>
             Xem
           </Button>
-          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); navigate(`/admin/students/edit/${val}`); }}>
+          <Button size="sm" variant="ghost"
+            onClick={(e) => { e.stopPropagation(); navigate(`/admin/students/edit/${val}`); }}>
             ✏️
           </Button>
         </div>
@@ -92,14 +87,10 @@ const StudentList = () => {
           Thêm học viên
         </Button>
       </div>
-
       <Card subtitle={`${filtered.length} học viên`}>
         {loading ? <Loading /> : (
-          <Table
-            columns={columns}
-            data={filtered}
-            onRowClick={(row) => navigate(`/admin/students/${row.id}`)}
-          />
+          <Table columns={columns} data={filtered}
+            onRowClick={(row) => navigate(`/admin/students/${row.id}`)} />
         )}
       </Card>
     </MainLayout>
