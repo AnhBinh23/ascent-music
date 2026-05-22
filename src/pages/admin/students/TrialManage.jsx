@@ -3,30 +3,32 @@ import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
+import api from '../../../services/api';
 import { toast } from 'react-toastify';
 
 const STATUS_VARIANT = { pending: 'orange', contacted: 'blue', enrolled: 'green', cancelled: 'gray' };
 const STATUS_LABEL   = { pending: '⏳ Chờ xử lý', contacted: '📞 Đã liên hệ', enrolled: '✅ Đã nhập học', cancelled: '❌ Không tiếp tục' };
 
-const SAMPLE = [
-  { id: 'T1', name: 'Lê Thị Lan',    phone: '0911111111', instrument: 'Piano',    time: 'Buổi sáng', age: '6-12 tuổi', status: 'pending',   createdAt: new Date().toISOString() },
-  { id: 'T2', name: 'Nguyễn Văn Bảo', phone: '0922222222', instrument: 'Guitar',   time: 'Buổi chiều', age: '13-17 tuổi', status: 'contacted', createdAt: new Date(Date.now()-86400000).toISOString() },
-];
-
 const TrialManage = () => {
-  const [trials, setTrials] = useState([]);
+  const [trials, setTrials]   = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('trial_registrations') || '[]');
-    setTrials([...saved, ...SAMPLE]);
-  }, []);
+  const loadTrials = async () => {
+    try {
+      const data = await api.get('/trials');
+      setTrials(data.rows || []);
+    } catch (err) { toast.error(err.message); }
+    finally { setLoading(false); }
+  };
 
-  const updateStatus = (id, status) => {
-    const updated = trials.map(t => t.id === id ? { ...t, status } : t);
-    setTrials(updated);
-    const saved = updated.filter(t => t.id.startsWith('TRIAL_'));
-    localStorage.setItem('trial_registrations', JSON.stringify(saved));
-    toast.success('Cập nhật trạng thái!');
+  useEffect(() => { loadTrials(); }, []);
+
+  const updateStatus = async (id, status) => {
+    try {
+      await api.put(`/trials/${id}`, { status });
+      setTrials(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+      toast.success('Cập nhật trạng thái!');
+    } catch (err) { toast.error(err.message); }
   };
 
   const pending   = trials.filter(t => t.status === 'pending').length;
@@ -50,41 +52,49 @@ const TrialManage = () => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        {trials.map(t => (
-          <Card key={t.id}>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold text-sm flex-shrink-0">
-                  {t.name.charAt(0)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <p className="font-semibold text-gray-800">{t.name}</p>
-                    <Badge label={STATUS_LABEL[t.status]} variant={STATUS_VARIANT[t.status]} />
+      {loading ? (
+        <p className="text-center text-gray-400 py-10">Đang tải...</p>
+      ) : trials.length === 0 ? (
+        <Card>
+          <p className="text-center text-gray-400 py-10">Chưa có đăng ký học thử nào</p>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {trials.map(t => (
+            <Card key={t.id}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold text-sm flex-shrink-0">
+                    {t.name?.charAt(0)}
                   </div>
-                  <p className="text-sm text-gray-500">📱 {t.phone} · 🎵 {t.instrument}</p>
-                  <p className="text-xs text-gray-400">🕐 {t.time} · 👤 {t.age}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Đăng ký: {new Date(t.createdAt).toLocaleString('vi-VN')}
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <p className="font-semibold text-gray-800">{t.name}</p>
+                      <Badge label={STATUS_LABEL[t.status]} variant={STATUS_VARIANT[t.status]} />
+                    </div>
+                    <p className="text-sm text-gray-500">📱 {t.phone} · 🎵 {t.instrument}</p>
+                    <p className="text-xs text-gray-400">🕐 {t.time} · 👤 {t.age}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Đăng ký: {new Date(t.created_at).toLocaleString('vi-VN')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  {t.status === 'pending' && (
+                    <Button size="sm" onClick={() => updateStatus(t.id, 'contacted')}>📞 Đã liên hệ</Button>
+                  )}
+                  {t.status === 'contacted' && (
+                    <Button size="sm" variant="secondary" onClick={() => updateStatus(t.id, 'enrolled')}>✅ Nhập học</Button>
+                  )}
+                  {t.status !== 'cancelled' && t.status !== 'enrolled' && (
+                    <Button size="sm" variant="ghost" onClick={() => updateStatus(t.id, 'cancelled')}>❌ Từ chối</Button>
+                  )}
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5 flex-shrink-0">
-                {t.status === 'pending' && (
-                  <Button size="sm" onClick={() => updateStatus(t.id, 'contacted')}>📞 Đã liên hệ</Button>
-                )}
-                {t.status === 'contacted' && (
-                  <Button size="sm" variant="success" onClick={() => updateStatus(t.id, 'enrolled')}>✅ Nhập học</Button>
-                )}
-                {t.status !== 'cancelled' && t.status !== 'enrolled' && (
-                  <Button size="sm" variant="danger" onClick={() => updateStatus(t.id, 'cancelled')}>❌ Từ chối</Button>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </MainLayout>
   );
 };

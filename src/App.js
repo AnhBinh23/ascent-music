@@ -112,6 +112,7 @@ function App() {
               <Route path="classes"           element={<ClassList />} />
               <Route path="classes/new"       element={<ClassForm />} />
               <Route path="classes/:id"       element={<ClassDetail />} />
+              <Route path="classes/edit/:id"  element={<ClassForm />} />
               <Route path="schedule"          element={<ScheduleCalendar />} />
               <Route path="schedule/new"      element={<ScheduleForm />} />
               <Route path="tuition"           element={<TuitionList />} />
@@ -128,7 +129,7 @@ function App() {
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
-           {/* Staff Routes */}
+            {/* Staff Routes */}
             <Route path="/staff" element={<PrivateRoute roles={['staff']} />}>
               <Route index element={<StaffDashboard />} />
               <Route path="students"          element={<StudentList />} />
