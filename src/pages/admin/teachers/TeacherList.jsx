@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
 import Table from '../../../components/ui/Table';
@@ -13,7 +13,10 @@ import { toast } from 'react-toastify';
 const INSTRUMENT_VARIANT = { Piano: 'blue', Guitar: 'green', Violin: 'purple', 'Thanh nhạc': 'orange' };
 
 const TeacherList = () => {
-  const navigate = useNavigate();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const basePath   = location.pathname.startsWith('/staff') ? '/staff' : '/admin';
+
   const [teachers, setTeachers] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch]     = useState('');
@@ -64,9 +67,9 @@ const TeacherList = () => {
       render: (val) => (
         <div className="flex gap-2">
           <Button size="sm" variant="secondary"
-            onClick={(e) => { e.stopPropagation(); navigate(`/admin/teachers/${val}`); }}>Xem</Button>
+            onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/teachers/${val}`); }}>Xem</Button>
           <Button size="sm" variant="ghost"
-            onClick={(e) => { e.stopPropagation(); navigate(`/admin/teachers/edit/${val}`); }}>✏️</Button>
+            onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/teachers/edit/${val}`); }}>✏️</Button>
         </div>
       )
     },
@@ -78,13 +81,15 @@ const TeacherList = () => {
         <div className="flex-1">
           <SearchBar value={search} onChange={setSearch} placeholder="Tìm tên, SĐT, chuyên môn..." />
         </div>
-        <Button icon="💰" variant="secondary" onClick={() => navigate('/admin/salary')}>Bảng lương</Button>
-        <Button icon="➕" onClick={() => navigate('/admin/teachers/new')}>Thêm giáo viên</Button>
+        {basePath === '/admin' && (
+          <Button icon="💰" variant="secondary" onClick={() => navigate('/admin/salary')}>Bảng lương</Button>
+        )}
+        <Button icon="➕" onClick={() => navigate(`${basePath}/teachers/new`)}>Thêm giáo viên</Button>
       </div>
       <Card subtitle={`${filtered.length} giáo viên`}>
         {loading ? <Loading /> : (
           <Table columns={columns} data={filtered}
-            onRowClick={(row) => navigate(`/admin/teachers/${row.id}`)} />
+            onRowClick={(row) => navigate(`${basePath}/teachers/${row.id}`)} />
         )}
       </Card>
     </MainLayout>

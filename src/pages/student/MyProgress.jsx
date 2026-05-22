@@ -14,34 +14,48 @@ const MyProgress = () => {
   const [logs, setLogs]         = useState([]);
   const [stats, setStats]       = useState(null);
   const [loading, setLoading]   = useState(true);
+  // eslint-disable-next-line no-unused-vars
   const [studentId, setStudentId] = useState(null);
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        setLoading(true);
-        // Tìm student record
-        const allStudents = await api.get('/students');
-        const myStudent   = allStudents.rows?.find(s =>
-          s.phone === user?.phone || s.email === user?.email
-        );
-        const sid = myStudent?.id || user?.id;
-        setStudentId(sid);
+  const fetch = async () => {
+    try {
+      setLoading(true);
 
-        const [logData, attStats] = await Promise.all([
-          api.get(`/lesson-logs/student/${sid}`),
-          attendanceService.getStats(sid),
-        ]);
-        setLogs(logData.rows || []);
-        setStats(attStats);
-      } catch (err) {
-        toast.error(err.message);
-      } finally {
+      // Tìm student theo user_id
+      console.log('User ID:', user?.id);
+      const studentByUser = await api.get(`/students/by-user/${user?.id}`);
+      console.log('Student found:', studentByUser);
+      const sid = studentByUser.row?.id;
+      console.log('Student ID:', sid);
+
+      if (!sid) {
+        console.log('Không tìm thấy student record!');
         setLoading(false);
+        return;
       }
-    };
-    fetch();
-  }, [user]);
+
+      setStudentId(sid);
+
+      const [logData, attStats] = await Promise.all([
+        api.get(`/lesson-logs/student/${sid}`),
+        attendanceService.getStats(sid),
+      ]);
+
+      console.log('Logs:', logData);
+      console.log('Stats:', attStats);
+
+      setLogs(logData.rows || []);
+      setStats(attStats);
+    } catch (err) {
+      console.error('Error:', err.message);
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetch();
+}, [user]);
 
   const avgRating = logs.length > 0
     ? (logs.reduce((sum, l) => sum + Number(l.rating || 3), 0) / logs.length).toFixed(1)

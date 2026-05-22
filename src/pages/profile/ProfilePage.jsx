@@ -3,80 +3,90 @@ import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import { toast } from 'react-toastify';
 
-const ROLE_LABEL   = { admin: 'Super Admin', staff: 'Nhân viên', teacher: 'Giáo viên', student: 'Học viên' };
-const ROLE_VARIANT = { admin: 'red', staff: 'orange', teacher: 'blue', student: 'green' };
+const ROLE_LABEL = {
+  admin:   '🔴 Super Admin',
+  staff:   '🟠 Nhân viên',
+  teacher: '🔵 Giáo viên',
+  student: '🟢 Học viên',
+};
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
-
-  const [info, setInfo] = useState({
+  const [tab, setTab]         = useState('info');
+  const [form, setForm]       = useState({
     name:  user?.name  || '',
     phone: user?.phone || '',
     email: user?.email || '',
   });
-
   const [pwForm, setPwForm] = useState({
     currentPassword: '', newPassword: '', confirmPassword: '',
   });
+  const [saving, setSaving]   = useState(false);
+  const [showPw, setShowPw]   = useState({});
 
-  const [showPw, setShowPw]     = useState(false);
-  const [savingInfo, setSavingInfo] = useState(false);
-  const [savingPw, setSavingPw]   = useState(false);
-  const [tab, setTab] = useState('info');
+  const handleChange   = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handlePwChange = e => setPwForm({ ...pwForm, [e.target.name]: e.target.value });
 
-  const handleSaveInfo = async (e) => {
-    e.preventDefault();
-    if (!info.name || !info.phone) { toast.error('Điền đầy đủ thông tin!'); return; }
-    setSavingInfo(true);
-    await new Promise(r => setTimeout(r, 600));
-    updateUser(info);
-    toast.success('Cập nhật thông tin thành công!');
-    setSavingInfo(false);
+  const handleSaveInfo = async () => {
+    if (!form.name || !form.phone) { toast.error('Điền đầy đủ thông tin!'); return; }
+    setSaving(true);
+    try {
+      await api.put('/auth/profile', form);
+      updateUser(form);
+      toast.success('✅ Cập nhật thông tin thành công!');
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSavePw = async (e) => {
-    e.preventDefault();
-    if (!pwForm.currentPassword) { toast.error('Nhập mật khẩu hiện tại!'); return; }
-    if (pwForm.newPassword.length < 6) { toast.error('Mật khẩu mới tối thiểu 6 ký tự!'); return; }
-    if (pwForm.newPassword !== pwForm.confirmPassword) { toast.error('Mật khẩu không khớp!'); return; }
-    setSavingPw(true);
-    await new Promise(r => setTimeout(r, 600));
-    toast.success('Đổi mật khẩu thành công!');
-    setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    setSavingPw(false);
+  const handleChangePassword = async () => {
+    if (!pwForm.currentPassword || !pwForm.newPassword) { toast.error('Điền đầy đủ!'); return; }
+    if (pwForm.newPassword !== pwForm.confirmPassword) { toast.error('Mật khẩu mới không khớp!'); return; }
+    if (pwForm.newPassword.length < 6) { toast.error('Mật khẩu ít nhất 6 ký tự!'); return; }
+    setSaving(true);
+    try {
+      await api.put('/auth/password', {
+        currentPassword: pwForm.currentPassword,
+        newPassword:     pwForm.newPassword,
+      });
+      toast.success('✅ Đổi mật khẩu thành công!');
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <MainLayout title="Tài khoản của tôi">
-      {/* Avatar & Info */}
-      <Card className="mb-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center text-primary-700 text-3xl font-bold">
-            {user?.name?.charAt(0)?.toUpperCase()}
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">{user?.name}</h2>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-            <div className="mt-1">
-              <Badge label={ROLE_LABEL[user?.role]} variant={ROLE_VARIANT[user?.role]} />
-            </div>
-          </div>
+    <MainLayout title="Hồ sơ cá nhân">
+      {/* Avatar */}
+      <div className="flex items-center gap-4 mb-6 p-5 bg-white rounded-2xl border border-gray-100">
+        <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold text-2xl">
+          {user?.name?.charAt(0)?.toUpperCase()}
         </div>
-      </Card>
+        <div>
+          <p className="text-xl font-bold text-gray-800">{user?.name}</p>
+          <p className="text-sm text-gray-500">{ROLE_LABEL[user?.role]}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{user?.email}</p>
+        </div>
+      </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4 border-b border-gray-100">
+      <div className="flex gap-2 mb-5 border-b border-gray-100">
         {[
-          { key: 'info', label: '👤 Thông tin cá nhân' },
-          { key: 'password', label: '🔒 Đổi mật khẩu' },
+          { key: 'info',     label: '👤 Thông tin'   },
+          { key: 'password', label: '🔒 Mật khẩu'    },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`pb-3 px-4 text-sm font-medium border-b-2 transition-all
-              ${tab === t.key ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              ${tab === t.key ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'}`}>
             {t.label}
           </button>
         ))}
@@ -84,62 +94,63 @@ const ProfilePage = () => {
 
       {/* Tab thông tin */}
       {tab === 'info' && (
-        <Card title="Chỉnh sửa thông tin">
-          <form onSubmit={handleSaveInfo} className="flex flex-col gap-4 mt-2">
-            <Input label="Họ và tên" name="name" value={info.name}
-              onChange={e => setInfo({ ...info, name: e.target.value })}
-              required placeholder="Nguyễn Văn A" />
-            <Input label="Email" name="email" type="email" value={info.email}
-              onChange={e => setInfo({ ...info, email: e.target.value })}
-              required placeholder="email@gmail.com" icon="📧" />
-            <Input label="Số điện thoại" name="phone" value={info.phone}
-              onChange={e => setInfo({ ...info, phone: e.target.value })}
-              required placeholder="0901234567" icon="📱" />
-            <div className="flex justify-end">
-              <Button type="submit" loading={savingInfo} icon="💾">Lưu thông tin</Button>
+        <Card title="Thông tin cá nhân">
+          <div className="flex flex-col gap-4 mt-3">
+            <Input label="Họ và tên" name="name" value={form.name}
+              onChange={handleChange} required />
+            <Input label="Số điện thoại" name="phone" value={form.phone}
+              onChange={handleChange} icon="📱" />
+            <Input label="Email" name="email" type="email" value={form.email}
+              onChange={handleChange} icon="📧" />
+            <div className="p-3 bg-gray-50 rounded-xl">
+              <p className="text-sm text-gray-600">Vai trò: <span className="font-medium">{ROLE_LABEL[user?.role]}</span></p>
+              <p className="text-xs text-gray-400 mt-0.5">Không thể thay đổi vai trò</p>
             </div>
-          </form>
+            <Button loading={saving} icon="💾" onClick={handleSaveInfo}>
+              Lưu thông tin
+            </Button>
+          </div>
         </Card>
       )}
 
       {/* Tab đổi mật khẩu */}
       {tab === 'password' && (
         <Card title="Đổi mật khẩu">
-          <form onSubmit={handleSavePw} className="flex flex-col gap-4 mt-2">
-
-            {/* Mật khẩu hiện tại */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Mật khẩu hiện tại <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <input type={showPw ? 'text' : 'password'}
-                  value={pwForm.currentPassword}
-                  onChange={e => setPwForm({ ...pwForm, currentPassword: e.target.value })}
-                  placeholder="••••••••" className="input-field pr-20" />
-                <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600">
-                  {showPw ? '🙈 Ẩn' : '👁️ Hiện'}
-                </button>
+          <div className="flex flex-col gap-4 mt-3">
+            {[
+              { name: 'currentPassword', label: 'Mật khẩu hiện tại' },
+              { name: 'newPassword',     label: 'Mật khẩu mới'      },
+              { name: 'confirmPassword', label: 'Xác nhận mật khẩu' },
+            ].map(field => (
+              <div key={field.name} className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">{field.label}</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
+                  <input
+                    type={showPw[field.name] ? 'text' : 'password'}
+                    name={field.name}
+                    value={pwForm[field.name]}
+                    onChange={handlePwChange}
+                    className="input-field pl-10 pr-12"
+                    placeholder="••••••••"
+                  />
+                  <button type="button"
+                    onClick={() => setShowPw(prev => ({ ...prev, [field.name]: !prev[field.name] }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                    {showPw[field.name] ? '🙈 Ẩn' : '👁️ Hiện'}
+                  </button>
+                </div>
               </div>
-            </div>
-
-            <Input label="Mật khẩu mới" name="newPassword" type="password"
-              value={pwForm.newPassword}
-              onChange={e => setPwForm({ ...pwForm, newPassword: e.target.value })}
-              placeholder="Tối thiểu 6 ký tự" />
-
-            <Input label="Xác nhận mật khẩu mới" name="confirmPassword" type="password"
-              value={pwForm.confirmPassword}
-              onChange={e => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
-              placeholder="Nhập lại mật khẩu mới" />
+            ))}
 
             <div className="p-3 bg-blue-50 rounded-xl">
-              <p className="text-xs text-blue-700">💡 Mật khẩu tối thiểu 6 ký tự, nên kết hợp chữ và số.</p>
+              <p className="text-xs text-blue-700">💡 Mật khẩu phải có ít nhất 6 ký tự</p>
             </div>
 
-            <div className="flex justify-end">
-              <Button type="submit" loading={savingPw} icon="🔒">Đổi mật khẩu</Button>
-            </div>
-          </form>
+            <Button loading={saving} icon="🔒" onClick={handleChangePassword}>
+              Đổi mật khẩu
+            </Button>
+          </div>
         </Card>
       )}
     </MainLayout>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../../../components/ui/Card';
-import Badge from '../../../components/ui/Badge';
+
 import Button from '../../../components/ui/Button';
 import { toast } from 'react-toastify';
 
@@ -18,7 +18,7 @@ const BirthdayReminder = () => {
 
   useEffect(() => {
     const today    = new Date();
-    const todayMD  = `${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    
     const in7Days  = new Date(today.getTime() + 7 * 86400000);
     const in30Days = new Date(today.getTime() + 30 * 86400000);
 

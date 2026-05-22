@@ -10,11 +10,11 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
 const RATINGS = [
-  { value: 1, label: '⭐', desc: 'Yếu'    },
-  { value: 2, label: '⭐⭐', desc: 'TB'   },
-  { value: 3, label: '⭐⭐⭐', desc: 'Khá' },
-  { value: 4, label: '⭐⭐⭐⭐', desc: 'Tốt' },
-  { value: 5, label: '⭐⭐⭐⭐⭐', desc: 'Xuất sắc' },
+  { value: 1, label: '⭐',         desc: 'Yếu'      },
+  { value: 2, label: '⭐⭐',       desc: 'TB'        },
+  { value: 3, label: '⭐⭐⭐',     desc: 'Khá'       },
+  { value: 4, label: '⭐⭐⭐⭐',   desc: 'Tốt'       },
+  { value: 5, label: '⭐⭐⭐⭐⭐', desc: 'Xuất sắc'  },
 ];
 
 const EMPTY = {
@@ -22,15 +22,21 @@ const EMPTY = {
   content: '', skill: '', weakness: '', progress: '', homework: '', rating: 3,
 };
 
+const formatDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toLocaleDateString('vi-VN');
+};
+
 const LessonLog = () => {
   const { user }      = useAuth();
-  const [logs, setLogs]         = useState([]);
-  const [classes, setClasses]   = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [logs, setLogs]           = useState([]);
+  const [classes, setClasses]     = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editId, setEditId]     = useState(null);
-  const [form, setForm]         = useState(EMPTY);
-  const [saving, setSaving]     = useState(false);
+  const [editId, setEditId]       = useState(null);
+  const [form, setForm]           = useState(EMPTY);
+  const [saving, setSaving]       = useState(false);
   const [filterClass, setFilterClass] = useState('all');
   const [teacherId, setTeacherId] = useState(null);
 
@@ -38,15 +44,10 @@ const LessonLog = () => {
     const fetch = async () => {
       try {
         setLoading(true);
-        // Tìm teacher record
-        const allTeachers = await api.get('/teachers');
-        const myTeacher   = allTeachers.rows?.find(t =>
-          t.phone === user?.phone || t.email === user?.email
-        );
-        const tid = myTeacher?.id || user?.id;
+        const teacherByUser = await api.get(`/teachers/by-user/${user?.id}`);
+        const tid = teacherByUser.row?.id || user?.id;
         setTeacherId(tid);
 
-        // Lấy lớp và nhật ký
         const [classData, logData] = await Promise.all([
           api.get('/classes'),
           api.get(`/lesson-logs/teacher/${tid}`),
@@ -62,6 +63,11 @@ const LessonLog = () => {
     fetch();
   }, [user]);
 
+  const reloadLogs = async () => {
+    const logData = await api.get(`/lesson-logs/teacher/${teacherId}`);
+    setLogs(logData.rows || []);
+  };
+
   const handleSave = async () => {
     if (!form.class_id || !form.content) {
       toast.error('Chọn lớp và nhập nội dung!'); return;
@@ -75,8 +81,7 @@ const LessonLog = () => {
         await api.post('/lesson-logs', { ...form, teacher_id: teacherId });
         toast.success('Lưu nhật ký thành công!');
       }
-      const logData = await api.get(`/lesson-logs/teacher/${teacherId}`);
-      setLogs(logData.rows || []);
+      await reloadLogs();
       setShowModal(false);
       setForm(EMPTY);
       setEditId(null);
@@ -100,7 +105,8 @@ const LessonLog = () => {
 
   const handleEdit = (log) => {
     setForm({
-      class_id: log.class_id, date: log.date,
+      class_id: log.class_id,
+      date:     log.date?.split('T')[0] || log.date,
       content:  log.content  || '',
       skill:    log.skill    || '',
       weakness: log.weakness || '',
@@ -124,6 +130,7 @@ const LessonLog = () => {
 
   return (
     <MainLayout title="Nhật ký học tập">
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <select value={filterClass} onChange={e => setFilterClass(e.target.value)}
@@ -151,12 +158,21 @@ const LessonLog = () => {
             <Card key={log.id}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                  {/* Header */}
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
                     <p className="font-semibold text-gray-800">{log.class_name}</p>
-                    <Badge label={`📅 ${log.date}`} variant="gray" />
-                    <Badge label={RATINGS.find(r => r.value === log.rating)?.label || '⭐⭐⭐'} variant="orange" />
+                    <Badge label={`📅 ${formatDate(log.date)}`} variant="gray" />
+                    <Badge label={RATINGS.find(r => r.value === Number(log.rating))?.label || '⭐⭐⭐'} variant="orange" />
                   </div>
 
+                  {/* Tên học viên */}
+                  {log.student_names && (
+                    <p className="text-xs text-gray-500 mb-3">
+                      👤 Học viên: <span className="font-medium text-gray-700">{log.student_names}</span>
+                    </p>
+                  )}
+
+                  {/* Nội dung */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     {log.content && (
                       <div className="p-3 bg-blue-50 rounded-xl">
@@ -192,10 +208,8 @@ const LessonLog = () => {
                 </div>
 
                 <div className="flex flex-col gap-2 flex-shrink-0">
-                  <Button size="sm" variant="secondary"
-                    onClick={() => handleEdit(log)}>✏️</Button>
-                  <Button size="sm" variant="ghost"
-                    onClick={() => handleDelete(log.id)}>🗑️</Button>
+                  <Button size="sm" variant="secondary" onClick={() => handleEdit(log)}>✏️</Button>
+                  <Button size="sm" variant="ghost"     onClick={() => handleDelete(log.id)}>🗑️</Button>
                 </div>
               </div>
             </Card>
@@ -204,7 +218,8 @@ const LessonLog = () => {
       )}
 
       {/* Modal thêm/sửa */}
-      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setForm(EMPTY); setEditId(null); }}
+      <Modal isOpen={showModal}
+        onClose={() => { setShowModal(false); setForm(EMPTY); setEditId(null); }}
         title={editId ? 'Chỉnh sửa nhật ký' : 'Thêm nhật ký học'} size="lg"
         footer={<>
           <Button variant="secondary" onClick={() => { setShowModal(false); setForm(EMPTY); setEditId(null); }}>Hủy</Button>
@@ -244,16 +259,17 @@ const LessonLog = () => {
           </div>
 
           {[
-            { name: 'content',  label: '📚 Nội dung bài học *', placeholder: 'Hôm nay học bài...' },
-            { name: 'skill',    label: '✅ Kỹ năng đạt được',    placeholder: 'Học viên đã biết...' },
-            { name: 'weakness', label: '⚠️ Điểm cần cải thiện',  placeholder: 'Cần luyện thêm...' },
-            { name: 'progress', label: '📈 Tiến độ',             placeholder: 'Đã hoàn thành...' },
-            { name: 'homework', label: '📝 Bài tập về nhà',       placeholder: 'Về nhà luyện...' },
+            { name: 'content',  label: '📚 Nội dung bài học', placeholder: 'Hôm nay học bài...',   required: true  },
+            { name: 'skill',    label: '✅ Kỹ năng đạt được',  placeholder: 'Học viên đã biết...',  required: false },
+            { name: 'weakness', label: '⚠️ Cần cải thiện',     placeholder: 'Cần luyện thêm...',   required: false },
+            { name: 'progress', label: '📈 Tiến độ',           placeholder: 'Đã hoàn thành...',    required: false },
+            { name: 'homework', label: '📝 Bài tập về nhà',     placeholder: 'Về nhà luyện...',    required: false },
           ].map(field => (
             <div key={field.name} className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">{field.label}</label>
-              <textarea
-                value={form[field.name]}
+              <label className="text-sm font-medium text-gray-700">
+                {field.label} {field.required && <span className="text-red-500">*</span>}
+              </label>
+              <textarea value={form[field.name]}
                 onChange={e => setForm({ ...form, [field.name]: e.target.value })}
                 rows={2} className="input-field resize-none"
                 placeholder={field.placeholder} />

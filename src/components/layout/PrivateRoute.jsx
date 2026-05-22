@@ -5,13 +5,12 @@ import Loading from '../ui/Loading';
 
 const PrivateRoute = ({ roles = [] }) => {
   const { user, loading, isAuthenticated } = useAuth();
-
   if (loading) return <Loading fullScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (roles.length > 0 && !roles.includes(user.role)) {
-    return <Navigate to="/login" replace />;
+    // Redirect về trang chủ của role hiện tại
+    return <Navigate to={`/${user.role}`} replace />;
   }
-
   return <Outlet />;
 };
 

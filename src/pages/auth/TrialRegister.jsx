@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -9,7 +8,7 @@ const TIMES = ['Buổi sáng (8h-12h)', 'Buổi chiều (13h-17h)', 'Buổi tố
 const AGES  = ['Dưới 6 tuổi', '6-12 tuổi', '13-17 tuổi', '18-25 tuổi', 'Trên 25 tuổi'];
 
 const TrialRegister = () => {
-  const navigate = useNavigate();
+  
   const [form, setForm] = useState({
     name: '', phone: '', email: '', age: '6-12 tuổi',
     instrument: 'Piano', time: 'Buổi sáng (8h-12h)',

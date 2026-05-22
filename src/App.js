@@ -48,12 +48,11 @@ import AnnouncementManage from './pages/admin/announcements/AnnouncementManage';
 
 // Staff
 import StaffDashboard      from './pages/staff/Dashboard';
-import StaffStudentManage  from './pages/staff/StudentManage';
 import StaffScheduleManage from './pages/staff/ScheduleManage';
 import StaffTuitionCollect from './pages/staff/TuitionCollect';
-import TeacherView  from './pages/staff/TeacherView';
-import InvoicePage  from './pages/staff/InvoicePage';
-import EnrollmentPage from './pages/staff/EnrollmentPage';
+import InvoicePage         from './pages/staff/InvoicePage';
+import EnrollmentPage      from './pages/staff/EnrollmentPage';
+import CheckInView         from './pages/staff/CheckInView';
 
 // Teacher
 import TeacherDashboard from './pages/teacher/Dashboard';
@@ -129,17 +128,25 @@ function App() {
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
-            {/* Staff Routes */}
+           {/* Staff Routes */}
             <Route path="/staff" element={<PrivateRoute roles={['staff']} />}>
               <Route index element={<StaffDashboard />} />
-              <Route path="students" element={<StaffStudentManage />} />
-              <Route path="schedule" element={<StaffScheduleManage />} />
-              <Route path="tuition"  element={<StaffTuitionCollect />} />
-              <Route path="chat"     element={<ChatPage />} />
-              <Route path="profile"  element={<ProfilePage />} />
-              <Route path="teachers" element={<TeacherView />} />
-              <Route path="invoice"  element={<InvoicePage />} />
-              <Route path="enrollment" element={<EnrollmentPage />} />
+              <Route path="students"          element={<StudentList />} />
+              <Route path="students/new"      element={<StudentForm />} />
+              <Route path="students/:id"      element={<StudentDetail />} />
+              <Route path="students/edit/:id" element={<StudentForm />} />
+              <Route path="teachers"          element={<TeacherList />} />
+              <Route path="teachers/new"      element={<TeacherForm />} />
+              <Route path="teachers/:id"      element={<TeacherDetail />} />
+              <Route path="teachers/edit/:id" element={<TeacherForm />} />
+              <Route path="enrollment"        element={<EnrollmentPage />} />
+              <Route path="schedule"          element={<StaffScheduleManage />} />
+              <Route path="schedule/new"      element={<ScheduleForm />} />
+              <Route path="tuition"           element={<StaffTuitionCollect />} />
+              <Route path="invoice"           element={<InvoicePage />} />
+              <Route path="checkin"           element={<CheckInView />} />
+              <Route path="chat"              element={<ChatPage />} />
+              <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
             {/* Teacher Routes */}

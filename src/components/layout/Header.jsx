@@ -2,44 +2,74 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
 const TYPE_ICON = {
-  checkin:        '📋',
-  schedule_remind:'⏰',
-  tuition:        '💰',
-  material:       '📁',
-  dayoff:         '📅',
-  pending:        '🔔',
-  general:        '📢',
+  checkin:         '📋',
+  schedule_remind: '⏰',
+  tuition:         '💰',
+  material:        '📁',
+  dayoff:          '📅',
+  pending:         '🔔',
+  general:         '📢',
+  manual:          '📨',
 };
 
 const Header = ({ title = '' }) => {
   const { toggleSidebar } = useApp();
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user }          = useAuth();
+  const navigate          = useNavigate();
 
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showDropdown, setShowDropdown]   = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [readIds, setReadIds]             = useState(() =>
+    JSON.parse(localStorage.getItem('read_notif_ids') || '[]')
+  );
   const dropdownRef = useRef(null);
 
-  // Load thông báo
-  const loadNotifs = () => {
-    const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
-    const adminNotifs = user?.role === 'admin'
-      ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
-      : [];
-    const all = [...adminNotifs, ...appNotifs]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 20);
-    setNotifications(all);
+  // Load thông báo từ API + localStorage
+  const loadNotifs = async () => {
+    try {
+      // Thông báo từ MySQL
+      const data = await api.get('/notifications/history');
+      const dbNotifs = (data.rows || []).map(n => ({
+        id:        n.id,
+        title:     n.title,
+        message:   n.message,
+        type:      n.type || 'manual',
+        createdAt: n.created_at,
+        read:      readIds.includes(n.id),
+      }));
+
+      // Thông báo chấm công từ localStorage (admin)
+      const adminNotifs = user?.role === 'admin'
+        ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
+        : [];
+
+      const all = [...adminNotifs, ...dbNotifs]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 30);
+
+      setNotifications(all);
+    } catch {
+      // Fallback localStorage
+      const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
+      const adminNotifs = user?.role === 'admin'
+        ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
+        : [];
+      const all = [...adminNotifs, ...appNotifs]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 20);
+      setNotifications(all);
+    }
   };
 
   useEffect(() => {
-  loadNotifs();
-  const interval = setInterval(loadNotifs, 30000);
-  return () => clearInterval(interval);
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, [user]);
+    loadNotifs();
+    const interval = setInterval(loadNotifs, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, readIds]);
 
   // Đóng dropdown khi click ngoài
   useEffect(() => {
@@ -52,23 +82,31 @@ const Header = ({ title = '' }) => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAllRead = () => {
-    const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
-    const adminNotifs = JSON.parse(localStorage.getItem('admin_notifications') || '[]');
-    localStorage.setItem('app_notifications',   JSON.stringify(appNotifs.map(n => ({ ...n, read: true }))));
-    localStorage.setItem('admin_notifications', JSON.stringify(adminNotifs.map(n => ({ ...n, read: true }))));
-    loadNotifs();
-  };
+  const unreadCount = notifications.filter(n => !readIds.includes(n.id) && !n.read).length;
 
   const markRead = (id) => {
-    const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
+    const newIds = [...new Set([...readIds, id])];
+    setReadIds(newIds);
+    localStorage.setItem('read_notif_ids', JSON.stringify(newIds));
+    // Cập nhật admin notifications
     const adminNotifs = JSON.parse(localStorage.getItem('admin_notifications') || '[]');
-    localStorage.setItem('app_notifications',   JSON.stringify(appNotifs.map(n => n.id === id ? { ...n, read: true } : n)));
-    localStorage.setItem('admin_notifications', JSON.stringify(adminNotifs.map(n => n.id === id ? { ...n, read: true } : n)));
-    loadNotifs();
+    localStorage.setItem('admin_notifications',
+      JSON.stringify(adminNotifs.map(n => n.id === id ? { ...n, read: true } : n))
+    );
   };
+
+  const markAllRead = () => {
+    const allIds = notifications.map(n => n.id);
+    const newIds = [...new Set([...readIds, ...allIds])];
+    setReadIds(newIds);
+    localStorage.setItem('read_notif_ids', JSON.stringify(newIds));
+    const adminNotifs = JSON.parse(localStorage.getItem('admin_notifications') || '[]');
+    localStorage.setItem('admin_notifications',
+      JSON.stringify(adminNotifs.map(n => ({ ...n, read: true })))
+    );
+  };
+
+  const isRead = (n) => readIds.includes(n.id) || n.read;
 
   const timeAgo = (dateStr) => {
     if (!dateStr) return '';
@@ -108,7 +146,6 @@ const Header = ({ title = '' }) => {
           {/* Dropdown */}
           {showDropdown && (
             <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
-              {/* Header dropdown */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <p className="font-semibold text-gray-800 text-sm">
                   Thông báo {unreadCount > 0 && <span className="text-primary-600">({unreadCount} mới)</span>}
@@ -121,7 +158,6 @@ const Header = ({ title = '' }) => {
                 )}
               </div>
 
-              {/* Danh sách */}
               <div className="max-h-80 overflow-y-auto">
                 {notifications.length === 0 ? (
                   <div className="text-center py-10">
@@ -133,23 +169,21 @@ const Header = ({ title = '' }) => {
                     <div key={notif.id || i}
                       onClick={() => markRead(notif.id)}
                       className={`flex items-start gap-3 px-4 py-3 cursor-pointer border-b border-gray-50 transition-colors hover:bg-gray-50
-                        ${!notif.read ? 'bg-blue-50' : ''}`}>
+                        ${!isRead(notif) ? 'bg-blue-50' : ''}`}>
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0
-                        ${!notif.read ? 'bg-primary-100' : 'bg-gray-100'}`}>
+                        ${!isRead(notif) ? 'bg-primary-100' : 'bg-gray-100'}`}>
                         {TYPE_ICON[notif.type] || '📢'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${!notif.read ? 'font-semibold text-gray-800' : 'text-gray-700'} truncate`}>
+                        <p className={`text-sm ${!isRead(notif) ? 'font-semibold text-gray-800' : 'text-gray-700'} truncate`}>
                           {notif.title || (notif.teacherName && `${notif.teacherName} đã chấm công`)}
                         </p>
                         <p className="text-xs text-gray-500 truncate mt-0.5">
                           {notif.message || notif.className}
                         </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {timeAgo(notif.createdAt)}
-                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
                       </div>
-                      {!notif.read && (
+                      {!isRead(notif) && (
                         <div className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0 mt-1" />
                       )}
                     </div>
@@ -157,13 +191,12 @@ const Header = ({ title = '' }) => {
                 )}
               </div>
 
-              {/* Footer */}
               {user?.role === 'admin' && (
                 <div className="px-4 py-3 border-t border-gray-100">
                   <button
-                    onClick={() => { navigate('/admin/checkin'); setShowDropdown(false); }}
+                    onClick={() => { navigate('/admin/notifications'); setShowDropdown(false); }}
                     className="text-xs text-primary-600 hover:underline font-medium w-full text-center">
-                    Xem tất cả thông báo chấm công →
+                    Xem tất cả thông báo →
                   </button>
                 </div>
               )}
