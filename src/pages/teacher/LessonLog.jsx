@@ -1,166 +1,266 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import Input from '../../components/ui/Input';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
-const SAMPLE_CLASSES = [
-  { id: 'LH001', name: 'Piano cơ bản 01', students: ['Nguyễn Văn An'] },
-  { id: 'LH002', name: 'Guitar nhóm 01',  students: ['Trần Thị Bình', 'Lê Minh Châu', 'Hoàng Văn Em'] },
+const RATINGS = [
+  { value: 1, label: '⭐', desc: 'Yếu'    },
+  { value: 2, label: '⭐⭐', desc: 'TB'   },
+  { value: 3, label: '⭐⭐⭐', desc: 'Khá' },
+  { value: 4, label: '⭐⭐⭐⭐', desc: 'Tốt' },
+  { value: 5, label: '⭐⭐⭐⭐⭐', desc: 'Xuất sắc' },
 ];
 
-const SAMPLE_LOGS = [
-  { id: 1, classId: 'LH001', date: '2025-05-19', content: 'Luyện gam Đô trưởng, bài số 5', skill: 'Ngón tay linh hoạt hơn', weakness: 'Còn yếu tay trái', progress: 'Tiến bộ tốt', rating: '⭐⭐⭐⭐' },
-  { id: 2, classId: 'LH002', date: '2025-05-18', content: 'Hợp âm cơ bản C, G, Am', skill: 'Chuyển hợp âm nhanh', weakness: 'Tiếng đàn chưa đều', progress: 'Ổn định', rating: '⭐⭐⭐' },
-];
-
-const EMPTY_FORM = { date: new Date().toISOString().split('T')[0], content: '', skill: '', weakness: '', progress: '', rating: '⭐⭐⭐', homework: '' };
+const EMPTY = {
+  class_id: '', date: new Date().toISOString().split('T')[0],
+  content: '', skill: '', weakness: '', progress: '', homework: '', rating: 3,
+};
 
 const LessonLog = () => {
-  const [selectedClass, setSelectedClass] = useState(SAMPLE_CLASSES[0]);
-  const [logs, setLogs] = useState(SAMPLE_LOGS);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { user }      = useAuth();
+  const [logs, setLogs]         = useState([]);
+  const [classes, setClasses]   = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editId, setEditId]     = useState(null);
+  const [form, setForm]         = useState(EMPTY);
+  const [saving, setSaving]     = useState(false);
+  const [filterClass, setFilterClass] = useState('all');
+  const [teacherId, setTeacherId] = useState(null);
 
-  const classLogs = logs.filter(l => l.classId === selectedClass?.id);
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        setLoading(true);
+        // Tìm teacher record
+        const allTeachers = await api.get('/teachers');
+        const myTeacher   = allTeachers.rows?.find(t =>
+          t.phone === user?.phone || t.email === user?.email
+        );
+        const tid = myTeacher?.id || user?.id;
+        setTeacherId(tid);
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+        // Lấy lớp và nhật ký
+        const [classData, logData] = await Promise.all([
+          api.get('/classes'),
+          api.get(`/lesson-logs/teacher/${tid}`),
+        ]);
+        setClasses(classData.rows || []);
+        setLogs(logData.rows || []);
+      } catch (err) {
+        toast.error(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, [user]);
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-    if (!form.content) { toast.error('Vui lòng nhập nội dung buổi học!'); return; }
+  const handleSave = async () => {
+    if (!form.class_id || !form.content) {
+      toast.error('Chọn lớp và nhập nội dung!'); return;
+    }
     setSaving(true);
     try {
-      await new Promise(r => setTimeout(r, 600));
-      setLogs(prev => [{ id: Date.now(), classId: selectedClass.id, ...form }, ...prev]);
-      toast.success('Lưu nhật ký thành công!');
-      setForm(EMPTY_FORM);
-      setShowForm(false);
-    } catch { toast.error('Có lỗi xảy ra!'); }
-    finally { setSaving(false); }
+      if (editId) {
+        await api.put(`/lesson-logs/${editId}`, form);
+        toast.success('Cập nhật nhật ký thành công!');
+      } else {
+        await api.post('/lesson-logs', { ...form, teacher_id: teacherId });
+        toast.success('Lưu nhật ký thành công!');
+      }
+      const logData = await api.get(`/lesson-logs/teacher/${teacherId}`);
+      setLogs(logData.rows || []);
+      setShowModal(false);
+      setForm(EMPTY);
+      setEditId(null);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Xóa nhật ký này?')) return;
+    try {
+      await api.delete(`/lesson-logs/${id}`);
+      setLogs(prev => prev.filter(l => l.id !== id));
+      toast.success('Đã xóa!');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleEdit = (log) => {
+    setForm({
+      class_id: log.class_id, date: log.date,
+      content:  log.content  || '',
+      skill:    log.skill    || '',
+      weakness: log.weakness || '',
+      progress: log.progress || '',
+      homework: log.homework || '',
+      rating:   log.rating   || 3,
+    });
+    setEditId(log.id);
+    setShowModal(true);
+  };
+
+  const filtered = filterClass === 'all'
+    ? logs
+    : logs.filter(l => l.class_id === filterClass);
+
+  if (loading) return (
+    <MainLayout title="Nhật ký học tập">
+      <p className="text-center text-gray-400 py-20">Đang tải...</p>
+    </MainLayout>
+  );
 
   return (
     <MainLayout title="Nhật ký học tập">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Chọn lớp */}
-        <Card title="Lớp học">
-          <div className="flex flex-col gap-2">
-            {SAMPLE_CLASSES.map(cls => (
-              <button key={cls.id} onClick={() => setSelectedClass(cls)}
-                className={`text-left p-3 rounded-xl border transition-all
-                  ${selectedClass?.id === cls.id ? 'border-primary-500 bg-primary-50' : 'border-gray-100 hover:bg-gray-50'}`}>
-                <p className="text-sm font-medium text-gray-800">{cls.name}</p>
-                <p className="text-xs text-gray-500">{cls.students.join(', ')}</p>
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        {/* Nhật ký */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-500">{classLogs.length} nhật ký</p>
-            <Button icon="➕" onClick={() => setShowForm(!showForm)}>
-              {showForm ? 'Đóng' : 'Thêm nhật ký'}
-            </Button>
-          </div>
-
-          {/* Form thêm */}
-          {showForm && (
-            <Card title="Nhật ký buổi học mới">
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-gray-700">Ngày học</label>
-                    <input type="date" name="date" value={form.date}
-                      onChange={handleChange} className="input-field" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-gray-700">Đánh giá</label>
-                    <select name="rating" value={form.rating} onChange={handleChange} className="input-field">
-                      {['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐'].map(r => <option key={r}>{r}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">Nội dung đã học <span className="text-red-500">*</span></label>
-                  <textarea name="content" value={form.content} onChange={handleChange}
-                    rows={2} className="input-field resize-none" placeholder="Hôm nay học gì..." />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-gray-700">Kỹ năng đạt được</label>
-                    <textarea name="skill" value={form.skill} onChange={handleChange}
-                      rows={2} className="input-field resize-none" placeholder="Điểm tốt..." />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-gray-700">Điểm yếu cần luyện</label>
-                    <textarea name="weakness" value={form.weakness} onChange={handleChange}
-                      rows={2} className="input-field resize-none" placeholder="Cần cải thiện..." />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">Nhận xét tiến bộ</label>
-                  <textarea name="progress" value={form.progress} onChange={handleChange}
-                    rows={2} className="input-field resize-none" placeholder="Nhận xét chung..." />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">Bài tập về nhà</label>
-                  <textarea name="homework" value={form.homework} onChange={handleChange}
-                    rows={2} className="input-field resize-none" placeholder="Bài tập giao về nhà..." />
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>Hủy</Button>
-                  <Button type="submit" loading={saving} icon="💾">Lưu nhật ký</Button>
-                </div>
-              </form>
-            </Card>
-          )}
-
-          {/* Danh sách nhật ký */}
-          {classLogs.length === 0 ? (
-            <Card><p className="text-center text-gray-400 py-8">Chưa có nhật ký nào</p></Card>
-          ) : (
-            classLogs.map(log => (
-              <Card key={log.id}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-800">📅 {log.date}</span>
-                    <Badge label={log.rating} variant="orange" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                  <div className="p-3 bg-blue-50 rounded-xl">
-                    <p className="text-xs font-medium text-blue-600 mb-1">📖 Nội dung học</p>
-                    <p className="text-gray-700">{log.content}</p>
-                  </div>
-                  <div className="p-3 bg-green-50 rounded-xl">
-                    <p className="text-xs font-medium text-green-600 mb-1">✅ Kỹ năng đạt được</p>
-                    <p className="text-gray-700">{log.skill || '—'}</p>
-                  </div>
-                  <div className="p-3 bg-red-50 rounded-xl">
-                    <p className="text-xs font-medium text-red-600 mb-1">⚠️ Cần cải thiện</p>
-                    <p className="text-gray-700">{log.weakness || '—'}</p>
-                  </div>
-                  <div className="p-3 bg-purple-50 rounded-xl">
-                    <p className="text-xs font-medium text-purple-600 mb-1">📝 Bài tập về nhà</p>
-                    <p className="text-gray-700">{log.homework || '—'}</p>
-                  </div>
-                </div>
-                {log.progress && (
-                  <div className="mt-3 p-3 bg-gray-50 rounded-xl">
-                    <p className="text-xs font-medium text-gray-500 mb-1">💬 Nhận xét tiến bộ</p>
-                    <p className="text-sm text-gray-700">{log.progress}</p>
-                  </div>
-                )}
-              </Card>
-            ))
-          )}
-        </div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        <select value={filterClass} onChange={e => setFilterClass(e.target.value)}
+          className="input-field flex-1">
+          <option value="all">Tất cả lớp ({logs.length})</option>
+          {classes.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.name} ({logs.filter(l => l.class_id === c.id).length})
+            </option>
+          ))}
+        </select>
+        <Button icon="➕" onClick={() => { setForm(EMPTY); setEditId(null); setShowModal(true); }}>
+          Thêm nhật ký
+        </Button>
       </div>
+
+      {/* Danh sách */}
+      {filtered.length === 0 ? (
+        <Card>
+          <p className="text-center text-gray-400 py-10">Chưa có nhật ký nào</p>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {filtered.map(log => (
+            <Card key={log.id}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <p className="font-semibold text-gray-800">{log.class_name}</p>
+                    <Badge label={`📅 ${log.date}`} variant="gray" />
+                    <Badge label={RATINGS.find(r => r.value === log.rating)?.label || '⭐⭐⭐'} variant="orange" />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    {log.content && (
+                      <div className="p-3 bg-blue-50 rounded-xl">
+                        <p className="text-xs text-blue-600 font-medium mb-1">📚 Nội dung bài học</p>
+                        <p className="text-gray-700">{log.content}</p>
+                      </div>
+                    )}
+                    {log.skill && (
+                      <div className="p-3 bg-green-50 rounded-xl">
+                        <p className="text-xs text-green-600 font-medium mb-1">✅ Kỹ năng đạt được</p>
+                        <p className="text-gray-700">{log.skill}</p>
+                      </div>
+                    )}
+                    {log.weakness && (
+                      <div className="p-3 bg-red-50 rounded-xl">
+                        <p className="text-xs text-red-600 font-medium mb-1">⚠️ Điểm cần cải thiện</p>
+                        <p className="text-gray-700">{log.weakness}</p>
+                      </div>
+                    )}
+                    {log.progress && (
+                      <div className="p-3 bg-purple-50 rounded-xl">
+                        <p className="text-xs text-purple-600 font-medium mb-1">📈 Tiến độ</p>
+                        <p className="text-gray-700">{log.progress}</p>
+                      </div>
+                    )}
+                    {log.homework && (
+                      <div className="p-3 bg-orange-50 rounded-xl sm:col-span-2">
+                        <p className="text-xs text-orange-600 font-medium mb-1">📝 Bài tập về nhà</p>
+                        <p className="text-gray-700">{log.homework}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <Button size="sm" variant="secondary"
+                    onClick={() => handleEdit(log)}>✏️</Button>
+                  <Button size="sm" variant="ghost"
+                    onClick={() => handleDelete(log.id)}>🗑️</Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Modal thêm/sửa */}
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setForm(EMPTY); setEditId(null); }}
+        title={editId ? 'Chỉnh sửa nhật ký' : 'Thêm nhật ký học'} size="lg"
+        footer={<>
+          <Button variant="secondary" onClick={() => { setShowModal(false); setForm(EMPTY); setEditId(null); }}>Hủy</Button>
+          <Button loading={saving} icon="💾" onClick={handleSave}>Lưu nhật ký</Button>
+        </>}>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Lớp học <span className="text-red-500">*</span></label>
+              <select value={form.class_id}
+                onChange={e => setForm({ ...form, class_id: e.target.value })}
+                className="input-field">
+                <option value="">-- Chọn lớp --</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <Input label="Ngày học" name="date" type="date"
+              value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+          </div>
+
+          {/* Đánh giá */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Đánh giá buổi học</label>
+            <div className="flex gap-2">
+              {RATINGS.map(r => (
+                <button key={r.value} type="button"
+                  onClick={() => setForm({ ...form, rating: r.value })}
+                  className={`flex-1 py-2 rounded-xl text-sm border transition-all
+                    ${form.rating === r.value
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                  <p>{r.label}</p>
+                  <p className="text-xs opacity-70">{r.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {[
+            { name: 'content',  label: '📚 Nội dung bài học *', placeholder: 'Hôm nay học bài...' },
+            { name: 'skill',    label: '✅ Kỹ năng đạt được',    placeholder: 'Học viên đã biết...' },
+            { name: 'weakness', label: '⚠️ Điểm cần cải thiện',  placeholder: 'Cần luyện thêm...' },
+            { name: 'progress', label: '📈 Tiến độ',             placeholder: 'Đã hoàn thành...' },
+            { name: 'homework', label: '📝 Bài tập về nhà',       placeholder: 'Về nhà luyện...' },
+          ].map(field => (
+            <div key={field.name} className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">{field.label}</label>
+              <textarea
+                value={form[field.name]}
+                onChange={e => setForm({ ...form, [field.name]: e.target.value })}
+                rows={2} className="input-field resize-none"
+                placeholder={field.placeholder} />
+            </div>
+          ))}
+        </div>
+      </Modal>
     </MainLayout>
   );
 };
