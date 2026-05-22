@@ -28,7 +28,7 @@ const CheckIn = () => {
         // Lịch hôm nay
         const schedules = await scheduleService.getByTeacher(user?.id || 'teacher-001');
         const today = new Date().getDay() || 7;
-        const todaySchedule = schedules.filter(s => s.day_of_week == today);
+        const todaySchedule = schedules.filter(s => s.day_of_week === today);
         setTodayClasses(todaySchedule);
 
         // Lịch sử chấm công

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
-import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import Loading from '../../../components/ui/Loading';
 import scheduleService from '../../../services/scheduleService';

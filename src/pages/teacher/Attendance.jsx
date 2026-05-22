@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
 import attendanceService from '../../services/attendanceService';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
