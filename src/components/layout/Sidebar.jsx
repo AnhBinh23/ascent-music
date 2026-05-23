@@ -1,6 +1,7 @@
 import React, { useRef, useLayoutEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+
 let savedScrollPos = 0;
 
 const menus = {
@@ -21,6 +22,7 @@ const menus = {
     { path: '/admin/notifications', icon: '📨', label: 'Gửi thông báo'   },
     { path: '/admin/announcements', icon: '📣', label: 'Thông báo App'   },
     { path: '/admin/chat',          icon: '💬', label: 'Tin nhắn'        },
+    { path: '/admin/ai',            icon: '🤖', label: 'Trợ lý AI'       },
     { path: '/admin/settings',      icon: '⚙️', label: 'Tài khoản'       },
     { path: '/admin/profile',       icon: '👤', label: 'Hồ sơ của tôi'  },
   ],
@@ -46,6 +48,7 @@ const menus = {
     { path: '/teacher/notifications', icon: '📨', label: 'Gửi thông báo' },
     { path: '/teacher/materials',     icon: '📁', label: 'Tài liệu'      },
     { path: '/teacher/chat',          icon: '💬', label: 'Tin nhắn'      },
+    { path: '/teacher/ai',            icon: '🤖', label: 'Trợ lý AI'     },
     { path: '/teacher/profile',       icon: '👤', label: 'Hồ sơ của tôi' },
   ],
   student: [
@@ -56,6 +59,7 @@ const menus = {
     { path: '/student/progress',   icon: '📈', label: 'Tiến độ'        },
     { path: '/student/materials',  icon: '📁', label: 'Tài liệu'       },
     { path: '/student/chat',       icon: '💬', label: 'Tin nhắn'       },
+    { path: '/student/ai',         icon: '🤖', label: 'Hỏi AI'         },
     { path: '/student/profile',    icon: '👤', label: 'Hồ sơ của tôi' },
   ],
 };
@@ -75,9 +79,8 @@ const roleLabels = {
 };
 
 const Sidebar = () => {
-  const { user }        = useAuth();
-
-  const navRef          = useRef(null);
+  const { user } = useAuth();
+  const navRef   = useRef(null);
 
   useLayoutEffect(() => {
     if (navRef.current) {
@@ -89,12 +92,9 @@ const Sidebar = () => {
 
   return (
     <aside
-  className="w-60 bg-white border-r border-gray-100 flex flex-col"
-  style={{
-    height: '100dvh',
-    maxHeight: '-webkit-fill-available',
-  }}
->
+      className="w-60 bg-white border-r border-gray-100 flex flex-col"
+      style={{ height: '100dvh', maxHeight: '-webkit-fill-available' }}
+    >
       {/* Logo */}
       <div className="flex-shrink-0 flex items-center gap-3 px-5 py-5 border-b border-gray-100">
         <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center text-white text-lg">

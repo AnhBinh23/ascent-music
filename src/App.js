@@ -20,6 +20,10 @@ import ProfilePage from './pages/profile/ProfilePage';
 // Chat
 import ChatPage from './pages/chat/ChatPage';
 
+// AI
+import AIAssistant from './pages/admin/AIAssistant';
+import AIChat      from './pages/student/AIChat';
+
 // Admin
 import AdminDashboard     from './pages/admin/Dashboard';
 import StudentList        from './pages/admin/students/StudentList';
@@ -126,6 +130,7 @@ function App() {
               <Route path="notifications"     element={<NotificationPage />} />
               <Route path="announcements"     element={<AnnouncementManage />} />
               <Route path="chat"              element={<ChatPage />} />
+              <Route path="ai"               element={<AIAssistant />} />
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
@@ -161,6 +166,7 @@ function App() {
               <Route path="checkin"       element={<CheckIn />} />
               <Route path="notifications" element={<SendNotification />} />
               <Route path="chat"          element={<ChatPage />} />
+              <Route path="ai"            element={<AIAssistant />} />
               <Route path="profile"       element={<ProfilePage />} />
             </Route>
 
@@ -173,6 +179,7 @@ function App() {
               <Route path="progress"   element={<MyProgress />} />
               <Route path="materials"  element={<StudentMaterials />} />
               <Route path="chat"       element={<ChatPage />} />
+              <Route path="ai"         element={<AIChat />} />
               <Route path="profile"    element={<ProfilePage />} />
             </Route>
 
