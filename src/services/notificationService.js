@@ -1,5 +1,17 @@
+import api from './api'; // hoặc axios, tuỳ project dùng gì
+
+// Lấy thông báo từ backend
+export const getNotifications = async () => {
+  try {
+    const res = await api.get('/notifications');
+    return res.data.rows || [];
+  } catch (err) {
+    console.error('Lỗi lấy thông báo:', err);
+    return [];
+  }
+};
+
 export const checkUpcomingClasses = (schedule, role, userName) => {
-  // Giữ nguyên logic localStorage cho notifications
   return [];
 };
 

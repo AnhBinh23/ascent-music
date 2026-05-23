@@ -28,41 +28,40 @@ const Header = ({ title = '' }) => {
   const dropdownRef = useRef(null);
 
   // Load thông báo từ API + localStorage
-  const loadNotifs = async () => {
-    try {
-      // Thông báo từ MySQL
-      const data = await api.get('/notifications/history');
-      const dbNotifs = (data.rows || []).map(n => ({
-        id:        n.id,
-        title:     n.title,
-        message:   n.message,
-        type:      n.type || 'manual',
-        createdAt: n.created_at,
-        read:      readIds.includes(n.id),
-      }));
+ const loadNotifs = async () => {
+  try {
+    // Admin xem history, còn lại xem thông báo của mình
+    const endpoint = user?.role === 'admin' ? '/notifications/history' : '/notifications';
+    const data = await api.get(endpoint);
+    const dbNotifs = (data.rows || []).map(n => ({
+      id:        n.id,
+      title:     n.title,
+      message:   n.message,
+      type:      n.type || 'manual',
+      createdAt: n.created_at,
+      read:      readIds.includes(n.id),
+    }));
 
-      // Thông báo chấm công từ localStorage (admin)
-      const adminNotifs = user?.role === 'admin'
-        ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
-        : [];
+    const adminNotifs = user?.role === 'admin'
+      ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
+      : [];
 
-      const all = [...adminNotifs, ...dbNotifs]
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 30);
+    const all = [...adminNotifs, ...dbNotifs]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 30);
 
-      setNotifications(all);
-    } catch {
-      // Fallback localStorage
-      const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
-      const adminNotifs = user?.role === 'admin'
-        ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
-        : [];
-      const all = [...adminNotifs, ...appNotifs]
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 20);
-      setNotifications(all);
-    }
-  };
+    setNotifications(all);
+  } catch {
+    const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
+    const adminNotifs = user?.role === 'admin'
+      ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
+      : [];
+    const all = [...adminNotifs, ...appNotifs]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 20);
+    setNotifications(all);
+  }
+};
 
   useEffect(() => {
     loadNotifs();
