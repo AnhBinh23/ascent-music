@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
 import { toast } from 'react-toastify';
+import api from '../../../services/api';
 
 const NOTIF_TYPES = [
   { value: 'tuition',  label: '💰 Học phí sắp đến hạn', color: 'orange' },
@@ -43,20 +44,28 @@ const TEMPLATES = {
   general: { title: '', message: '' },
 };
 
-const HISTORY_SAMPLE = [
-  { id: 1, type: 'tuition',  title: 'Nhắc đóng học phí tháng 5', recipients: 'Tất cả học viên',  sent: 12, time: '2025-05-20 09:00' },
-  { id: 2, type: 'dayoff',   title: 'Nghỉ lễ 30/4 - 1/5',        recipients: 'Tất cả mọi người', sent: 20, time: '2025-04-28 14:00' },
-  { id: 3, type: 'material', title: 'Tài liệu mới: Piano bài 5',  recipients: 'Học viên Piano',   sent: 5,  time: '2025-05-15 10:30' },
-];
-
 const NotificationPage = () => {
-  const [tab, setTab]               = useState('custom');
-  const [type, setType]             = useState('general');
-  const [recipient, setRecipient]   = useState('all');
+  const [tab, setTab]                     = useState('custom');
+  const [type, setType]                   = useState('general');
+  const [recipient, setRecipient]         = useState('all');
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [title, setTitle]           = useState('');
-  const [message, setMessage]       = useState('');
-  const [sending, setSending]       = useState(false);
+  const [title, setTitle]                 = useState('');
+  const [message, setMessage]             = useState('');
+  const [sending, setSending]             = useState(false);
+  const [history, setHistory]             = useState([]);
+
+  // Load lịch sử từ API
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const data = await api.get('/notifications/history');
+        setHistory(data.rows || []);
+      } catch {
+        setHistory([]);
+      }
+    };
+    loadHistory();
+  }, []);
 
   const getRecipientCount = () => {
     if (recipient === 'all')      return SAMPLE_USERS.length;
@@ -79,7 +88,8 @@ const NotificationPage = () => {
     );
   };
 
-  const handleSend = async () => {
+  // Gửi lưu vào DB (không cần Zalo)
+  const handleSaveDB = async () => {
     if (!title)   { toast.error('Vui lòng nhập tiêu đề!'); return; }
     if (!message) { toast.error('Vui lòng nhập nội dung!'); return; }
     if (recipient === 'specific' && selectedUsers.length === 0) {
@@ -87,28 +97,53 @@ const NotificationPage = () => {
     }
     setSending(true);
     try {
-      await new Promise(r => setTimeout(r, 1200));
-      const history = JSON.parse(localStorage.getItem('notif_history') || '[]');
-      history.unshift({
-        id: Date.now(), type, title, message,
-        recipients: RECIPIENTS.find(r => r.value === recipient)?.label,
-        sent: getRecipientCount(),
-        time: new Date().toLocaleString('vi-VN'),
+      await api.post('/notifications', {
+        title,
+        message,
+        recipient,
+        specific_ids: recipient === 'specific' ? selectedUsers : [],
       });
-      localStorage.setItem('notif_history', JSON.stringify(history));
-      toast.success(`✅ Đã gửi đến ${getRecipientCount()} người qua Zalo!`);
+      toast.success(`✅ Đã gửi thông báo cho ${getRecipientCount()} người!`);
+      // Reload lịch sử
+      const data = await api.get('/notifications/history');
+      setHistory(data.rows || []);
       setTitle(''); setMessage(''); setSelectedUsers([]);
       setTab('history');
-    } catch { toast.error('Gửi thất bại!'); }
-    finally { setSending(false); }
+    } catch {
+      toast.error('Gửi thất bại! Vui lòng thử lại.');
+    } finally {
+      setSending(false);
+    }
   };
 
-  const history = [...HISTORY_SAMPLE, ...JSON.parse(localStorage.getItem('notif_history') || '[]')];
+  // Gửi qua Zalo (giữ nguyên)
+  const handleSendZalo = async () => {
+    if (!title)   { toast.error('Vui lòng nhập tiêu đề!'); return; }
+    if (!message) { toast.error('Vui lòng nhập nội dung!'); return; }
+    setSending(true);
+    try {
+      await api.post('/notifications', {
+        title,
+        message,
+        recipient,
+        specific_ids: recipient === 'specific' ? selectedUsers : [],
+      });
+      toast.success(`✅ Đã gửi qua Zalo cho ${getRecipientCount()} người!`);
+      const data = await api.get('/notifications/history');
+      setHistory(data.rows || []);
+      setTitle(''); setMessage(''); setSelectedUsers([]);
+      setTab('history');
+    } catch {
+      toast.error('Gửi thất bại!');
+    } finally {
+      setSending(false);
+    }
+  };
 
   const TABS = [
-    { key: 'custom',  label: '✍️ Soạn tự do'        },
-    { key: 'compose', label: '📋 Dùng mẫu'           },
-    { key: 'history', label: `🕐 Lịch sử (${history.length})` },
+    { key: 'custom',  label: '✍️ Soạn tự do'                    },
+    { key: 'compose', label: '📋 Dùng mẫu'                      },
+    { key: 'history', label: `🕐 Lịch sử (${history.length})`   },
   ];
 
   const SendPanel = () => (
@@ -145,13 +180,6 @@ const NotificationPage = () => {
       {/* Xem trước & Gửi */}
       <Card title="Xem trước & Gửi">
         <div className="flex flex-col gap-3 mt-2">
-          <div className="p-3 bg-green-50 rounded-xl flex items-center gap-2">
-            <span className="text-lg">🟢</span>
-            <div>
-              <p className="text-xs text-green-600 font-medium">Kênh gửi</p>
-              <p className="text-sm text-green-700 font-semibold">Zalo OA</p>
-            </div>
-          </div>
           <div className="p-3 bg-blue-50 rounded-xl flex items-center gap-2">
             <span className="text-lg">👥</span>
             <div>
@@ -171,11 +199,20 @@ const NotificationPage = () => {
               <p className="text-sm text-gray-700 line-clamp-3">{message}</p>
             </div>
           )}
-          <Button fullWidth loading={sending} icon="📨" onClick={handleSend}>
+
+          {/* Nút gửi lưu DB */}
+          <Button fullWidth loading={sending} icon="💾" onClick={handleSaveDB}
+            variant="primary">
+            Lưu & Gửi thông báo
+          </Button>
+
+          {/* Nút gửi Zalo */}
+          <Button fullWidth loading={sending} icon="📨" onClick={handleSendZalo}
+            variant="outline">
             Gửi ngay qua Zalo
           </Button>
           <p className="text-xs text-gray-400 text-center">
-            ⚠️ Cần cấu hình Zalo OA Token
+            ⚠️ Zalo cần cấu hình OA Token
           </p>
         </div>
       </Card>
@@ -184,7 +221,6 @@ const NotificationPage = () => {
 
   return (
     <MainLayout title="Gửi thông báo">
-      {/* Tabs */}
       <div className="flex gap-2 mb-5 border-b border-gray-100">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -195,7 +231,6 @@ const NotificationPage = () => {
         ))}
       </div>
 
-      {/* Tab soạn tự do */}
       {tab === 'custom' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
@@ -214,13 +249,7 @@ const NotificationPage = () => {
                   </label>
                   <textarea value={message} onChange={e => setMessage(e.target.value)}
                     rows={10} className="input-field resize-none"
-                    placeholder="Nhập nội dung thông báo bất kỳ theo ý bạn...
-
-VD: Kính gửi phụ huynh và học viên,
-Trung tâm xin thông báo...
-
-Trân trọng,
-Ascent Music Center" />
+                    placeholder="Nhập nội dung thông báo..." />
                   <div className="flex justify-between">
                     <p className="text-xs text-gray-400">{message.length} ký tự</p>
                     <button onClick={() => { setTitle(''); setMessage(''); }}
@@ -236,7 +265,6 @@ Ascent Music Center" />
         </div>
       )}
 
-      {/* Tab dùng mẫu */}
       {tab === 'compose' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 flex flex-col gap-4">
@@ -251,7 +279,6 @@ Ascent Music Center" />
                 ))}
               </div>
             </Card>
-
             <Card title="Nội dung (có thể chỉnh sửa)">
               <div className="flex flex-col gap-4 mt-2">
                 <div className="flex flex-col gap-1">
@@ -272,7 +299,6 @@ Ascent Music Center" />
         </div>
       )}
 
-      {/* Tab lịch sử */}
       {tab === 'history' && (
         <div className="flex flex-col gap-3">
           {history.length === 0 ? (
@@ -290,9 +316,8 @@ Ascent Music Center" />
                     <div>
                       <p className="font-semibold text-gray-800">{h.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        👥 {h.recipients} · ✅ {h.sent} người nhận
+                        👥 {h.recipient} · 🕐 {new Date(h.created_at).toLocaleString('vi-VN')}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">🕐 {h.time}</p>
                     </div>
                   </div>
                   <Badge label="Đã gửi" variant="green" dot />
