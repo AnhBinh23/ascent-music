@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import MainLayout from '../../../components/layout/MainLayout';
-import aiService from '../../../services/aiService';
-
+import aiService from '../../services/aiService';
 const QUICK_QUESTIONS = [
   'Học viên nào chưa đóng học phí tháng này?',
   'Hôm nay có bao nhiêu buổi học?',
