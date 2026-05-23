@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import MainLayout from '../../../components/layout/MainLayout';
+import MainLayout from '../../components/layout/MainLayout';
 import aiService from '../../services/aiService';
+
 const QUICK_QUESTIONS = [
   'Học viên nào chưa đóng học phí tháng này?',
   'Hôm nay có bao nhiêu buổi học?',
@@ -28,11 +29,9 @@ const AIAssistant = () => {
   const sendMessage = async (text) => {
     const question = text || input.trim();
     if (!question) return;
-
     setMessages(prev => [...prev, { role: 'user', text: question }]);
     setInput('');
     setLoading(true);
-
     try {
       const answer = await aiService.ask(question);
       setMessages(prev => [...prev, { role: 'ai', text: answer }]);
@@ -51,9 +50,8 @@ const AIAssistant = () => {
 
   return (
     <MainLayout title="Trợ lý AI">
-      <div className="flex flex-col h-full" style={{ height: 'calc(100dvh - 120px)' }}>
+      <div className="flex flex-col" style={{ height: 'calc(100dvh - 120px)' }}>
 
-        {/* Câu hỏi gợi ý */}
         <div className="flex gap-2 flex-wrap mb-4">
           {QUICK_QUESTIONS.map((q, i) => (
             <button key={i} onClick={() => sendMessage(q)}
@@ -63,7 +61,6 @@ const AIAssistant = () => {
           ))}
         </div>
 
-        {/* Chat messages */}
         <div className="flex-1 overflow-y-auto flex flex-col gap-3 mb-4 pr-1">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -96,7 +93,6 @@ const AIAssistant = () => {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
         <div className="flex gap-2 bg-white border border-gray-200 rounded-2xl px-4 py-2">
           <textarea
             value={input}
