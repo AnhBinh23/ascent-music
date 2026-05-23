@@ -12,23 +12,10 @@ const MainLayout = ({ children, title }) => {
       className="flex bg-gray-50 overflow-hidden"
       style={{ height: '100dvh' }}
     >
-      {/* Sidebar — desktop */}
+      {/* Sidebar — desktop only */}
       <div className="hidden md:flex">
         <Sidebar />
       </div>
-
-      {/* Sidebar — mobile overlay */}
-      {sidebarOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/30 z-30 md:hidden"
-            onClick={() => {}} 
-          />
-          <div className="fixed inset-0 z-40 md:hidden">
-            <Sidebar />
-          </div>
-        </>
-      )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -41,7 +28,7 @@ const MainLayout = ({ children, title }) => {
         </main>
       </div>
 
-      {/* Bottom nav — mobile */}
+      {/* Bottom nav — mobile only */}
       <BottomNav />
     </div>
   );

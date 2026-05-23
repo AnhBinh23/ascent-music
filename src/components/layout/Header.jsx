@@ -15,18 +15,34 @@ const TYPE_ICON = {
   manual:          '📨',
 };
 
+const roleLabels = {
+  admin:   'Super Admin',
+  staff:   'Nhân viên',
+  teacher: 'Giáo viên',
+  student: 'Học viên',
+};
+
+const roleColors = {
+  admin:   'bg-red-100 text-red-700',
+  staff:   'bg-orange-100 text-orange-700',
+  teacher: 'bg-blue-100 text-blue-700',
+  student: 'bg-green-100 text-green-700',
+};
+
 const Header = ({ title = '' }) => {
   const { toggleSidebar } = useApp();
-  const { user }          = useAuth();
+  const { user, logout }  = useAuth();
   const navigate          = useNavigate();
 
-  const [showDropdown, setShowDropdown]   = useState(false);
+  const [showNotif, setShowNotif]       = useState(false);
+  const [showProfile, setShowProfile]   = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [expandedId, setExpandedId]       = useState(null);
-  const [readIds, setReadIds]             = useState(() =>
+  const [expandedId, setExpandedId]     = useState(null);
+  const [readIds, setReadIds]           = useState(() =>
     JSON.parse(localStorage.getItem('read_notif_ids') || '[]')
   );
-  const dropdownRef = useRef(null);
+  const notifRef   = useRef(null);
+  const profileRef = useRef(null);
 
   const loadNotifs = async () => {
     try {
@@ -41,15 +57,12 @@ const Header = ({ title = '' }) => {
         createdAt: n.created_at,
         read:      readIds.includes(n.id),
       }));
-
       const adminNotifs = user?.role === 'admin'
         ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
         : [];
-
       const all = [...adminNotifs, ...dbNotifs]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 30);
-
       setNotifications(all);
     } catch {
       const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
@@ -72,10 +85,8 @@ const Header = ({ title = '' }) => {
 
   useEffect(() => {
     const handleClick = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowDropdown(false);
-        setExpandedId(null);
-      }
+      if (notifRef.current && !notifRef.current.contains(e.target))   setShowNotif(false);
+      if (profileRef.current && !profileRef.current.contains(e.target)) setShowProfile(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -122,6 +133,11 @@ const Header = ({ title = '' }) => {
     return `${Math.floor(hrs / 24)} ngày trước`;
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 md:px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -133,9 +149,11 @@ const Header = ({ title = '' }) => {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative" ref={dropdownRef}>
+
+        {/* Chuông thông báo */}
+        <div className="relative" ref={notifRef}>
           <button
-            onClick={() => { setShowDropdown(!showDropdown); if (!showDropdown) loadNotifs(); }}
+            onClick={() => { setShowNotif(!showNotif); setShowProfile(false); if (!showNotif) loadNotifs(); }}
             className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors">
             <span className="text-lg">🔔</span>
             {unreadCount > 0 && (
@@ -145,20 +163,18 @@ const Header = ({ title = '' }) => {
             )}
           </button>
 
-          {showDropdown && (
-            <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+          {showNotif && (
+            <div className="absolute right-0 top-12 w-80 md:w-96 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <p className="font-semibold text-gray-800 text-sm">
                   Thông báo {unreadCount > 0 && <span className="text-primary-600">({unreadCount} mới)</span>}
                 </p>
                 {unreadCount > 0 && (
-                  <button onClick={markAllRead}
-                    className="text-xs text-primary-600 hover:underline font-medium">
+                  <button onClick={markAllRead} className="text-xs text-primary-600 hover:underline font-medium">
                     Đọc tất cả
                   </button>
                 )}
               </div>
-
               <div className="max-h-[500px] overflow-y-auto">
                 {notifications.length === 0 ? (
                   <div className="text-center py-10">
@@ -180,8 +196,7 @@ const Header = ({ title = '' }) => {
                           <p className={`text-sm ${!isRead(notif) ? 'font-semibold text-gray-800' : 'text-gray-700'}`}>
                             {notif.title || (notif.teacherName && `${notif.teacherName} đã chấm công`)}
                           </p>
-                          <p className={`text-xs text-gray-500 mt-0.5 whitespace-pre-wrap
-                            ${expandedId === notif.id ? '' : 'line-clamp-2'}`}>
+                          <p className={`text-xs text-gray-500 mt-0.5 whitespace-pre-wrap ${expandedId === notif.id ? '' : 'line-clamp-2'}`}>
                             {notif.message || notif.className}
                           </p>
                           <div className="flex items-center justify-between mt-1">
@@ -199,11 +214,10 @@ const Header = ({ title = '' }) => {
                   ))
                 )}
               </div>
-
               {user?.role === 'admin' && (
                 <div className="px-4 py-3 border-t border-gray-100">
                   <button
-                    onClick={() => { navigate('/admin/notifications'); setShowDropdown(false); }}
+                    onClick={() => { navigate('/admin/notifications'); setShowNotif(false); }}
                     className="text-xs text-primary-600 hover:underline font-medium w-full text-center">
                     Xem tất cả thông báo →
                   </button>
@@ -213,11 +227,55 @@ const Header = ({ title = '' }) => {
           )}
         </div>
 
-        <button
-          onClick={() => navigate(`/${user?.role}/profile`)}
-          className="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-semibold text-sm hover:bg-primary-200 transition-colors">
-          {user?.name?.charAt(0)?.toUpperCase()}
-        </button>
+        {/* Avatar + dropdown profile */}
+        <div className="relative" ref={profileRef}>
+          <button
+            onClick={() => { setShowProfile(!showProfile); setShowNotif(false); }}
+            className="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-semibold text-sm hover:bg-primary-200 transition-colors">
+            {user?.name?.charAt(0)?.toUpperCase()}
+          </button>
+
+          {showProfile && (
+            <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+              {/* Thông tin user */}
+              <div className="px-4 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold text-lg flex-shrink-0">
+                    {user?.name?.charAt(0)?.toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 truncate">{user?.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${roleColors[user?.role]}`}>
+                      {roleLabels[user?.role]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tài khoản */}
+              <div className="py-2">
+                <button
+                  onClick={() => { navigate(`/${user?.role}/profile`); setShowProfile(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                  <span>👤</span>
+                  <span>Hồ sơ & Chỉnh sửa</span>
+                </button>
+              </div>
+
+              {/* Đăng xuất */}
+              <div className="border-t border-gray-100 py-2">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                  <span>🚪</span>
+                  <span>Đăng xuất</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </header>
   );
