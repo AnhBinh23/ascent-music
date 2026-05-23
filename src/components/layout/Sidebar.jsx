@@ -3,7 +3,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 
-// Nằm ngoài component — không reset khi remount
 let savedScrollPos = 0;
 
 const menus = {
@@ -28,17 +27,17 @@ const menus = {
     { path: '/admin/profile',       icon: '👤', label: 'Hồ sơ của tôi'  },
   ],
   staff: [
-  { path: '/staff',               icon: '🏠', label: 'Tổng quan'        },
-  { path: '/staff/students',      icon: '🎓', label: 'Học viên'         },
-  { path: '/staff/teachers',      icon: '👨‍🏫', label: 'Giáo viên'        },
-  { path: '/staff/enrollment',    icon: '📋', label: 'Đăng ký khóa học' },
-  { path: '/staff/schedule',      icon: '📅', label: 'Lịch học'         },
-  { path: '/staff/tuition',       icon: '💰', label: 'Thu học phí'      },
-  { path: '/staff/invoice',       icon: '🧾', label: 'Tạo hóa đơn'     },
-  { path: '/staff/checkin',       icon: '📊', label: 'Chấm công GV'     },
-  { path: '/staff/chat',          icon: '💬', label: 'Tin nhắn'         },
-  { path: '/staff/profile',       icon: '👤', label: 'Hồ sơ của tôi'   },
-],
+    { path: '/staff',               icon: '🏠', label: 'Tổng quan'        },
+    { path: '/staff/students',      icon: '🎓', label: 'Học viên'         },
+    { path: '/staff/teachers',      icon: '👨‍🏫', label: 'Giáo viên'        },
+    { path: '/staff/enrollment',    icon: '📋', label: 'Đăng ký khóa học' },
+    { path: '/staff/schedule',      icon: '📅', label: 'Lịch học'         },
+    { path: '/staff/tuition',       icon: '💰', label: 'Thu học phí'      },
+    { path: '/staff/invoice',       icon: '🧾', label: 'Tạo hóa đơn'     },
+    { path: '/staff/checkin',       icon: '📊', label: 'Chấm công GV'     },
+    { path: '/staff/chat',          icon: '💬', label: 'Tin nhắn'         },
+    { path: '/staff/profile',       icon: '👤', label: 'Hồ sơ của tôi'   },
+  ],
   teacher: [
     { path: '/teacher',               icon: '🏠', label: 'Tổng quan'      },
     { path: '/teacher/classes',       icon: '🎵', label: 'Lớp của tôi'   },
@@ -93,15 +92,20 @@ const Sidebar = () => {
   const navItems = menus[user?.role] || [];
 
   return (
-    <aside className={`
-      fixed top-0 left-0 h-full bg-white border-r border-gray-100 z-40
-      flex flex-col transition-all duration-300
-      ${sidebarOpen ? 'w-60' : 'w-0 overflow-hidden'}
-      md:relative md:flex md:w-60
-    `}>
-
+    <aside
+      className={`
+        fixed top-0 left-0 bg-white border-r border-gray-100 z-40
+        flex flex-col transition-all duration-300
+        ${sidebarOpen ? 'w-60' : 'w-0 overflow-hidden'}
+        md:relative md:flex md:w-60
+      `}
+      style={{
+        height: '100dvh',
+        maxHeight: '-webkit-fill-available',
+      }}
+    >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
+      <div className="flex-shrink-0 flex items-center gap-3 px-5 py-5 border-b border-gray-100">
         <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center text-white text-lg">
           🎵
         </div>
@@ -112,7 +116,7 @@ const Sidebar = () => {
       </div>
 
       {/* User info */}
-      <div className="px-4 py-4 border-b border-gray-100">
+      <div className="flex-shrink-0 px-4 py-4 border-b border-gray-100">
         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
           <div className="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-semibold text-sm flex-shrink-0">
             {user?.name?.charAt(0)?.toUpperCase()}
@@ -129,7 +133,7 @@ const Sidebar = () => {
       {/* Nav */}
       <nav
         ref={navRef}
-        className="flex-1 overflow-y-auto px-3 py-3"
+        className="flex-1 overflow-y-auto px-3 py-3 min-h-0"
         onScroll={(e) => { savedScrollPos = e.currentTarget.scrollTop; }}
       >
         {navItems.map((item) => (
@@ -150,8 +154,8 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="px-3 py-4 border-t border-gray-100">
+      {/* Logout — luôn hiển thị */}
+      <div className="flex-shrink-0 px-3 py-4 border-t border-gray-100">
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 transition-all"
@@ -160,7 +164,6 @@ const Sidebar = () => {
           <span>Đăng xuất</span>
         </button>
       </div>
-
     </aside>
   );
 };

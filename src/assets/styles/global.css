@@ -10,11 +10,22 @@
   box-sizing: border-box;
 }
 
+html {
+  height: -webkit-fill-available;
+}
+
 body {
   font-family: 'Be Vietnam Pro', sans-serif;
   background-color: #f8fafc;
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
 }
 
 ::-webkit-scrollbar {
@@ -26,6 +37,17 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 3px;
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  /* Tránh zoom khi focus input trên iOS */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
 }
 
 @layer components {
@@ -58,21 +80,5 @@ body {
   }
   .badge-gray {
     @apply bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-1 rounded-full;
-  }
-}
-
-/* Mobile responsive */
-html, body, #root {
-  height: 100%;
-}
-
-@media (max-width: 768px) {
-  html {
-    font-size: 14px;
-  }
-
-  /* Tránh zoom khi focus input trên iOS */
-  input, textarea, select {
-    font-size: 16px !important;
   }
 }
