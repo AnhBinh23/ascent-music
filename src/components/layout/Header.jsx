@@ -22,46 +22,46 @@ const Header = ({ title = '' }) => {
 
   const [showDropdown, setShowDropdown]   = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [expandedId, setExpandedId]       = useState(null);
   const [readIds, setReadIds]             = useState(() =>
     JSON.parse(localStorage.getItem('read_notif_ids') || '[]')
   );
   const dropdownRef = useRef(null);
 
-  // Load thông báo từ API + localStorage
- const loadNotifs = async () => {
-  try {
-    // Admin xem history, còn lại xem thông báo của mình
-    const endpoint = user?.role === 'admin' ? '/notifications/history' : '/notifications';
-    const data = await api.get(endpoint);
-    const dbNotifs = (data.rows || []).map(n => ({
-      id:        n.id,
-      title:     n.title,
-      message:   n.message,
-      type:      n.type || 'manual',
-      createdAt: n.created_at,
-      read:      readIds.includes(n.id),
-    }));
+  const loadNotifs = async () => {
+    try {
+      const endpoint = user?.role === 'admin' ? '/notifications/history' : '/notifications';
+      const data = await api.get(endpoint);
+      const dbNotifs = (data.rows || []).map(n => ({
+        id:        n.id,
+        title:     n.title,
+        message:   n.message,
+        type:      n.type || 'manual',
+        recipient: n.recipient,
+        createdAt: n.created_at,
+        read:      readIds.includes(n.id),
+      }));
 
-    const adminNotifs = user?.role === 'admin'
-      ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
-      : [];
+      const adminNotifs = user?.role === 'admin'
+        ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
+        : [];
 
-    const all = [...adminNotifs, ...dbNotifs]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 30);
+      const all = [...adminNotifs, ...dbNotifs]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 30);
 
-    setNotifications(all);
-  } catch {
-    const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
-    const adminNotifs = user?.role === 'admin'
-      ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
-      : [];
-    const all = [...adminNotifs, ...appNotifs]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 20);
-    setNotifications(all);
-  }
-};
+      setNotifications(all);
+    } catch {
+      const appNotifs   = JSON.parse(localStorage.getItem('app_notifications') || '[]');
+      const adminNotifs = user?.role === 'admin'
+        ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
+        : [];
+      const all = [...adminNotifs, ...appNotifs]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 20);
+      setNotifications(all);
+    }
+  };
 
   useEffect(() => {
     loadNotifs();
@@ -70,11 +70,11 @@ const Header = ({ title = '' }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, readIds]);
 
-  // Đóng dropdown khi click ngoài
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDropdown(false);
+        setExpandedId(null);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -87,7 +87,6 @@ const Header = ({ title = '' }) => {
     const newIds = [...new Set([...readIds, id])];
     setReadIds(newIds);
     localStorage.setItem('read_notif_ids', JSON.stringify(newIds));
-    // Cập nhật admin notifications
     const adminNotifs = JSON.parse(localStorage.getItem('admin_notifications') || '[]');
     localStorage.setItem('admin_notifications',
       JSON.stringify(adminNotifs.map(n => n.id === id ? { ...n, read: true } : n))
@@ -106,6 +105,11 @@ const Header = ({ title = '' }) => {
   };
 
   const isRead = (n) => readIds.includes(n.id) || n.read;
+
+  const toggleExpand = (id) => {
+    setExpandedId(prev => prev === id ? null : id);
+    markRead(id);
+  };
 
   const timeAgo = (dateStr) => {
     if (!dateStr) return '';
@@ -129,7 +133,6 @@ const Header = ({ title = '' }) => {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Chuông thông báo */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => { setShowDropdown(!showDropdown); if (!showDropdown) loadNotifs(); }}
@@ -142,9 +145,8 @@ const Header = ({ title = '' }) => {
             )}
           </button>
 
-          {/* Dropdown */}
           {showDropdown && (
-            <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+            <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <p className="font-semibold text-gray-800 text-sm">
                   Thông báo {unreadCount > 0 && <span className="text-primary-600">({unreadCount} mới)</span>}
@@ -157,7 +159,7 @@ const Header = ({ title = '' }) => {
                 )}
               </div>
 
-              <div className="max-h-80 overflow-y-auto">
+              <div className="max-h-[500px] overflow-y-auto">
                 {notifications.length === 0 ? (
                   <div className="text-center py-10">
                     <p className="text-3xl mb-2">🔕</p>
@@ -166,25 +168,33 @@ const Header = ({ title = '' }) => {
                 ) : (
                   notifications.map((notif, i) => (
                     <div key={notif.id || i}
-                      onClick={() => markRead(notif.id)}
-                      className={`flex items-start gap-3 px-4 py-3 cursor-pointer border-b border-gray-50 transition-colors hover:bg-gray-50
+                      onClick={() => toggleExpand(notif.id)}
+                      className={`px-4 py-3 cursor-pointer border-b border-gray-50 transition-colors hover:bg-gray-50
                         ${!isRead(notif) ? 'bg-blue-50' : ''}`}>
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0
-                        ${!isRead(notif) ? 'bg-primary-100' : 'bg-gray-100'}`}>
-                        {TYPE_ICON[notif.type] || '📢'}
+                      <div className="flex items-start gap-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0
+                          ${!isRead(notif) ? 'bg-primary-100' : 'bg-gray-100'}`}>
+                          {TYPE_ICON[notif.type] || '📢'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm ${!isRead(notif) ? 'font-semibold text-gray-800' : 'text-gray-700'}`}>
+                            {notif.title || (notif.teacherName && `${notif.teacherName} đã chấm công`)}
+                          </p>
+                          <p className={`text-xs text-gray-500 mt-0.5 whitespace-pre-wrap
+                            ${expandedId === notif.id ? '' : 'line-clamp-2'}`}>
+                            {notif.message || notif.className}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-xs text-gray-400">{timeAgo(notif.createdAt)}</p>
+                            <span className="text-xs text-primary-500 font-medium">
+                              {expandedId === notif.id ? '▲ Thu gọn' : '▼ Xem thêm'}
+                            </span>
+                          </div>
+                        </div>
+                        {!isRead(notif) && (
+                          <div className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0 mt-1" />
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${!isRead(notif) ? 'font-semibold text-gray-800' : 'text-gray-700'} truncate`}>
-                          {notif.title || (notif.teacherName && `${notif.teacherName} đã chấm công`)}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">
-                          {notif.message || notif.className}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
-                      </div>
-                      {!isRead(notif) && (
-                        <div className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0 mt-1" />
-                      )}
                     </div>
                   ))
                 )}
@@ -203,7 +213,6 @@ const Header = ({ title = '' }) => {
           )}
         </div>
 
-        {/* Avatar */}
         <button
           onClick={() => navigate(`/${user?.role}/profile`)}
           className="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-semibold text-sm hover:bg-primary-200 transition-colors">
