@@ -43,8 +43,6 @@ body {
   html {
     font-size: 14px;
   }
-
-  /* Tránh zoom khi focus input trên iOS */
   input, textarea, select {
     font-size: 16px !important;
   }
