@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState } from 'react';
 const AppContext = createContext(null);
 
 export const AppProvider = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // ← false để ẩn mặc định
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [globalLoading, setGlobalLoading] = useState(false);
 
