@@ -1,18 +1,64 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import BottomNav from './BottomNav';
+import { useApp } from '../../context/AppContext';
 
 const MainLayout = ({ children, title }) => {
+  const { sidebarOpen, toggleSidebar } = useApp();
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+    // Chỉ xử lý khi vuốt ngang nhiều hơn dọc
+    if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+    // Vuốt phải → mở sidebar
+    if (deltaX > 60 && !sidebarOpen) toggleSidebar();
+    // Vuốt trái → đóng sidebar
+    if (deltaX < -60 && sidebarOpen) toggleSidebar();
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
   return (
     <div
       className="flex bg-gray-50 overflow-hidden"
       style={{ height: '100dvh' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
-      {/* Sidebar — desktop only */}
+      {/* Sidebar — desktop */}
       <div className="hidden md:flex">
         <Sidebar />
       </div>
+
+      {/* Sidebar — mobile slide in */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 md:hidden
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <Sidebar />
+      </div>
+
+      {/* Overlay mờ khi sidebar mở */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -25,7 +71,7 @@ const MainLayout = ({ children, title }) => {
         </main>
       </div>
 
-      {/* Bottom nav — mobile only */}
+      {/* Bottom nav — mobile */}
       <BottomNav />
     </div>
   );
