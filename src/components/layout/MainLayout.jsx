@@ -8,8 +8,10 @@ const MainLayout = ({ children, title }) => {
   const { sidebarOpen } = useApp();
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-
+    <div
+      className="flex bg-gray-50 overflow-hidden"
+      style={{ height: '100dvh' }}
+    >
       {/* Sidebar — desktop */}
       <div className="hidden md:flex">
         <Sidebar />
@@ -17,9 +19,15 @@ const MainLayout = ({ children, title }) => {
 
       {/* Sidebar — mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-30 md:hidden">
-          <Sidebar />
-        </div>
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 z-30 md:hidden"
+            onClick={() => {}} 
+          />
+          <div className="fixed inset-0 z-40 md:hidden">
+            <Sidebar />
+          </div>
+        </>
       )}
 
       {/* Main content */}
@@ -27,7 +35,7 @@ const MainLayout = ({ children, title }) => {
         <Header title={title} />
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6"
+          className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6"
         >
           {children}
         </main>
