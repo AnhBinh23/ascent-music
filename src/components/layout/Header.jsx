@@ -34,12 +34,12 @@ const Header = ({ title = '' }) => {
   const { user, logout }  = useAuth();
   const navigate          = useNavigate();
 
-  const [showNotif, setShowNotif]       = useState(false);
-  const [showProfile, setShowProfile]   = useState(false);
+  const [showNotif, setShowNotif]         = useState(false);
+  const [showProfile, setShowProfile]     = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [expandedId, setExpandedId]     = useState(null);
-  const [readIds, setReadIds]           = useState(() =>
-    JSON.parse(localStorage.getItem('read_notif_ids') || '[]')
+  const [expandedId, setExpandedId]       = useState(null);
+  const [readIds, setReadIds]             = useState(() =>
+    JSON.parse(localStorage.getItem('read_notif_ids') || '[]').map(String)
   );
   const notifRef   = useRef(null);
   const profileRef = useRef(null);
@@ -55,7 +55,7 @@ const Header = ({ title = '' }) => {
         type:      n.type || 'manual',
         recipient: n.recipient,
         createdAt: n.created_at,
-        read:      readIds.includes(n.id),
+        read:      false,
       }));
       const adminNotifs = user?.role === 'admin'
         ? JSON.parse(localStorage.getItem('admin_notifications') || '[]')
@@ -81,31 +81,34 @@ const Header = ({ title = '' }) => {
     const interval = setInterval(loadNotifs, 30000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, readIds]);
+  }, [user]);
 
   useEffect(() => {
     const handleClick = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target))   setShowNotif(false);
+      if (notifRef.current && !notifRef.current.contains(e.target))     setShowNotif(false);
       if (profileRef.current && !profileRef.current.contains(e.target)) setShowProfile(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const unreadCount = notifications.filter(n => !readIds.includes(n.id) && !n.read).length;
+  const isRead = (n) => readIds.includes(String(n.id)) || n.read;
+
+  const unreadCount = notifications.filter(n => !isRead(n)).length;
 
   const markRead = (id) => {
-    const newIds = [...new Set([...readIds, id])];
+    const strId  = String(id);
+    const newIds = [...new Set([...readIds, strId])];
     setReadIds(newIds);
     localStorage.setItem('read_notif_ids', JSON.stringify(newIds));
     const adminNotifs = JSON.parse(localStorage.getItem('admin_notifications') || '[]');
     localStorage.setItem('admin_notifications',
-      JSON.stringify(adminNotifs.map(n => n.id === id ? { ...n, read: true } : n))
+      JSON.stringify(adminNotifs.map(n => String(n.id) === strId ? { ...n, read: true } : n))
     );
   };
 
   const markAllRead = () => {
-    const allIds = notifications.map(n => n.id);
+    const allIds = notifications.map(n => String(n.id));
     const newIds = [...new Set([...readIds, ...allIds])];
     setReadIds(newIds);
     localStorage.setItem('read_notif_ids', JSON.stringify(newIds));
@@ -114,8 +117,6 @@ const Header = ({ title = '' }) => {
       JSON.stringify(adminNotifs.map(n => ({ ...n, read: true })))
     );
   };
-
-  const isRead = (n) => readIds.includes(n.id) || n.read;
 
   const toggleExpand = (id) => {
     setExpandedId(prev => prev === id ? null : id);
@@ -133,16 +134,13 @@ const Header = ({ title = '' }) => {
     return `${Math.floor(hrs / 24)} ngày trước`;
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 md:px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <button onClick={toggleSidebar}
-          className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors text-gray-600 md:hidden">
+          className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors text-gray-600">
           ☰
         </button>
         <h1 className="text-base font-semibold text-gray-800">{title}</h1>
@@ -237,7 +235,6 @@ const Header = ({ title = '' }) => {
 
           {showProfile && (
             <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-lg border border-gray-100 z-50 overflow-hidden">
-              {/* Thông tin user */}
               <div className="px-4 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold text-lg flex-shrink-0">
@@ -252,18 +249,14 @@ const Header = ({ title = '' }) => {
                   </div>
                 </div>
               </div>
-
-              {/* Tài khoản */}
               <div className="py-2">
                 <button
                   onClick={() => { navigate(`/${user?.role}/profile`); setShowProfile(false); }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                  <span>👤</span>
-                  <span>Hồ sơ & Chỉnh sửa</span>
+                  <span>⚙️</span>
+                  <span>Tài khoản</span>
                 </button>
               </div>
-
-              {/* Đăng xuất */}
               <div className="border-t border-gray-100 py-2">
                 <button
                   onClick={handleLogout}

@@ -1,8 +1,6 @@
 import React, { useRef, useLayoutEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
-
 let savedScrollPos = 0;
 
 const menus = {
@@ -78,7 +76,7 @@ const roleLabels = {
 
 const Sidebar = () => {
   const { user }        = useAuth();
-  const { sidebarOpen } = useApp();
+
   const navRef          = useRef(null);
 
   useLayoutEffect(() => {
@@ -91,17 +89,12 @@ const Sidebar = () => {
 
   return (
     <aside
-      className={`
-        fixed top-0 left-0 bg-white border-r border-gray-100 z-40
-        flex flex-col transition-all duration-300
-        ${sidebarOpen ? 'w-60' : 'w-0 overflow-hidden'}
-        md:relative md:flex md:w-60
-      `}
-      style={{
-        height: '100dvh',
-        maxHeight: '-webkit-fill-available',
-      }}
-    >
+  className="w-60 bg-white border-r border-gray-100 flex flex-col"
+  style={{
+    height: '100dvh',
+    maxHeight: '-webkit-fill-available',
+  }}
+>
       {/* Logo */}
       <div className="flex-shrink-0 flex items-center gap-3 px-5 py-5 border-b border-gray-100">
         <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center text-white text-lg">
