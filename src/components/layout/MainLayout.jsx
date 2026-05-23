@@ -5,7 +5,7 @@ import BottomNav from './BottomNav';
 import { useApp } from '../../context/AppContext';
 
 const MainLayout = ({ children, title }) => {
-  const { sidebarOpen } = useApp();
+  
 
   return (
     <div
