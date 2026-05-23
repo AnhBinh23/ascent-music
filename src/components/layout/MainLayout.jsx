@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import BottomNav from './BottomNav';
 import { useApp } from '../../context/AppContext';
 
 const MainLayout = ({ children, title }) => {
@@ -18,15 +17,9 @@ const MainLayout = ({ children, title }) => {
     if (touchStartX.current === null) return;
     const deltaX = e.changedTouches[0].clientX - touchStartX.current;
     const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-
-    // Chỉ xử lý khi vuốt ngang nhiều hơn dọc
     if (Math.abs(deltaX) < Math.abs(deltaY)) return;
-
-    // Vuốt phải → mở sidebar
     if (deltaX > 60 && !sidebarOpen) toggleSidebar();
-    // Vuốt trái → đóng sidebar
     if (deltaX < -60 && sidebarOpen) toggleSidebar();
-
     touchStartX.current = null;
     touchStartY.current = null;
   };
@@ -52,7 +45,7 @@ const MainLayout = ({ children, title }) => {
         <Sidebar />
       </div>
 
-      {/* Overlay mờ khi sidebar mở */}
+      {/* Overlay khi sidebar mở */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
@@ -65,14 +58,11 @@ const MainLayout = ({ children, title }) => {
         <Header title={title} />
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6"
+          className="flex-1 overflow-y-auto p-4 md:p-6"
         >
           {children}
         </main>
       </div>
-
-      {/* Bottom nav — mobile */}
-      <BottomNav />
     </div>
   );
 };

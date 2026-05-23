@@ -1,5 +1,5 @@
 import React, { useRef, useLayoutEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 
@@ -77,10 +77,9 @@ const roleLabels = {
 };
 
 const Sidebar = () => {
-  const { user, logout } = useAuth();
-  const { sidebarOpen }  = useApp();
-  const navigate         = useNavigate();
-  const navRef           = useRef(null);
+  const { user }        = useAuth();
+  const { sidebarOpen } = useApp();
+  const navRef          = useRef(null);
 
   useLayoutEffect(() => {
     if (navRef.current) {
@@ -88,7 +87,6 @@ const Sidebar = () => {
     }
   });
 
-  const handleLogout = () => { logout(); navigate('/login'); };
   const navItems = menus[user?.role] || [];
 
   return (
