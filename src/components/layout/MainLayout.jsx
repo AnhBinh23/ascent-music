@@ -2,11 +2,8 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import BottomNav from './BottomNav';
-import { useApp } from '../../context/AppContext';
 
 const MainLayout = ({ children, title }) => {
-  
-
   return (
     <div
       className="flex bg-gray-50 overflow-hidden"
