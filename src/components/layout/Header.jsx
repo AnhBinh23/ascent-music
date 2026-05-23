@@ -30,7 +30,7 @@ const roleColors = {
 };
 
 const Header = ({ title = '' }) => {
-  const { toggleSidebar } = useApp();
+  const { toggleSidebar, darkMode, toggleDarkMode } = useApp();
   const { user, logout }  = useAuth();
   const navigate          = useNavigate();
 
@@ -93,7 +93,6 @@ const Header = ({ title = '' }) => {
   }, []);
 
   const isRead = (n) => readIds.includes(String(n.id)) || n.read;
-
   const unreadCount = notifications.filter(n => !isRead(n)).length;
 
   const markRead = (id) => {
@@ -255,6 +254,13 @@ const Header = ({ title = '' }) => {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                   <span>⚙️</span>
                   <span>Tài khoản</span>
+                </button>
+                {/* Dark mode toggle */}
+                <button
+                  onClick={() => { toggleDarkMode(); setShowProfile(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                  <span>{darkMode ? '☀️' : '🌙'}</span>
+                  <span>{darkMode ? 'Chế độ sáng' : 'Chế độ tối'}</span>
                 </button>
               </div>
               <div className="border-t border-gray-100 py-2">
