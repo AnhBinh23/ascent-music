@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import pushService from '../services/pushService';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -8,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Khi app khởi động — đọc user từ localStorage
   useEffect(() => {
     const savedUser  = localStorage.getItem('ascent_user');
     const savedToken = localStorage.getItem('ascent_token');
@@ -18,11 +19,15 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    // Đảm bảo email là string
-    if (typeof email !== 'string') {
-      throw new Error('Email không hợp lệ');
+  // Auto subscribe push khi user đăng nhập
+  useEffect(() => {
+    if (user) {
+      pushService.subscribe(api.post).catch(console.error);
     }
+  }, [user]);
+
+  const login = async (email, password) => {
+    if (typeof email !== 'string') throw new Error('Email không hợp lệ');
     setLoading(true);
     try {
       const res = await fetch(`${API}/auth/login`, {
