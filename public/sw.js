@@ -1,3 +1,11 @@
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.map(key => caches.delete(key)))
+    )
+  );
+});
+
 self.addEventListener('push', function(event) {
   const data = event.data?.json() || {};
   const title = data.title || 'Ascent Music';
