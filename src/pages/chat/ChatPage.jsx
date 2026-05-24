@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -13,39 +13,47 @@ const ROLE_LABEL = { admin: 'Admin', teacher: 'Giáo viên', student: 'Học vi�
 
 const ChatPage = () => {
   const { user }  = useAuth();
-  const [contacts, setContacts] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
+  const [contacts, setContacts]     = useState([]);
+  const [selected, setSelected]     = useState(null);
+  const [messages, setMessages]     = useState([]);
+  const [allUsers, setAllUsers]     = useState([]);
   const [totalUnread, setTotalUnread] = useState(0);
   const messagesEndRef = useRef(null);
   const pollRef        = useRef(null);
   const inputRef       = useRef(null);
 
-  useEffect(() => {
-    api.get('/auth/users').then(d => setAllUsers(d.rows || [])).catch(() => {});
-    loadContacts();
-  }, [user]);
-
-  // Poll tổng số chưa đọc mỗi 5 giây
-  useEffect(() => {
-    const loadUnread = async () => {
-      try {
-        const data = await api.get('/messages/unread-count');
-        setTotalUnread(data.count || 0);
-      } catch {}
-    };
-    loadUnread();
-    const interval = setInterval(loadUnread, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadContacts = async () => {
+  const loadContacts = useCallback(async () => {
     try {
       const data = await api.get('/messages');
       setContacts(data.rows || []);
     } catch {}
-  };
+  }, []);
+
+  const loadMessages = useCallback(async (contactId) => {
+    try {
+      const data = await api.get(`/messages/${contactId}`);
+      setMessages(data.rows || []);
+      await loadContacts();
+    } catch {}
+  }, [loadContacts]);
+
+  const loadUnread = useCallback(async () => {
+    try {
+      const data = await api.get('/messages/unread-count');
+      setTotalUnread(data.count || 0);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    api.get('/auth/users').then(d => setAllUsers(d.rows || [])).catch(() => {});
+    loadContacts();
+  }, [user, loadContacts]);
+
+  useEffect(() => {
+    loadUnread();
+    const interval = setInterval(loadUnread, 5000);
+    return () => clearInterval(interval);
+  }, [loadUnread]);
 
   useEffect(() => {
     if (!selected) return;
@@ -54,16 +62,7 @@ const ChatPage = () => {
       loadMessages(selected.contact_id || selected.id);
     }, 3000);
     return () => clearInterval(pollRef.current);
-  }, [selected]);
-
-  const loadMessages = async (contactId) => {
-    try {
-      const data = await api.get(`/messages/${contactId}`);
-      setMessages(data.rows || []);
-      // Reload contacts để cập nhật unread count
-      await loadContacts();
-    } catch {}
-  };
+  }, [selected, loadMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,6 +96,7 @@ const ChatPage = () => {
   if (selected) {
     return (
       <div className="flex flex-col bg-gray-50" style={{ height: '100dvh' }}>
+        {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 sticky top-0 z-10">
           <button onClick={() => { setSelected(null); clearInterval(pollRef.current); loadContacts(); }}
             className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 text-xl flex-shrink-0">
@@ -112,6 +112,7 @@ const ChatPage = () => {
           </div>
         </div>
 
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center flex-1 py-16">
@@ -148,6 +149,7 @@ const ChatPage = () => {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Input */}
         <div className="px-3 py-3 bg-white border-t border-gray-100 flex items-center gap-2">
           <input
             ref={inputRef}
@@ -182,7 +184,6 @@ const ChatPage = () => {
                 style={{ backgroundColor: color(c.role).bg }}>
                 {c.name?.charAt(0)}
               </div>
-              {/* Badge chưa đọc */}
               {c.unread_count > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                   {c.unread_count > 9 ? '9+' : c.unread_count}
