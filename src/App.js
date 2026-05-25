@@ -47,6 +47,7 @@ import ReportPage         from './pages/admin/reports/ReportPage';
 import AccountManage      from './pages/admin/settings/AccountManage';
 import PendingApprovals   from './pages/admin/settings/PendingApprovals';
 import CheckInManage      from './pages/admin/CheckInManage';
+import AttendanceManage   from './pages/admin/AttendanceManage';
 import NotificationPage   from './pages/admin/notifications/NotificationPage';
 import AnnouncementManage from './pages/admin/announcements/AnnouncementManage';
 
@@ -102,7 +103,7 @@ function App() {
 
             {/* Admin Routes */}
             <Route path="/admin" element={<PrivateRoute roles={['admin']} />}>
-              <Route index element={<AdminDashboard />} />
+              <Route index                    element={<AdminDashboard />} />
               <Route path="students"          element={<StudentList />} />
               <Route path="students/new"      element={<StudentForm />} />
               <Route path="students/:id"      element={<StudentDetail />} />
@@ -127,6 +128,7 @@ function App() {
               <Route path="settings"          element={<AccountManage />} />
               <Route path="pending"           element={<PendingApprovals />} />
               <Route path="checkin"           element={<CheckInManage />} />
+              <Route path="attendance"        element={<AttendanceManage />} />
               <Route path="notifications"     element={<NotificationPage />} />
               <Route path="announcements"     element={<AnnouncementManage />} />
               <Route path="chat"              element={<ChatPage />} />
@@ -136,7 +138,7 @@ function App() {
 
             {/* Staff Routes */}
             <Route path="/staff" element={<PrivateRoute roles={['staff']} />}>
-              <Route index element={<StaffDashboard />} />
+              <Route index                    element={<StaffDashboard />} />
               <Route path="students"          element={<StudentList />} />
               <Route path="students/new"      element={<StudentForm />} />
               <Route path="students/:id"      element={<StudentDetail />} />
@@ -157,30 +159,30 @@ function App() {
 
             {/* Teacher Routes */}
             <Route path="/teacher" element={<PrivateRoute roles={['teacher']} />}>
-              <Route index element={<TeacherDashboard />} />
-              <Route path="classes"       element={<MyClasses />} />
-              <Route path="attendance"    element={<Attendance />} />
-              <Route path="lesson-log"    element={<LessonLog />} />
-              <Route path="materials"     element={<TeacherMaterials />} />
-              <Route path="schedule"      element={<MySchedule />} />
-              <Route path="checkin"       element={<CheckIn />} />
-              <Route path="notifications" element={<SendNotification />} />
-              <Route path="chat"          element={<ChatPage />} />
-              <Route path="ai"            element={<AIAssistant />} />
-              <Route path="profile"       element={<ProfilePage />} />
+              <Route index                    element={<TeacherDashboard />} />
+              <Route path="classes"           element={<MyClasses />} />
+              <Route path="attendance"        element={<Attendance />} />
+              <Route path="lesson-log"        element={<LessonLog />} />
+              <Route path="materials"         element={<TeacherMaterials />} />
+              <Route path="schedule"          element={<MySchedule />} />
+              <Route path="checkin"           element={<CheckIn />} />
+              <Route path="notifications"     element={<SendNotification />} />
+              <Route path="chat"              element={<ChatPage />} />
+              <Route path="ai"               element={<AIAssistant />} />
+              <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
             {/* Student Routes */}
             <Route path="/student" element={<PrivateRoute roles={['student']} />}>
-              <Route index element={<StudentDashboard />} />
-              <Route path="schedule"   element={<StudentMySchedule />} />
-              <Route path="tuition"    element={<MyTuition />} />
-              <Route path="attendance" element={<MyAttendance />} />
-              <Route path="progress"   element={<MyProgress />} />
-              <Route path="materials"  element={<StudentMaterials />} />
-              <Route path="chat"       element={<ChatPage />} />
-              <Route path="ai"         element={<AIChat />} />
-              <Route path="profile"    element={<ProfilePage />} />
+              <Route index                    element={<StudentDashboard />} />
+              <Route path="schedule"          element={<StudentMySchedule />} />
+              <Route path="tuition"           element={<MyTuition />} />
+              <Route path="attendance"        element={<MyAttendance />} />
+              <Route path="progress"          element={<MyProgress />} />
+              <Route path="materials"         element={<StudentMaterials />} />
+              <Route path="chat"              element={<ChatPage />} />
+              <Route path="ai"               element={<AIChat />} />
+              <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
             {/* 404 */}
