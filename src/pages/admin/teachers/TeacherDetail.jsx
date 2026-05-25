@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
@@ -16,20 +16,18 @@ const Row = ({ label, value }) => (
 );
 
 const TeacherDetail = () => {
-  const { id } = useParams();
+  const { id }   = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/staff') ? '/staff' : '/admin';
+
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     teacherService.getById(id)
       .then(data => setTeacher(data))
-      .catch(() => setTeacher({
-        id, name: 'Nguyễn Thị Mai', phone: '0901111111',
-        email: 'mai@ascentmusic.vn', instrument: 'Piano',
-        experience: '5 năm', salaryType: 'Theo buổi',
-        salaryAmount: '200000', status: 'active', gender: 'Nữ',
-      }))
+      .catch(() => toast.error('Không tải được thông tin giáo viên'))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -38,8 +36,10 @@ const TeacherDetail = () => {
     try {
       await teacherService.delete(id);
       toast.success('Đã xóa giáo viên!');
-      navigate('/admin/teachers');
-    } catch { toast.error('Không thể xóa!'); }
+      navigate(`${basePath}/teachers`);
+    } catch {
+      toast.error('Không thể xóa!');
+    }
   };
 
   if (loading) return <MainLayout title="Chi tiết giáo viên"><Loading /></MainLayout>;
@@ -52,35 +52,48 @@ const TeacherDetail = () => {
         </div>
         <div className="flex-1">
           <h2 className="text-xl font-bold text-gray-800">{teacher?.name}</h2>
-          <div className="flex gap-2 mt-1">
+          <div className="flex gap-2 mt-1 flex-wrap">
             <Badge label={teacher?.instrument} variant="blue" />
-            <Badge label={teacher?.status === 'active' ? 'Đang dạy' : 'Nghỉ'} variant={teacher?.status === 'active' ? 'green' : 'gray'} dot />
+            <Badge
+              label={teacher?.status === 'active' ? 'Đang dạy' : 'Nghỉ'}
+              variant={teacher?.status === 'active' ? 'green' : 'gray'} dot
+            />
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" icon="✏️" onClick={() => navigate(`/admin/teachers/edit/${id}`)}>Chỉnh sửa</Button>
+          <Button variant="secondary" size="sm" icon="✏️"
+            onClick={() => navigate(`${basePath}/teachers/edit/${id}`)}>
+            Chỉnh sửa
+          </Button>
           <Button variant="danger" size="sm" onClick={handleDelete}>🗑️</Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card title="Thông tin cá nhân">
-          <Row label="Giới tính" value={teacher?.gender} />
+          <Row label="Giới tính"     value={teacher?.gender} />
           <Row label="Số điện thoại" value={teacher?.phone} />
-          <Row label="Email" value={teacher?.email} />
-          <Row label="Địa chỉ" value={teacher?.address} />
+          <Row label="Email"         value={teacher?.email} />
+          <Row label="Địa chỉ"       value={teacher?.address} />
         </Card>
         <Card title="Thông tin giảng dạy">
-          <Row label="Chuyên môn" value={teacher?.instrument} />
-          <Row label="Kinh nghiệm" value={teacher?.experience} />
-          <Row label="Hình thức lương" value={teacher?.salaryType} />
-          <Row label="Mức lương" value={teacher?.salaryAmount ? `${Number(teacher.salaryAmount).toLocaleString('vi-VN')}đ` : ''} />
+          <Row label="Chuyên môn"      value={teacher?.instrument} />
+          <Row label="Kinh nghiệm"     value={teacher?.experience} />
+          <Row label="Hình thức lương" value={teacher?.salary_type} />
+          <Row label="Mức lương"
+            value={teacher?.salary_amount
+              ? `${Number(teacher.salary_amount).toLocaleString('vi-VN')}đ`
+              : ''
+            }
+          />
           <Row label="Ghi chú" value={teacher?.note} />
         </Card>
       </div>
 
       <div className="mt-4">
-        <Button variant="secondary" onClick={() => navigate('/admin/teachers')}>← Quay lại</Button>
+        <Button variant="secondary" onClick={() => navigate(`${basePath}/teachers`)}>
+          ← Quay lại
+        </Button>
       </div>
     </MainLayout>
   );
