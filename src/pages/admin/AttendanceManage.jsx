@@ -14,10 +14,13 @@ const STATUS_CONFIG = {
 const AttendanceManage = () => {
   const [classes, setClasses]             = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
-  const [date, setDate]                   = useState(new Date().toISOString().split('T')[0]);
   const [records, setRecords]             = useState([]);
   const [loading, setLoading]             = useState(false);
   const [tab, setTab]                     = useState('date');
+
+  // Filter states
+  const [date, setDate]       = useState(new Date().toISOString().split('T')[0]);
+  const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     api.get('/classes').then(d => setClasses(d.rows || [])).catch(() => {});
@@ -38,10 +41,13 @@ const AttendanceManage = () => {
 
   useEffect(() => { loadAttendance(); }, [loadAttendance]);
 
-  const filtered = tab === 'date'
-    ? records.filter(r => r.date === date)
-    : records;
+  // Lọc theo tab
+  const filtered =
+    tab === 'date'  ? records.filter(r => r.date === date) :
+    tab === 'month' ? records.filter(r => r.date?.slice(0, 7) === filterMonth) :
+    records;
 
+  // Thống kê
   const stats = {
     present: filtered.filter(r => r.status === 'present').length,
     absent:  filtered.filter(r => r.status === 'absent').length,
@@ -49,6 +55,7 @@ const AttendanceManage = () => {
     excused: filtered.filter(r => r.status === 'excused').length,
   };
 
+  // Nhóm theo ngày
   const groupedByDate = filtered.reduce((acc, r) => {
     if (!acc[r.date]) acc[r.date] = [];
     acc[r.date].push(r);
@@ -56,19 +63,18 @@ const AttendanceManage = () => {
   }, {});
   const sortedDates = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
 
+  // Tháng có data
+  const availableMonths = [...new Set(records.map(r => r.date?.slice(0, 7)))].filter(Boolean).sort((a, b) => b.localeCompare(a));
+
   return (
     <MainLayout title="Quản lý điểm danh">
-      {/* Bộ lọc */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
+      {/* Chọn lớp */}
+      <div className="mb-5">
         <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)}
-          className="input-field flex-1">
+          className="input-field w-full">
           <option value="">-- Chọn lớp học --</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        {tab === 'date' && (
-          <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="input-field w-auto" />
-        )}
       </div>
 
       {!selectedClass ? (
@@ -77,6 +83,49 @@ const AttendanceManage = () => {
         </Card>
       ) : (
         <>
+          {/* Tab */}
+          <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-2xl">
+            <button onClick={() => setTab('date')}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all
+                ${tab === 'date' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
+              📅 Theo ngày
+            </button>
+            <button onClick={() => setTab('month')}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all
+                ${tab === 'month' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
+              🗓️ Theo tháng
+            </button>
+            <button onClick={() => setTab('all')}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all
+                ${tab === 'all' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
+              📋 Tất cả
+            </button>
+          </div>
+
+          {/* Filter */}
+          {tab === 'date' && (
+            <div className="mb-4">
+              <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                className="input-field w-full" />
+            </div>
+          )}
+          {tab === 'month' && (
+            <div className="mb-4">
+              <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+                className="input-field w-full">
+                {availableMonths.length === 0 ? (
+                  <option value={filterMonth}>
+                    {new Date(filterMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
+                  </option>
+                ) : availableMonths.map(m => (
+                  <option key={m} value={m}>
+                    {new Date(m + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-4 gap-3 mb-5">
             {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
@@ -88,23 +137,10 @@ const AttendanceManage = () => {
             ))}
           </div>
 
-          {/* Tab */}
-          <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-2xl">
-            <button onClick={() => setTab('date')}
-              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all
-                ${tab === 'date' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
-              📅 Theo ngày
-            </button>
-            <button onClick={() => setTab('all')}
-              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all
-                ${tab === 'all' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
-              📋 Tất cả
-            </button>
-          </div>
-
           {loading ? (
             <div className="text-center py-10 text-gray-400">Đang tải...</div>
           ) : tab === 'date' ? (
+            /* View theo ngày */
             <Card title={`Điểm danh ngày ${new Date(date).toLocaleDateString('vi-VN')}`}>
               {filtered.length === 0 ? (
                 <p className="text-center text-gray-400 py-8">Chưa có điểm danh ngày này</p>
@@ -121,21 +157,19 @@ const AttendanceManage = () => {
                           {r.note && <p className="text-xs text-gray-400 italic">"{r.note}"</p>}
                         </div>
                       </div>
-                      <Badge
-                        label={STATUS_CONFIG[r.status]?.label || r.status}
-                        variant={STATUS_CONFIG[r.status]?.variant || 'gray'}
-                        dot
-                      />
+                      <Badge label={STATUS_CONFIG[r.status]?.label || r.status}
+                        variant={STATUS_CONFIG[r.status]?.variant || 'gray'} dot />
                     </div>
                   ))}
                 </div>
               )}
             </Card>
           ) : (
+            /* View theo tháng hoặc tất cả — nhóm theo ngày */
             <div className="flex flex-col gap-4">
               {sortedDates.length === 0 ? (
                 <Card>
-                  <p className="text-center text-gray-400 py-8">Chưa có dữ liệu điểm danh</p>
+                  <p className="text-center text-gray-400 py-8">Chưa có dữ liệu</p>
                 </Card>
               ) : sortedDates.map(d => {
                 const items        = groupedByDate[d];
@@ -162,11 +196,8 @@ const AttendanceManage = () => {
                               {r.note && <p className="text-xs text-gray-400 italic">"{r.note}"</p>}
                             </div>
                           </div>
-                          <Badge
-                            label={STATUS_CONFIG[r.status]?.label || r.status}
-                            variant={STATUS_CONFIG[r.status]?.variant || 'gray'}
-                            dot
-                          />
+                          <Badge label={STATUS_CONFIG[r.status]?.label || r.status}
+                            variant={STATUS_CONFIG[r.status]?.variant || 'gray'} dot />
                         </div>
                       ))}
                     </div>
