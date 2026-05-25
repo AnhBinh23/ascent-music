@@ -1,22 +1,23 @@
+import React, { useEffect, useState, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import api from '../../services/api';
 
 const STATUS_CONFIG = {
-  present: { label: 'Có mặt',  variant: 'green',  icon: '✅' },
+  present: { label: 'Có mặt',   variant: 'green',  icon: '✅' },
   absent:  { label: 'Vắng mặt', variant: 'red',    icon: '❌' },
-  late:    { label: 'Đi muộn', variant: 'orange',  icon: '⏰' },
-  excused: { label: 'Có phép', variant: 'blue',    icon: '📝' },
+  late:    { label: 'Đi muộn',  variant: 'orange', icon: '⏰' },
+  excused: { label: 'Có phép',  variant: 'blue',   icon: '📝' },
 };
 
 const AttendanceManage = () => {
-  const [classes, setClasses]         = useState([]);
+  const [classes, setClasses]             = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
-  const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
-  const [records, setRecords]         = useState([]);
-  const [loading, setLoading]         = useState(false);
-  const [tab, setTab]                 = useState('date'); // 'date' | 'all'
+  const [date, setDate]                   = useState(new Date().toISOString().split('T')[0]);
+  const [records, setRecords]             = useState([]);
+  const [loading, setLoading]             = useState(false);
+  const [tab, setTab]                     = useState('date');
 
   useEffect(() => {
     api.get('/classes').then(d => setClasses(d.rows || [])).catch(() => {});
@@ -37,12 +38,10 @@ const AttendanceManage = () => {
 
   useEffect(() => { loadAttendance(); }, [loadAttendance]);
 
-  // Lọc theo ngày hoặc xem tất cả
   const filtered = tab === 'date'
     ? records.filter(r => r.date === date)
     : records;
 
-  // Thống kê
   const stats = {
     present: filtered.filter(r => r.status === 'present').length,
     absent:  filtered.filter(r => r.status === 'absent').length,
@@ -50,7 +49,6 @@ const AttendanceManage = () => {
     excused: filtered.filter(r => r.status === 'excused').length,
   };
 
-  // Nhóm theo ngày (tab tất cả)
   const groupedByDate = filtered.reduce((acc, r) => {
     if (!acc[r.date]) acc[r.date] = [];
     acc[r.date].push(r);
@@ -107,7 +105,6 @@ const AttendanceManage = () => {
           {loading ? (
             <div className="text-center py-10 text-gray-400">Đang tải...</div>
           ) : tab === 'date' ? (
-            /* View theo ngày */
             <Card title={`Điểm danh ngày ${new Date(date).toLocaleDateString('vi-VN')}`}>
               {filtered.length === 0 ? (
                 <p className="text-center text-gray-400 py-8">Chưa có điểm danh ngày này</p>
@@ -135,20 +132,21 @@ const AttendanceManage = () => {
               )}
             </Card>
           ) : (
-            /* View tất cả theo ngày */
             <div className="flex flex-col gap-4">
               {sortedDates.length === 0 ? (
                 <Card>
                   <p className="text-center text-gray-400 py-8">Chưa có dữ liệu điểm danh</p>
                 </Card>
               ) : sortedDates.map(d => {
-                const items = groupedByDate[d];
+                const items        = groupedByDate[d];
                 const presentCount = items.filter(r => r.status === 'present').length;
                 return (
                   <div key={d}>
                     <div className="flex items-center justify-between px-1 mb-2">
                       <p className="text-sm font-semibold text-gray-600 capitalize">
-                        {new Date(d).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' })}
+                        {new Date(d).toLocaleDateString('vi-VN', {
+                          weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric'
+                        })}
                       </p>
                       <p className="text-xs text-gray-400">{presentCount}/{items.length} có mặt</p>
                     </div>
