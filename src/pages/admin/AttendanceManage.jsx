@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import MainLayout from '../../../components/layout/MainLayout';
-import Card from '../../../components/ui/Card';
-import Badge from '../../../components/ui/Badge';
-import api from '../../../services/api';
+import MainLayout from '../../components/layout/MainLayout';
+import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
+import api from '../../services/api';
 
 const STATUS_CONFIG = {
   present: { label: 'Có mặt',  variant: 'green',  icon: '✅' },
