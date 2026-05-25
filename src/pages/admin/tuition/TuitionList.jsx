@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
 import Table from '../../../components/ui/Table';
@@ -8,6 +8,7 @@ import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 import SearchBar from '../../../components/shared/SearchBar';
 import TuitionReceipt from './TuitionReceipt';
+import api from '../../../services/api';
 import { toast } from 'react-toastify';
 
 const STATUS_VARIANT = {
@@ -16,59 +17,76 @@ const STATUS_VARIANT = {
   'Thanh toán 1 phần':'orange',
 };
 
-const SAMPLE = [
-  { id: 'HP001', studentName: 'Nguyễn Văn An',  instrument: 'Piano',      month: '05/2025', amount: 800000, paid: 800000, status: 'Đã thanh toán',    method: 'Tiền mặt',     date: '2025-05-01' },
-  { id: 'HP002', studentName: 'Trần Thị Bình',  instrument: 'Guitar',     month: '05/2025', amount: 700000, paid: 0,      status: 'Chưa thanh toán',  method: '',             date: '' },
-  { id: 'HP003', studentName: 'Lê Minh Châu',   instrument: 'Violin',     month: '05/2025', amount: 850000, paid: 400000, status: 'Thanh toán 1 phần',method: 'Chuyển khoản', date: '2025-05-10' },
-  { id: 'HP004', studentName: 'Hoàng Văn Em',   instrument: 'Piano',      month: '05/2025', amount: 800000, paid: 0,      status: 'Chưa thanh toán',  method: '',             date: '' },
-  { id: 'HP005', studentName: 'Phạm Thị Dung',  instrument: 'Thanh nhạc', month: '05/2025', amount: 750000, paid: 750000, status: 'Đã thanh toán',    method: 'Ví điện tử',   date: '2025-05-03' },
-];
-
 const TuitionList = () => {
-  const [data, setData]               = useState(SAMPLE);
-  const [filtered, setFiltered]       = useState(SAMPLE);
+  const [data, setData]               = useState([]);
+  const [filtered, setFiltered]       = useState([]);
+  const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState('');
   const [filterStatus, setFilterStatus] = useState('Tất cả');
   const [showModal, setShowModal]     = useState(false);
   const [selected, setSelected]       = useState(null);
   const [receiptData, setReceiptData] = useState(null);
   const [payForm, setPayForm]         = useState({ amount: '', method: 'Tiền mặt', note: '' });
+  const [saving, setSaving]           = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const res = await api.get('/tuition');
+      setData(res.rows || []);
+    } catch (err) {
+      toast.error('Không tải được dữ liệu học phí');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
     let result = data;
     if (filterStatus !== 'Tất cả') result = result.filter(d => d.status === filterStatus);
     if (search) result = result.filter(d =>
-      d.studentName?.toLowerCase().includes(search.toLowerCase())
+      d.student_name?.toLowerCase().includes(search.toLowerCase())
     );
     setFiltered(result);
   }, [search, filterStatus, data]);
 
   const totalRevenue = data
     .filter(d => d.status === 'Đã thanh toán')
-    .reduce((sum, d) => sum + d.paid, 0);
-  const totalUnpaid = data.filter(d => d.status !== 'Đã thanh toán').length;
+    .reduce((sum, d) => sum + Number(d.paid || 0), 0);
+  const totalUnpaid   = data.filter(d => d.status !== 'Đã thanh toán').length;
+  const totalPartial  = data.filter(d => d.status === 'Thanh toán 1 phần').length;
 
   const handleCollect = (row) => {
     setSelected(row);
-    setPayForm({ amount: row.amount - row.paid, method: 'Tiền mặt', note: '' });
+    setPayForm({ amount: Number(row.amount) - Number(row.paid || 0), method: 'Tiền mặt', note: '' });
     setShowModal(true);
   };
 
-  const handleSavePay = () => {
+  const handleSavePay = async () => {
     if (!payForm.amount) { toast.error('Nhập số tiền thu!'); return; }
-    const newPaid   = selected.paid + Number(payForm.amount);
-    const newStatus = newPaid >= selected.amount ? 'Đã thanh toán' : 'Thanh toán 1 phần';
-    setData(prev => prev.map(d => d.id === selected.id
-      ? { ...d, paid: newPaid, status: newStatus, method: payForm.method, date: new Date().toISOString().split('T')[0] }
-      : d
-    ));
-    toast.success('Thu học phí thành công!');
-    setShowModal(false);
+    setSaving(true);
+    try {
+      const newPaid   = Number(selected.paid || 0) + Number(payForm.amount);
+      const newStatus = newPaid >= Number(selected.amount) ? 'Đã thanh toán' : 'Thanh toán 1 phần';
+      await api.put(`/tuition/${selected.id}`, {
+        paid:   newPaid,
+        status: newStatus,
+        method: payForm.method,
+      });
+      toast.success('Thu học phí thành công!');
+      setShowModal(false);
+      await loadData(); // reload từ DB
+    } catch (err) {
+      toast.error(err.message || 'Có lỗi xảy ra!');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const columns = [
     {
-      key: 'studentName', label: 'Học viên',
+      key: 'student_name', label: 'Học viên',
       render: (val, row) => (
         <div>
           <p className="font-medium text-gray-800">{val}</p>
@@ -79,23 +97,23 @@ const TuitionList = () => {
     { key: 'month', label: 'Tháng' },
     {
       key: 'amount', label: 'Học phí',
-      render: (val) => <span className="font-medium">{val.toLocaleString('vi-VN')}đ</span>,
+      render: val => <span className="font-medium">{Number(val).toLocaleString('vi-VN')}đ</span>,
     },
     {
       key: 'paid', label: 'Đã thu',
-      render: (val) => (
-        <span className={`font-medium ${val > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-          {val.toLocaleString('vi-VN')}đ
+      render: val => (
+        <span className={`font-medium ${Number(val) > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+          {Number(val).toLocaleString('vi-VN')}đ
         </span>
       ),
     },
     {
       key: 'status', label: 'Trạng thái',
-      render: (val) => <Badge label={val} variant={STATUS_VARIANT[val]} dot />,
+      render: val => <Badge label={val} variant={STATUS_VARIANT[val] || 'gray'} dot />,
     },
     {
       key: 'method', label: 'Hình thức',
-      render: (val) => val || <span className="text-gray-300">—</span>,
+      render: val => val || <span className="text-gray-300">—</span>,
     },
     {
       key: 'id', label: '',
@@ -103,13 +121,13 @@ const TuitionList = () => {
         <div className="flex gap-2">
           {row.status !== 'Đã thanh toán' && (
             <Button size="sm" icon="💰"
-              onClick={(e) => { e.stopPropagation(); handleCollect(row); }}>
+              onClick={e => { e.stopPropagation(); handleCollect(row); }}>
               Thu tiền
             </Button>
           )}
           {row.status === 'Đã thanh toán' && (
             <Button size="sm" variant="secondary" icon="🖨️"
-              onClick={(e) => { e.stopPropagation(); setReceiptData(row); }}>
+              onClick={e => { e.stopPropagation(); setReceiptData(row); }}>
               In phiếu
             </Button>
           )}
@@ -120,7 +138,6 @@ const TuitionList = () => {
 
   return (
     <MainLayout title="Quản lý học phí">
-
       {/* Tổng quan */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <div className="card text-center">
@@ -136,9 +153,7 @@ const TuitionList = () => {
           <p className="text-xs text-gray-500 mt-1">Tổng học viên</p>
         </div>
         <div className="card text-center">
-          <p className="text-xl font-bold text-orange-500">
-            {data.filter(d => d.status === 'Thanh toán 1 phần').length}
-          </p>
+          <p className="text-xl font-bold text-orange-500">{totalPartial}</p>
           <p className="text-xs text-gray-500 mt-1">Thanh toán 1 phần</p>
         </div>
       </div>
@@ -158,26 +173,29 @@ const TuitionList = () => {
       </div>
 
       <Card subtitle={`${filtered.length} học viên`}>
-        <Table columns={columns} data={filtered} />
+        {loading
+          ? <div className="text-center py-10 text-gray-400">Đang tải...</div>
+          : <Table columns={columns} data={filtered} />
+        }
       </Card>
 
       {/* Modal thu tiền */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Thu học phí"
         footer={<>
           <Button variant="secondary" onClick={() => setShowModal(false)}>Hủy</Button>
-          <Button icon="💰" onClick={handleSavePay}>Xác nhận thu</Button>
+          <Button icon="💰" loading={saving} onClick={handleSavePay}>Xác nhận thu</Button>
         </>}>
         {selected && (
           <div className="flex flex-col gap-4">
             <div className="p-4 bg-gray-50 rounded-xl">
-              <p className="font-semibold text-gray-800">{selected.studentName}</p>
+              <p className="font-semibold text-gray-800">{selected.student_name}</p>
               <p className="text-sm text-gray-500">{selected.instrument} · Tháng {selected.month}</p>
               <p className="text-sm text-gray-600 mt-2">
-                Học phí: <span className="font-medium">{selected.amount.toLocaleString('vi-VN')}đ</span>
+                Học phí: <span className="font-medium">{Number(selected.amount).toLocaleString('vi-VN')}đ</span>
               </p>
               <p className="text-sm text-gray-600">
                 Còn lại: <span className="font-medium text-red-500">
-                  {(selected.amount - selected.paid).toLocaleString('vi-VN')}đ
+                  {(Number(selected.amount) - Number(selected.paid || 0)).toLocaleString('vi-VN')}đ
                 </span>
               </p>
             </div>
@@ -201,14 +219,10 @@ const TuitionList = () => {
         )}
       </Modal>
 
-      {/* Modal in phiếu thu */}
+      {/* Modal in phiếu */}
       {receiptData && (
-        <TuitionReceipt
-          data={receiptData}
-          onClose={() => setReceiptData(null)}
-        />
+        <TuitionReceipt data={receiptData} onClose={() => setReceiptData(null)} />
       )}
-
     </MainLayout>
   );
 };
