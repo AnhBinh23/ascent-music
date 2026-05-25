@@ -14,6 +14,7 @@ const menus = {
     { path: '/admin/classes',       icon: '🎵', label: 'Lớp học'         },
     { path: '/admin/schedule',      icon: '📅', label: 'Lịch học'        },
     { path: '/admin/tuition',       icon: '💰', label: 'Học phí'         },
+    { path: '/admin/attendance',    icon: '✅', label: 'Điểm danh HV'    },
     { path: '/admin/rooms',         icon: '🚪', label: 'Phòng học'       },
     { path: '/admin/instruments',   icon: '🎸', label: 'Nhạc cụ'         },
     { path: '/admin/reports',       icon: '📊', label: 'Báo cáo'         },
