@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import MainLayout from '../../../components/layout/MainLayout';
 import Card from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
-import Loading from '../../../components/ui/Loading';   
+import Loading from '../../../components/ui/Loading';
 import studentService from '../../../services/studentService';
+
 const INSTRUMENTS = ['Piano', 'Guitar', 'Violin', 'Thanh nhạc'];
-const LEVELS = ['Sơ cấp', 'Trung cấp', 'Nâng cao'];
+const LEVELS      = ['Sơ cấp', 'Trung cấp', 'Nâng cao'];
 
 const EMPTY = {
   name: '', dob: '', gender: 'Nam', phone: '',
@@ -17,17 +18,19 @@ const EMPTY = {
 };
 
 const StudentForm = () => {
-  const { id } = useParams();
+  const { id }   = useParams();
   const navigate = useNavigate();
-  const isEdit = !!id;
+  const location = useLocation();
+  const basePath = location.pathname.startsWith('/staff') ? '/staff' : '/admin';
+  const isEdit   = !!id;
 
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm]       = useState(EMPTY);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
 
   useEffect(() => {
     if (!isEdit) return;
-    const fetch = async () => {
+    const load = async () => {
       try {
         const data = await studentService.getById(id);
         if (data) setForm(data);
@@ -37,12 +40,10 @@ const StudentForm = () => {
         setFetching(false);
       }
     };
-    fetch();
+    load();
   }, [id, isEdit]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,18 +57,22 @@ const StudentForm = () => {
         await studentService.update(id, form);
         toast.success('Cập nhật học viên thành công!');
       } else {
-        await studentService.create({ ...form, id: `HV${Date.now()}`, createdAt: new Date().toISOString() });
+        await studentService.create(form);
         toast.success('Thêm học viên thành công!');
       }
-      navigate('/admin/students');
-    } catch {
-      toast.error('Có lỗi xảy ra, thử lại!');
+      navigate(`${basePath}/students`);
+    } catch (err) {
+      toast.error(err?.message || 'Có lỗi xảy ra, thử lại!');
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetching) return <MainLayout title={isEdit ? 'Chỉnh sửa học viên' : 'Thêm học viên'}><Loading /></MainLayout>;
+  if (fetching) return (
+    <MainLayout title={isEdit ? 'Chỉnh sửa học viên' : 'Thêm học viên'}>
+      <Loading />
+    </MainLayout>
+  );
 
   return (
     <MainLayout title={isEdit ? 'Chỉnh sửa học viên' : 'Thêm học viên'}>
@@ -80,7 +85,7 @@ const StudentForm = () => {
               <Input label="Họ và tên" name="name" value={form.name}
                 onChange={handleChange} required placeholder="Nguyễn Văn A" />
               <Input label="Ngày sinh" name="dob" type="date"
-                value={form.dob} onChange={handleChange} />
+                value={form.dob?.slice(0, 10)} onChange={handleChange} />
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Giới tính</label>
                 <select name="gender" value={form.gender} onChange={handleChange} className="input-field">
@@ -99,7 +104,9 @@ const StudentForm = () => {
           <Card title="Thông tin học tập">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Nhạc cụ học <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-gray-700">
+                  Nhạc cụ học <span className="text-red-500">*</span>
+                </label>
                 <select name="instrument" value={form.instrument} onChange={handleChange} className="input-field">
                   {INSTRUMENTS.map(i => <option key={i}>{i}</option>)}
                 </select>
@@ -133,7 +140,8 @@ const StudentForm = () => {
 
         {/* Actions */}
         <div className="flex gap-3 justify-end mt-4">
-          <Button variant="secondary" onClick={() => navigate('/admin/students')} type="button">
+          <Button variant="secondary" type="button"
+            onClick={() => navigate(`${basePath}/students`)}>
             Hủy
           </Button>
           <Button type="submit" loading={loading} icon={isEdit ? '💾' : '➕'}>
