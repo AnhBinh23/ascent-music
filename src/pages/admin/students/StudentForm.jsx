@@ -24,8 +24,8 @@ const StudentForm = () => {
   const basePath = location.pathname.startsWith('/staff') ? '/staff' : '/admin';
   const isEdit   = !!id;
 
-  const [form, setForm]       = useState(EMPTY);
-  const [loading, setLoading] = useState(false);
+  const [form, setForm]         = useState(EMPTY);
+  const [loading, setLoading]   = useState(false);
   const [fetching, setFetching] = useState(isEdit);
 
   useEffect(() => {
@@ -33,7 +33,10 @@ const StudentForm = () => {
     const load = async () => {
       try {
         const data = await studentService.getById(id);
-        if (data) setForm(data);
+        if (data) setForm({
+          ...data,
+          dob: data.dob ? data.dob.slice(0, 10) : '', // ← cắt về YYYY-MM-DD
+        });
       } catch {
         toast.error('Không tải được dữ liệu');
       } finally {
@@ -53,11 +56,15 @@ const StudentForm = () => {
     }
     setLoading(true);
     try {
+      const payload = {
+        ...form,
+        dob: form.dob ? form.dob.slice(0, 10) : null, // ← đảm bảo YYYY-MM-DD
+      };
       if (isEdit) {
-        await studentService.update(id, form);
+        await studentService.update(id, payload);
         toast.success('Cập nhật học viên thành công!');
       } else {
-        await studentService.create(form);
+        await studentService.create(payload);
         toast.success('Thêm học viên thành công!');
       }
       navigate(`${basePath}/students`);
@@ -79,13 +86,12 @@ const StudentForm = () => {
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-          {/* Thông tin cá nhân */}
           <Card title="Thông tin cá nhân">
             <div className="flex flex-col gap-4">
               <Input label="Họ và tên" name="name" value={form.name}
                 onChange={handleChange} required placeholder="Nguyễn Văn A" />
               <Input label="Ngày sinh" name="dob" type="date"
-                value={form.dob?.slice(0, 10)} onChange={handleChange} />
+                value={form.dob} onChange={handleChange} />
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Giới tính</label>
                 <select name="gender" value={form.gender} onChange={handleChange} className="input-field">
@@ -100,7 +106,6 @@ const StudentForm = () => {
             </div>
           </Card>
 
-          {/* Thông tin học tập */}
           <Card title="Thông tin học tập">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
@@ -138,7 +143,6 @@ const StudentForm = () => {
           </Card>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 justify-end mt-4">
           <Button variant="secondary" type="button"
             onClick={() => navigate(`${basePath}/students`)}>
