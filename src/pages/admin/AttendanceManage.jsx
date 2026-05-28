@@ -120,7 +120,6 @@ const SessionModal = ({ student, classId, className, onClose }) => {
 // ── Attendance Table ───────────────────────────────────────────────────────────
 const AttendanceTable = ({ classId, filterMonth }) => {
   const [tableData, setTableData]     = useState([]);
-  const [, setMaxSessions] = useState(0);
   const [loading, setLoading]         = useState(false);
   const scrollRef = useRef(null);
 
@@ -130,7 +129,7 @@ const AttendanceTable = ({ classId, filterMonth }) => {
       ? '/attendance/all-table'
       : `/attendance/table/${classId}`;
     api.get(url)
-      .then(d => { setTableData(d.rows || []); setMaxSessions(d.maxSessions || 0); })
+      .then(d => { setTableData(d.rows || []); })
       .catch(err => console.error(err.message))
       .finally(() => setLoading(false));
   }, [classId]);
