@@ -122,6 +122,11 @@ function App() {
               <Route path="schedule/new"      element={<ScheduleForm />} />
               <Route path="tuition"           element={<TuitionList />} />
               <Route path="tuition/report"    element={<TuitionReport />} />
+              {/* ── Tính năng nhân viên cho Admin ── */}
+              <Route path="enrollment"        element={<EnrollmentPage />} />
+              <Route path="invoice"           element={<InvoicePage />} />
+              <Route path="tuition-collect"   element={<StaffTuitionCollect />} />
+              {/* ────────────────────────────────── */}
               <Route path="rooms"             element={<RoomList />} />
               <Route path="instruments"       element={<InstrumentList />} />
               <Route path="reports"           element={<ReportPage />} />
