@@ -120,7 +120,7 @@ const SessionModal = ({ student, classId, className, onClose }) => {
 // ── Attendance Table ───────────────────────────────────────────────────────────
 const AttendanceTable = ({ classId, filterMonth }) => {
   const [tableData, setTableData]     = useState([]);
-  const [maxSessions, setMaxSessions] = useState(0);
+  const [, setMaxSessions] = useState(0);
   const [loading, setLoading]         = useState(false);
   const scrollRef = useRef(null);
 
