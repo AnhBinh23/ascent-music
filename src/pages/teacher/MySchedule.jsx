@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef, useCallback, useContext } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import api from '../../services/api';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
 const DAYS        = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
@@ -106,7 +106,7 @@ const DetailModal = ({ event, onClose }) => {
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 const MySchedule = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const gridRef     = useRef(null);
   const gridWrapRef = useRef(null);
   const dragData    = useRef(null);
