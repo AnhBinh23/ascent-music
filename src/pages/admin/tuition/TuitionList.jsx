@@ -349,3 +349,5 @@ const TuitionList = () => {
 };
 
 export default TuitionList;
+
+;
