@@ -14,9 +14,9 @@ const STATUS_CONFIG = {
 const getWarning = (attended, total) => {
   if (!total) return null;
   const rem = total - attended;
-  if (rem <= 0) return { label: 'Hết khóa',        color: 'bg-red-100 text-red-600 border-red-200',         icon: '🔴' };
-  if (rem <= 2) return { label: `Còn ${rem} buổi`, color: 'bg-red-50 text-red-500 border-red-100',          icon: '🚨' };
-  if (rem <= 5) return { label: `Còn ${rem} buổi`, color: 'bg-orange-50 text-orange-500 border-orange-100', icon: '⚠️' };
+  if (rem <= 0) return { label: 'Hết khóa',  color: 'bg-red-100 text-red-600 border-red-200',         icon: '🔴' };
+  if (rem <= 2) return { label: `Còn ${rem} buổi`, color: 'bg-red-50 text-red-500 border-red-100',  icon: '🚨' };
+  if (rem < 5)  return { label: `Còn ${rem} buổi`, color: 'bg-orange-50 text-orange-500 border-orange-100', icon: '⚠️' };
   return null;
 };
 

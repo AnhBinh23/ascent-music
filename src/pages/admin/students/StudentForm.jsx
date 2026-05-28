@@ -12,9 +12,10 @@ const INSTRUMENTS = ['Piano', 'Guitar', 'Violin', 'Thanh nhạc'];
 const LEVELS      = ['Sơ cấp', 'Trung cấp', 'Nâng cao'];
 
 const EMPTY = {
-  name: '', dob: '', gender: 'Nam', phone: '',
+  name: '', dob: '', gender: 'Nam', phone: '', email: '',
   address: '', instrument: 'Piano', level: 'Sơ cấp',
   parentName: '', parentPhone: '', note: '', status: 'active',
+  total_sessions: 0,
 };
 
 const StudentForm = () => {
@@ -35,7 +36,8 @@ const StudentForm = () => {
         const data = await studentService.getById(id);
         if (data) setForm({
           ...data,
-          dob: data.dob ? data.dob.slice(0, 10) : '', // ← cắt về YYYY-MM-DD
+          dob: data.dob ? data.dob.slice(0, 10) : '',
+          total_sessions: data.total_sessions || 0,
         });
       } catch {
         toast.error('Không tải được dữ liệu');
@@ -58,7 +60,8 @@ const StudentForm = () => {
     try {
       const payload = {
         ...form,
-        dob: form.dob ? form.dob.slice(0, 10) : null, // ← đảm bảo YYYY-MM-DD
+        dob:            form.dob ? form.dob.slice(0, 10) : null,
+        total_sessions: Number(form.total_sessions) || 0,
       };
       if (isEdit) {
         await studentService.update(id, payload);
@@ -86,6 +89,7 @@ const StudentForm = () => {
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
+          {/* Thông tin cá nhân */}
           <Card title="Thông tin cá nhân">
             <div className="flex flex-col gap-4">
               <Input label="Họ và tên" name="name" value={form.name}
@@ -106,6 +110,7 @@ const StudentForm = () => {
             </div>
           </Card>
 
+          {/* Thông tin học tập */}
           <Card title="Thông tin học tập">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
@@ -122,6 +127,26 @@ const StudentForm = () => {
                   {LEVELS.map(l => <option key={l}>{l}</option>)}
                 </select>
               </div>
+
+              {/* ← THÊM MỚI: Số buổi học */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Số buổi học (khóa) 🎯
+                </label>
+                <input
+                  type="number"
+                  name="total_sessions"
+                  value={form.total_sessions}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="VD: 16, 24, 32..."
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-400">
+                  Dùng để theo dõi tiến độ và cảnh báo sắp hết khóa
+                </p>
+              </div>
+
               <Input label="Tên phụ huynh" name="parentName" value={form.parentName}
                 onChange={handleChange} placeholder="Nguyễn Thị B" />
               <Input label="SĐT phụ huynh (2)" name="parentPhone" value={form.parentPhone}
