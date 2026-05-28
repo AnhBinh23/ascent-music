@@ -118,7 +118,7 @@ const SessionModal = ({ student, classId, className, onClose }) => {
 };
 
 // ── Attendance Table ───────────────────────────────────────────────────────────
-const AttendanceTable = ({ classId }) => {
+const AttendanceTable = ({ classId, filterMonth }) => {
   const [tableData, setTableData]     = useState([]);
   const [maxSessions, setMaxSessions] = useState(0);
   const [loading, setLoading]         = useState(false);
@@ -138,7 +138,20 @@ const AttendanceTable = ({ classId }) => {
   if (loading)  return <p className="text-center text-gray-400 py-8">Đang tải bảng...</p>;
   if (!tableData.length) return <p className="text-center text-gray-400 py-8">Chưa có dữ liệu</p>;
 
-  const sessionNums = Array.from({ length: Math.max(maxSessions, 1) }, (_, i) => i + 1);
+  // Lọc sessions theo tháng nếu có filter
+  const filteredData = tableData.map(student => ({
+    ...student,
+    sessions: filterMonth === 'all'
+      ? student.sessions
+      : student.sessions.filter(s => s.date?.slice(0,7) === filterMonth),
+  }));
+
+  const maxFiltered = Math.max(
+    ...filteredData.map(r => Math.max(r.sessions.length, filterMonth === 'all' ? (r.total_sessions || 0) : 0)), 0
+  );
+
+  const sessionNums = Array.from({ length: Math.max(maxFiltered, 1) }, (_, i) => i + 1);
+  const displayData = filteredData;
 
   return (
     <div ref={scrollRef} className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
@@ -164,7 +177,7 @@ const AttendanceTable = ({ classId }) => {
           </tr>
         </thead>
         <tbody>
-          {tableData.map((student, si) => {
+          {displayData.map((student, si) => {
             const attended = student.sessions.filter(s => ['present','late'].includes(s.status)).length;
             const total    = student.total_sessions || 0;
             const warning  = getWarning(attended, total);
@@ -272,6 +285,7 @@ const AttendanceManage = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [selectedClassName, setSelectedClassName] = useState('');
+  const [tableMonth, setTableMonth]               = useState(new Date().toISOString().slice(0, 7));
 
   const loadAll = useCallback(async () => {
     try {
@@ -400,12 +414,35 @@ const AttendanceManage = () => {
       {/* ── BẢNG TỔNG HỢP ── */}
       {tab === 'table' && (
         <>
-          {/* Lọc theo lớp — tùy chọn */}
-          <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="input-field w-full mb-4">
-            <option value="all">📊 Tất cả các lớp</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <AttendanceTable classId={selectedClass || 'all'} />
+          {/* Bộ lọc */}
+          <div className="flex gap-2 mb-4">
+            <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="input-field flex-1">
+              <option value="all">📊 Tất cả các lớp</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <input
+              type="month"
+              value={tableMonth}
+              onChange={e => setTableMonth(e.target.value)}
+              className="input-field w-auto"
+            />
+            <button
+              onClick={() => setTableMonth('all')}
+              className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all flex-shrink-0 ${tableMonth === 'all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+              Tất cả
+            </button>
+          </div>
+
+          {/* Hiện tháng đang xem */}
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-xs text-gray-400">
+              {tableMonth === 'all'
+                ? '📅 Hiển thị tất cả các buổi'
+                : `📅 Tháng ${new Date(tableMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}`}
+            </span>
+          </div>
+
+          <AttendanceTable classId={selectedClass || 'all'} filterMonth={tableMonth} />
         </>
       )}
 
