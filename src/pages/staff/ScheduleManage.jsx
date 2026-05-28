@@ -45,6 +45,7 @@ const getLabel = s => {
   if(s.class_type==='group') return `Nhóm (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
   return s.class_name||'Lớp học';
 };
+// eslint-disable-next-line no-unused-vars
 const DAY_NAMES = {1:'Chủ nhật',2:'Thứ 2',3:'Thứ 3',4:'Thứ 4',5:'Thứ 5',6:'Thứ 6',7:'Thứ 7'};
 
 const snap = (clientY, grid) => {
@@ -414,9 +415,7 @@ const ScheduleManage = () => {
                       {/* Day columns */}
                       {DAYS.map((day,dayIdx)=>(
                         <div key={day} className="relative border-l border-gray-100"
-                          style={{height:totalHeight}}
-                          onDragOver={e=>onDragOver(e,dayIdx)}
-                          onDrop={e=>onDrop(e,dayIdx)}>
+                          style={{height:totalHeight}}>
                           {hours.map(h=>(
                             <div key={h} className="absolute w-full border-t border-gray-50"
                               style={{top:(h-START_HOUR)*SLOT_HEIGHT}}/>
@@ -426,6 +425,13 @@ const ScheduleManage = () => {
                             className="absolute left-0 right-0 mx-1 rounded-xl border-2 border-dashed border-primary-400 bg-primary-100 pointer-events-none z-20"
                             style={{display:'none',opacity:0.55}}/>
                           {byDay[dayIdx].map(s=><GridEvent key={s.id} s={s}/>)}
+                          {/* Invisible overlay khi đang kéo — chặn event cards, cho phép drop vào */}
+                          {draggingId && (
+                            <div className="absolute inset-0 z-30"
+                              style={{background:'transparent'}}
+                              onDragOver={e=>onDragOver(e,dayIdx)}
+                              onDrop={e=>onDrop(e,dayIdx)}/>
+                          )}
                         </div>
                       ))}
                     </div>

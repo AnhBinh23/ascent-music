@@ -53,7 +53,6 @@ import AnnouncementManage from './pages/admin/announcements/AnnouncementManage';
 
 // Staff
 import StaffDashboard      from './pages/staff/Dashboard';
-import StaffScheduleManage from './pages/staff/ScheduleManage';
 import StaffTuitionCollect from './pages/staff/TuitionCollect';
 import InvoicePage         from './pages/staff/InvoicePage';
 import EnrollmentPage      from './pages/staff/EnrollmentPage';
@@ -83,15 +82,7 @@ function App() {
       <ScrollToTop />
       <AuthProvider>
         <AppProvider>
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop
-            closeOnClick
-            pauseOnHover
-            theme="light"
-          />
+          <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover theme="light" />
           <Routes>
 
             {/* Public */}
@@ -122,11 +113,9 @@ function App() {
               <Route path="schedule/new"      element={<ScheduleForm />} />
               <Route path="tuition"           element={<TuitionList />} />
               <Route path="tuition/report"    element={<TuitionReport />} />
-              {/* ── Tính năng nhân viên cho Admin ── */}
               <Route path="enrollment"        element={<EnrollmentPage />} />
               <Route path="invoice"           element={<InvoicePage />} />
               <Route path="tuition-collect"   element={<StaffTuitionCollect />} />
-              {/* ────────────────────────────────── */}
               <Route path="rooms"             element={<RoomList />} />
               <Route path="instruments"       element={<InstrumentList />} />
               <Route path="reports"           element={<ReportPage />} />
@@ -141,7 +130,7 @@ function App() {
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
-            {/* Staff Routes */}
+            {/* Staff Routes — dùng chung ScheduleCalendar với admin */}
             <Route path="/staff" element={<PrivateRoute roles={['staff']} />}>
               <Route index                    element={<StaffDashboard />} />
               <Route path="students"          element={<StudentList />} />
@@ -153,7 +142,7 @@ function App() {
               <Route path="teachers/:id"      element={<TeacherDetail />} />
               <Route path="teachers/edit/:id" element={<TeacherForm />} />
               <Route path="enrollment"        element={<EnrollmentPage />} />
-              <Route path="schedule"          element={<StaffScheduleManage />} />
+              <Route path="schedule"          element={<ScheduleCalendar />} />
               <Route path="schedule/new"      element={<ScheduleForm />} />
               <Route path="tuition"           element={<StaffTuitionCollect />} />
               <Route path="invoice"           element={<InvoicePage />} />

@@ -253,7 +253,7 @@ const MySchedule = () => {
   schedules.forEach(s=>{if(!colorMap[s.class_id])colorMap[s.class_id]=COLORS[Object.keys(colorMap).length%COLORS.length];});
   const byDay           = DAY_MAP.map(dow=>layoutEvents(schedules.filter(s=>s.day_of_week===dow)));
   const schedulesByDate = schedules.filter(s=>s.day_of_week===getDayOfWeek(selectedDate));
-  const daysInMonth     = getDaysInMonth(selectedMonth);
+
 
   const GridEvent = useCallback(({s})=>{
     const color=colorMap[s.class_id]||COLORS[0];
