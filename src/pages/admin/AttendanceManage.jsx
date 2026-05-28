@@ -3,7 +3,6 @@ import MainLayout from '../../components/layout/MainLayout';
 import Badge from '../../components/ui/Badge';
 import api from '../../services/api';
 
-// ── Constants ──────────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
   present: { label: 'Có mặt',   variant: 'green',  icon: '✅', bg: '#fed7aa', text: '#9a3412' },
   absent:  { label: 'Vắng mặt', variant: 'red',    icon: '❌', bg: '#fecaca', text: '#991b1b' },
@@ -14,8 +13,8 @@ const STATUS_CONFIG = {
 const getWarning = (attended, total) => {
   if (!total) return null;
   const rem = total - attended;
-  if (rem <= 0) return { label: 'Hết khóa',  color: 'bg-red-100 text-red-600 border-red-200',         icon: '🔴' };
-  if (rem <= 2) return { label: `Còn ${rem} buổi`, color: 'bg-red-50 text-red-500 border-red-100',  icon: '🚨' };
+  if (rem <= 0) return { label: 'Hết khóa',        color: 'bg-red-100 text-red-600 border-red-200',         icon: '🔴' };
+  if (rem <= 2) return { label: `Còn ${rem} buổi`, color: 'bg-red-50 text-red-500 border-red-100',          icon: '🚨' };
   if (rem < 5)  return { label: `Còn ${rem} buổi`, color: 'bg-orange-50 text-orange-500 border-orange-100', icon: '⚠️' };
   return null;
 };
@@ -100,9 +99,7 @@ const SessionModal = ({ student, classId, className, onClose }) => {
                       <p className="text-sm font-medium" style={{ color: STATUS_CONFIG[s.status]?.text || '#374151' }}>
                         {new Date(s.date).toLocaleDateString('vi-VN', { weekday:'short', day:'numeric', month:'numeric', year:'numeric' })}
                       </p>
-                      {s.time_start && <p className="text-xs opacity-70" style={{ color: STATUS_CONFIG[s.status]?.text }}>
-                        {s.time_start?.slice(0,5)} – {s.time_end?.slice(0,5)}
-                      </p>}
+                      {s.time_start && <p className="text-xs opacity-70" style={{ color: STATUS_CONFIG[s.status]?.text }}>{s.time_start?.slice(0,5)} – {s.time_end?.slice(0,5)}</p>}
                       {s.note && <p className="text-xs italic opacity-60" style={{ color: STATUS_CONFIG[s.status]?.text }}>"{s.note}"</p>}
                     </div>
                   </div>
@@ -119,59 +116,51 @@ const SessionModal = ({ student, classId, className, onClose }) => {
 
 // ── Attendance Table ───────────────────────────────────────────────────────────
 const AttendanceTable = ({ classId, filterMonth }) => {
-  const [tableData, setTableData]     = useState([]);
-  const [loading, setLoading]         = useState(false);
+  const [tableData, setTableData] = useState([]);
+  const [loading, setLoading]     = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     setLoading(true);
-    const url = classId === 'all'
+    const url = (!classId || classId === 'all')
       ? '/attendance/all-table'
       : `/attendance/table/${classId}`;
     api.get(url)
-      .then(d => { setTableData(d.rows || []); })
+      .then(d => setTableData(d.rows || []))
       .catch(err => console.error(err.message))
       .finally(() => setLoading(false));
   }, [classId]);
 
-  if (loading)  return <p className="text-center text-gray-400 py-8">Đang tải bảng...</p>;
+  if (loading)         return <p className="text-center text-gray-400 py-8">Đang tải bảng...</p>;
   if (!tableData.length) return <p className="text-center text-gray-400 py-8">Chưa có dữ liệu</p>;
 
-  // Lọc sessions theo tháng nếu có filter
-  const filteredData = tableData.map(student => ({
+  // Lọc sessions theo tháng
+  const displayData = tableData.map(student => ({
     ...student,
-    sessions: filterMonth === 'all'
+    sessions: (!filterMonth || filterMonth === 'all')
       ? student.sessions
       : student.sessions.filter(s => s.date?.slice(0,7) === filterMonth),
   }));
 
-  const maxFiltered = Math.max(
-    ...filteredData.map(r => Math.max(r.sessions.length, filterMonth === 'all' ? (r.total_sessions || 0) : 0)), 0
+  const maxSess = Math.max(
+    ...displayData.map(r => Math.max(
+      r.sessions.length,
+      (!filterMonth || filterMonth === 'all') ? (r.total_sessions || 0) : 0
+    )), 0
   );
-
-  const sessionNums = Array.from({ length: Math.max(maxFiltered, 1) }, (_, i) => i + 1);
-  const displayData = filteredData;
+  const sessionNums = Array.from({ length: Math.max(maxSess, 1) }, (_, i) => i + 1);
 
   return (
     <div ref={scrollRef} className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
       <table className="border-collapse text-xs" style={{ minWidth: Math.max(500, sessionNums.length * 52 + 360) }}>
         <thead>
           <tr className="bg-gray-100">
-            {/* Sticky columns */}
-            <th className="sticky left-0 z-20 bg-gray-100 border border-gray-200 px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap" style={{ minWidth: 120 }}>
-              Học viên
-            </th>
-            <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 120, minWidth: 60, zIndex: 20 }}>
-              H.thức
-            </th>
-            <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 180, minWidth: 64, zIndex: 20 }}>
-              Gói học
-            </th>
-            {/* Session number columns */}
+            <th className="sticky left-0 z-20 bg-gray-100 border border-gray-200 px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap" style={{ minWidth: 130 }}>Học viên</th>
+            <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 130, minWidth: 90, zIndex: 20 }}>Lớp học</th>
+            <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 220, minWidth: 60, zIndex: 20 }}>H.thức</th>
+            <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 280, minWidth: 60, zIndex: 20 }}>Gói học</th>
             {sessionNums.map(n => (
-              <th key={n} className="border border-gray-200 px-1 py-2 font-semibold text-gray-500 text-center" style={{ minWidth: 48, width: 48 }}>
-                {n}
-              </th>
+              <th key={n} className="border border-gray-200 px-1 py-2 font-semibold text-gray-500 text-center" style={{ minWidth: 48, width: 48 }}>{n}</th>
             ))}
           </tr>
         </thead>
@@ -180,64 +169,37 @@ const AttendanceTable = ({ classId, filterMonth }) => {
             const attended = student.sessions.filter(s => ['present','late'].includes(s.status)).length;
             const total    = student.total_sessions || 0;
             const warning  = getWarning(attended, total);
-            const pkg      = total > 0 ? `${total}` : '—';
+            const rowBg    = si % 2 === 0 ? '#fff' : '#f9fafb';
 
             return (
-              <tr key={si} className={si % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                {/* Student name */}
-                <td className="sticky left-0 z-10 border border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800"
-                  style={{ backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', minWidth: 130 }}>
+              <tr key={si}>
+                <td className="sticky left-0 z-10 border border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800" style={{ backgroundColor: rowBg, minWidth: 130 }}>
                   <div className="flex items-center gap-1.5">
                     <span className="truncate max-w-[110px]">{student.name}</span>
                     {warning && <span title={warning.label} className="flex-shrink-0">{warning.icon}</span>}
                   </div>
                 </td>
-
-                {/* Class name */}
-                <td className="sticky border border-gray-200 px-2 py-1.5 text-xs text-gray-600 whitespace-nowrap"
-                  style={{ left: 130, backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', zIndex: 10, minWidth: 90 }}>
+                <td className="sticky border border-gray-200 px-2 py-1.5 text-xs text-gray-600 whitespace-nowrap" style={{ left: 130, backgroundColor: rowBg, zIndex: 10, minWidth: 90 }}>
                   <span className="truncate max-w-[80px] block">{student.class_name || '—'}</span>
                 </td>
-
-                {/* Class type */}
-                <td className="sticky border border-gray-200 px-2 py-1.5 text-center text-gray-600 whitespace-nowrap"
-                  style={{ left: 220, backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', zIndex: 10 }}>
+                <td className="sticky border border-gray-200 px-2 py-1.5 text-center text-gray-600 whitespace-nowrap" style={{ left: 220, backgroundColor: rowBg, zIndex: 10 }}>
                   {student.class_type === '1v1' ? '1-1' : 'Nhóm'}
                 </td>
-
-                {/* Package */}
-                <td className="sticky border border-gray-200 px-2 py-1.5 text-center font-medium whitespace-nowrap"
-                  style={{ left: 280, backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', zIndex: 10,
-                    color: warning ? '#ea580c' : '#374151' }}>
-                  {pkg}
+                <td className="sticky border border-gray-200 px-2 py-1.5 text-center font-medium whitespace-nowrap" style={{ left: 280, backgroundColor: rowBg, zIndex: 10, color: warning ? '#ea580c' : '#374151' }}>
+                  {total > 0 ? total : '—'}
                 </td>
-
-                {/* Session cells */}
                 {sessionNums.map(n => {
-                  const session = student.sessions[n - 1];
-                  const isEmpty = !session;
-                  const isFuture = n > student.sessions.length && n <= total;
-                  const cfg     = session ? STATUS_CONFIG[session.status] : null;
-
+                  const session  = student.sessions[n - 1];
+                  const isFuture = !session && n > student.sessions.length && n <= total && (!filterMonth || filterMonth === 'all');
+                  const cfg      = session ? STATUS_CONFIG[session.status] : null;
                   return (
-                    <td key={n}
-                      className="border border-gray-200 text-center p-0"
-                      style={{
-                        backgroundColor: isEmpty
-                          ? isFuture ? '#f8fafc' : 'transparent'
-                          : cfg?.bg || '#f3f4f6',
-                        minWidth: 48, width: 48,
-                      }}
-                      title={session ? `${new Date(session.date).toLocaleDateString('vi-VN')} — ${cfg?.label}${session.note ? ` — ${session.note}` : ''}` : ''}
-                    >
+                    <td key={n} className="border border-gray-200 text-center p-0"
+                      style={{ backgroundColor: session ? cfg?.bg : isFuture ? '#f8fafc' : 'transparent', minWidth: 48, width: 48 }}
+                      title={session ? `${new Date(session.date).toLocaleDateString('vi-VN')} — ${cfg?.label}${session.note ? ` — ${session.note}` : ''}` : ''}>
                       {session ? (
                         <div className="py-1 px-0.5">
-                          <p className="font-semibold leading-tight" style={{ color: cfg?.text || '#374151', fontSize: 11 }}>
-                            {fmtDate(session.date)}
-                          </p>
-                          <p style={{ fontSize: 9, color: cfg?.text, opacity: 0.7 }}>
-                            {cfg?.icon}
-                          </p>
+                          <p className="font-semibold leading-tight" style={{ color: cfg?.text || '#374151', fontSize: 11 }}>{fmtDate(session.date)}</p>
+                          <p style={{ fontSize: 9, color: cfg?.text, opacity: 0.7 }}>{cfg?.icon}</p>
                         </div>
                       ) : isFuture ? (
                         <span className="text-gray-200 text-lg">·</span>
@@ -250,8 +212,6 @@ const AttendanceTable = ({ classId, filterMonth }) => {
           })}
         </tbody>
       </table>
-
-      {/* Legend */}
       <div className="flex flex-wrap gap-3 p-3 bg-gray-50 border-t border-gray-200">
         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
           <div key={key} className="flex items-center gap-1.5">
@@ -278,13 +238,13 @@ const AttendanceManage = () => {
   const [selectedClass, setSelectedClass]     = useState('all');
   const [date, setDate]                       = useState(new Date().toISOString().split('T')[0]);
   const [filterMonth, setFilterMonth]         = useState(new Date().toISOString().slice(0, 7));
+  const [tableMonth, setTableMonth]           = useState(new Date().toISOString().slice(0, 7));
   const [viewTab, setViewTab]                 = useState('date');
   const [searchName, setSearchName]           = useState('');
   const [filterWarning, setFilterWarning]     = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [selectedClassName, setSelectedClassName] = useState('');
-  const [tableMonth, setTableMonth]               = useState(new Date().toISOString().slice(0, 7));
 
   const loadAll = useCallback(async () => {
     try {
@@ -301,13 +261,12 @@ const AttendanceManage = () => {
   useEffect(() => { loadAll(); }, [loadAll]);
 
   useEffect(() => {
-    if (!selectedClass) return;
+    if (!selectedClass || selectedClass === 'all') return;
     api.get(`/attendance/class/${selectedClass}`)
       .then(d => setRecords(d.rows || []))
       .catch(err => console.error(err.message));
   }, [selectedClass]);
 
-  // Filters
   const filteredProgress = progress.filter(p =>
     (!searchName || p.student_name?.toLowerCase().includes(searchName.toLowerCase())) &&
     (!filterWarning || getWarning(p.attended, p.total_sessions))
@@ -322,22 +281,18 @@ const AttendanceManage = () => {
   const stats = { present:0, absent:0, late:0, excused:0 };
   filteredRecords.forEach(r => { if (stats[r.status] !== undefined) stats[r.status]++; });
 
-  const groupedByDate  = filteredRecords.reduce((acc, r) => { if (!acc[r.date]) acc[r.date]=[]; acc[r.date].push(r); return acc; }, {});
-  const sortedDates    = Object.keys(groupedByDate).sort((a,b) => b.localeCompare(a));
+  const groupedByDate   = filteredRecords.reduce((acc, r) => { if (!acc[r.date]) acc[r.date]=[]; acc[r.date].push(r); return acc; }, {});
+  const sortedDates     = Object.keys(groupedByDate).sort((a,b) => b.localeCompare(a));
   const availableMonths = [...new Set(records.map(r => r.date?.slice(0,7)))].filter(Boolean).sort((a,b) => b.localeCompare(a));
 
   if (loading) return <MainLayout title="Quản lý điểm danh"><p className="text-center py-16 text-gray-400">Đang tải...</p></MainLayout>;
 
   return (
     <MainLayout title="Quản lý điểm danh">
-      <SessionModal
-        student={selectedStudent}
-        classId={selectedClassId}
-        className={selectedClassName}
-        onClose={() => { setSelectedStudent(null); setSelectedClassId(null); }}
-      />
+      <SessionModal student={selectedStudent} classId={selectedClassId} className={selectedClassName}
+        onClose={() => { setSelectedStudent(null); setSelectedClassId(null); }} />
 
-      {/* Main tabs */}
+      {/* Tabs */}
       <div className="flex gap-1.5 mb-5 bg-gray-100 p-1 rounded-2xl">
         {[
           { key:'overview', label:'👥 Tổng quan' },
@@ -345,11 +300,10 @@ const AttendanceManage = () => {
           { key:'detail',   label:'📋 Chi tiết' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all relative
-              ${tab===t.key ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
+            className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all relative ${tab===t.key ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
             {t.label}
             {t.key === 'overview' && warningCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold" style={{fontSize:9}}>
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center font-bold" style={{fontSize:9}}>
                 {warningCount > 9 ? '9+' : warningCount}
               </span>
             )}
@@ -365,7 +319,6 @@ const AttendanceManage = () => {
             <div className="card text-center"><p className="text-2xl font-bold text-red-500">{warningCount}</p><p className="text-xs text-gray-500 mt-1">Sắp hết khóa</p></div>
             <div className="card text-center"><p className="text-2xl font-bold text-green-600">{progress.filter(p => p.total_sessions > 0 && p.attended >= p.total_sessions).length}</p><p className="text-xs text-gray-500 mt-1">Hoàn thành</p></div>
           </div>
-
           <div className="flex gap-2 mb-4">
             <input type="text" placeholder="🔍 Tìm tên học viên..." value={searchName}
               onChange={e => setSearchName(e.target.value)}
@@ -375,20 +328,16 @@ const AttendanceManage = () => {
               ⚠️
             </button>
           </div>
-
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            {filteredProgress.length === 0 ? (
-              <p className="text-center text-gray-400 py-10">Không có dữ liệu</p>
-            ) : filteredProgress.map((p, i) => {
+            {filteredProgress.length === 0 ? <p className="text-center text-gray-400 py-10">Không có dữ liệu</p>
+              : filteredProgress.map((p, i) => {
               const warning  = getWarning(p.attended, p.total_sessions);
               const pct      = p.total_sessions > 0 ? Math.round(p.attended/p.total_sessions*100) : 0;
               const barColor = pct>=100?'#dc2626':pct>=80?'#ea580c':'#16a34a';
               return (
                 <div key={i} onClick={() => { setSelectedStudent(p); setSelectedClassId(p.class_id); setSelectedClassName(p.class_name); }}
                   className="flex items-center gap-3 p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer active:bg-gray-100 transition-colors">
-                  <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-700 font-bold flex-shrink-0">
-                    {p.student_name?.charAt(0)}
-                  </div>
+                  <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-700 font-bold flex-shrink-0">{p.student_name?.charAt(0)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="text-sm font-semibold text-gray-800">{p.student_name}</p>
@@ -413,47 +362,36 @@ const AttendanceManage = () => {
       {/* ── BẢNG TỔNG HỢP ── */}
       {tab === 'table' && (
         <>
-          {/* Bộ lọc */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-3">
             <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="input-field flex-1">
               <option value="all">📊 Tất cả các lớp</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <input
-              type="month"
-              value={tableMonth}
-              onChange={e => setTableMonth(e.target.value)}
-              className="input-field w-auto"
-            />
-            <button
-              onClick={() => setTableMonth('all')}
+            <input type="month" value={tableMonth === 'all' ? '' : tableMonth}
+              onChange={e => setTableMonth(e.target.value || 'all')}
+              className="input-field w-auto" />
+            <button onClick={() => setTableMonth('all')}
               className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all flex-shrink-0 ${tableMonth === 'all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200'}`}>
               Tất cả
             </button>
           </div>
-
-          {/* Hiện tháng đang xem */}
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="text-xs text-gray-400">
-              {tableMonth === 'all'
-                ? '📅 Hiển thị tất cả các buổi'
-                : `📅 Tháng ${new Date(tableMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}`}
-            </span>
-          </div>
-
-          <AttendanceTable classId={selectedClass || 'all'} filterMonth={tableMonth} />
+          <p className="text-xs text-gray-400 mb-3 px-1">
+            {tableMonth === 'all'
+              ? '📅 Hiển thị tất cả các buổi'
+              : `📅 Tháng ${new Date(tableMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}`}
+          </p>
+          <AttendanceTable classId={selectedClass} filterMonth={tableMonth} />
         </>
       )}
 
       {/* ── CHI TIẾT ── */}
       {tab === 'detail' && (
         <>
-          <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="input-field w-full mb-4">
+          <select value={selectedClass === 'all' ? '' : selectedClass} onChange={e => setSelectedClass(e.target.value)} className="input-field w-full mb-4">
             <option value="">-- Chọn lớp học --</option>
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-
-          {!selectedClass ? (
+          {(!selectedClass || selectedClass === 'all') ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
               <p className="text-3xl mb-3">📋</p>
               <p className="text-gray-400">Chọn lớp để xem điểm danh</p>
@@ -468,7 +406,6 @@ const AttendanceManage = () => {
                   </button>
                 ))}
               </div>
-
               {viewTab==='date' && <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="input-field w-full mb-4" />}
               {viewTab==='month' && (
                 <select value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} className="input-field w-full mb-4">
@@ -477,7 +414,6 @@ const AttendanceManage = () => {
                   ))}
                 </select>
               )}
-
               <div className="grid grid-cols-4 gap-2 mb-4">
                 {Object.entries(STATUS_CONFIG).map(([key,cfg]) => (
                   <div key={key} className="card text-center py-3">
@@ -487,7 +423,6 @@ const AttendanceManage = () => {
                   </div>
                 ))}
               </div>
-
               {viewTab==='date' ? (
                 <div className="bg-white rounded-2xl border border-gray-100 p-4">
                   <p className="text-sm font-semibold text-gray-700 mb-3">
@@ -514,35 +449,36 @@ const AttendanceManage = () => {
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {sortedDates.length===0 ? <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center"><p className="text-gray-400">Chưa có dữ liệu</p></div>
+                  {sortedDates.length===0
+                    ? <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center"><p className="text-gray-400">Chưa có dữ liệu</p></div>
                     : sortedDates.map(d => {
-                    const items = groupedByDate[d];
-                    const pCount = items.filter(r=>r.status==='present').length;
-                    return (
-                      <div key={d}>
-                        <div className="flex justify-between px-1 mb-2">
-                          <p className="text-sm font-semibold text-gray-600 capitalize">
-                            {new Date(d).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric',year:'numeric'})}
-                          </p>
-                          <p className="text-xs text-gray-400">{pCount}/{items.length} có mặt</p>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          {items.map((r,i) => (
-                            <div key={i} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-primary-100 rounded-xl flex items-center justify-center text-primary-700 text-sm font-bold">{r.student_name?.charAt(0)}</div>
-                                <div>
-                                  <p className="text-sm font-semibold text-gray-800">{r.student_name}</p>
-                                  {r.note && <p className="text-xs text-gray-400 italic">"{r.note}"</p>}
+                      const items  = groupedByDate[d];
+                      const pCount = items.filter(r=>r.status==='present').length;
+                      return (
+                        <div key={d}>
+                          <div className="flex justify-between px-1 mb-2">
+                            <p className="text-sm font-semibold text-gray-600 capitalize">
+                              {new Date(d).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric',year:'numeric'})}
+                            </p>
+                            <p className="text-xs text-gray-400">{pCount}/{items.length} có mặt</p>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {items.map((r,i) => (
+                              <div key={i} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-primary-100 rounded-xl flex items-center justify-center text-primary-700 text-sm font-bold">{r.student_name?.charAt(0)}</div>
+                                  <div>
+                                    <p className="text-sm font-semibold text-gray-800">{r.student_name}</p>
+                                    {r.note && <p className="text-xs text-gray-400 italic">"{r.note}"</p>}
+                                  </div>
                                 </div>
+                                <Badge label={STATUS_CONFIG[r.status]?.label||r.status} variant={STATUS_CONFIG[r.status]?.variant||'gray'} dot />
                               </div>
-                              <Badge label={STATUS_CONFIG[r.status]?.label||r.status} variant={STATUS_CONFIG[r.status]?.variant||'gray'} dot />
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               )}
             </>
