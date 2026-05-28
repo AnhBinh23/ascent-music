@@ -119,21 +119,22 @@ const SessionModal = ({ student, classId, className, onClose }) => {
 
 // ── Attendance Table ───────────────────────────────────────────────────────────
 const AttendanceTable = ({ classId }) => {
-  const [tableData, setTableData]   = useState([]);
+  const [tableData, setTableData]     = useState([]);
   const [maxSessions, setMaxSessions] = useState(0);
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading]         = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    if (!classId) return;
     setLoading(true);
-    api.get(`/attendance/table/${classId}`)
+    const url = classId === 'all'
+      ? '/attendance/all-table'
+      : `/attendance/table/${classId}`;
+    api.get(url)
       .then(d => { setTableData(d.rows || []); setMaxSessions(d.maxSessions || 0); })
       .catch(err => console.error(err.message))
       .finally(() => setLoading(false));
   }, [classId]);
 
-  if (!classId) return null;
   if (loading)  return <p className="text-center text-gray-400 py-8">Đang tải bảng...</p>;
   if (!tableData.length) return <p className="text-center text-gray-400 py-8">Chưa có dữ liệu</p>;
 
@@ -141,7 +142,7 @@ const AttendanceTable = ({ classId }) => {
 
   return (
     <div ref={scrollRef} className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-      <table className="border-collapse text-xs" style={{ minWidth: Math.max(400, sessionNums.length * 52 + 280) }}>
+      <table className="border-collapse text-xs" style={{ minWidth: Math.max(500, sessionNums.length * 52 + 360) }}>
         <thead>
           <tr className="bg-gray-100">
             {/* Sticky columns */}
@@ -170,25 +171,31 @@ const AttendanceTable = ({ classId }) => {
             const pkg      = total > 0 ? `${total}` : '—';
 
             return (
-              <tr key={student.id} className={si % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+              <tr key={si} className={si % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                 {/* Student name */}
                 <td className="sticky left-0 z-10 border border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800"
-                  style={{ backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                  style={{ backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', minWidth: 130 }}>
                   <div className="flex items-center gap-1.5">
-                    <span className="truncate max-w-[100px]">{student.name}</span>
+                    <span className="truncate max-w-[110px]">{student.name}</span>
                     {warning && <span title={warning.label} className="flex-shrink-0">{warning.icon}</span>}
                   </div>
                 </td>
 
+                {/* Class name */}
+                <td className="sticky border border-gray-200 px-2 py-1.5 text-xs text-gray-600 whitespace-nowrap"
+                  style={{ left: 130, backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', zIndex: 10, minWidth: 90 }}>
+                  <span className="truncate max-w-[80px] block">{student.class_name || '—'}</span>
+                </td>
+
                 {/* Class type */}
                 <td className="sticky border border-gray-200 px-2 py-1.5 text-center text-gray-600 whitespace-nowrap"
-                  style={{ left: 120, backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', zIndex: 10 }}>
+                  style={{ left: 220, backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', zIndex: 10 }}>
                   {student.class_type === '1v1' ? '1-1' : 'Nhóm'}
                 </td>
 
                 {/* Package */}
                 <td className="sticky border border-gray-200 px-2 py-1.5 text-center font-medium whitespace-nowrap"
-                  style={{ left: 180, backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', zIndex: 10,
+                  style={{ left: 280, backgroundColor: si % 2 === 0 ? '#fff' : '#f9fafb', zIndex: 10,
                     color: warning ? '#ea580c' : '#374151' }}>
                   {pkg}
                 </td>
@@ -256,7 +263,7 @@ const AttendanceManage = () => {
   const [records, setRecords]                 = useState([]);
   const [loading, setLoading]                 = useState(true);
   const [tab, setTab]                         = useState('overview');
-  const [selectedClass, setSelectedClass]     = useState('');
+  const [selectedClass, setSelectedClass]     = useState('all');
   const [date, setDate]                       = useState(new Date().toISOString().split('T')[0]);
   const [filterMonth, setFilterMonth]         = useState(new Date().toISOString().slice(0, 7));
   const [viewTab, setViewTab]                 = useState('date');
@@ -393,20 +400,12 @@ const AttendanceManage = () => {
       {/* ── BẢNG TỔNG HỢP ── */}
       {tab === 'table' && (
         <>
+          {/* Lọc theo lớp — tùy chọn */}
           <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="input-field w-full mb-4">
-            <option value="">-- Chọn lớp học --</option>
+            <option value="all">📊 Tất cả các lớp</option>
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-
-          {!selectedClass ? (
-            <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-              <p className="text-4xl mb-3">📊</p>
-              <p className="text-gray-400">Chọn lớp để xem bảng tổng hợp</p>
-              <p className="text-xs text-gray-300 mt-2">Mỗi cột = 1 buổi học · Màu = trạng thái điểm danh</p>
-            </div>
-          ) : (
-            <AttendanceTable classId={selectedClass} />
-          )}
+          <AttendanceTable classId={selectedClass || 'all'} />
         </>
       )}
 
