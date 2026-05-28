@@ -25,6 +25,13 @@ const CARD_COLORS = [
   'bg-purple-50 border-purple-200','bg-orange-50 border-orange-200','bg-pink-50 border-pink-200',
 ];
 
+const DAYS_OPT = [
+  { value: 2, label: 'Thứ 2' }, { value: 3, label: 'Thứ 3' },
+  { value: 4, label: 'Thứ 4' }, { value: 5, label: 'Thứ 5' },
+  { value: 6, label: 'Thứ 6' }, { value: 7, label: 'Thứ 7' },
+  { value: 1, label: 'Chủ nhật' },
+];
+
 const timeToMins   = (t) => { const [h,m] = t.split(':').map(Number); return h*60+m; };
 const minsToTime   = (m) => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}:00`;
 const timeToTop    = (t) => (timeToMins(t) - START_HOUR*60) / 60 * SLOT_HEIGHT;
@@ -43,98 +50,128 @@ const getLabel = (s) => {
 };
 const DAY_NAMES = { 1:'Chủ nhật',2:'Thứ 2',3:'Thứ 3',4:'Thứ 4',5:'Thứ 5',6:'Thứ 6',7:'Thứ 7' };
 
-// ── Overlap layout algorithm ───────────────────────────────────────────────────
+// ── Overlap layout ─────────────────────────────────────────────────────────────
 const layoutEvents = (events) => {
   if (!events.length) return [];
   const sorted = [...events].sort((a,b) => timeToMins(a.time_start) - timeToMins(b.time_start));
-
-  // Group overlapping events together
-  const groups = [];
-  const seen   = new Set();
-
+  const groups = []; const seen = new Set();
   sorted.forEach(ev => {
     if (seen.has(ev.id)) return;
-    const group = [ev];
-    seen.add(ev.id);
-    let i = 0;
+    const group = [ev]; seen.add(ev.id); let i = 0;
     while (i < group.length) {
       const cur = group[i];
-      const cs  = timeToMins(cur.time_start);
-      const ce  = timeToMins(cur.time_end);
+      const cs = timeToMins(cur.time_start), ce = timeToMins(cur.time_end);
       sorted.forEach(other => {
         if (seen.has(other.id)) return;
-        const os = timeToMins(other.time_start);
-        const oe = timeToMins(other.time_end);
+        const os = timeToMins(other.time_start), oe = timeToMins(other.time_end);
         if (cs < oe && ce > os) { group.push(other); seen.add(other.id); }
       });
       i++;
     }
     groups.push(group);
   });
-
-  // Assign lanes within each group
   const layout = {};
   groups.forEach(group => {
     const gSorted = [...group].sort((a,b) => timeToMins(a.time_start) - timeToMins(b.time_start));
-    const lanes   = [];
-
+    const lanes = [];
     gSorted.forEach(ev => {
-      const start      = timeToMins(ev.time_start);
-      let assignedLane = -1;
+      const start = timeToMins(ev.time_start);
+      let lane = -1;
       for (let i = 0; i < lanes.length; i++) {
-        if (timeToMins(lanes[i][lanes[i].length-1].time_end) <= start) {
-          assignedLane = i; break;
-        }
+        if (timeToMins(lanes[i][lanes[i].length-1].time_end) <= start) { lane = i; break; }
       }
-      if (assignedLane === -1) { assignedLane = lanes.length; lanes.push([]); }
-      lanes[assignedLane].push(ev);
-      layout[ev.id] = { lane: assignedLane, totalLanes: lanes.length };
+      if (lane === -1) { lane = lanes.length; lanes.push([]); }
+      lanes[lane].push(ev);
+      layout[ev.id] = { lane, totalLanes: lanes.length };
     });
-
-    // Update totalLanes to actual lane count
-    const total = lanes.length;
-    group.forEach(ev => { layout[ev.id].totalLanes = total; });
+    group.forEach(ev => { layout[ev.id].totalLanes = lanes.length; });
   });
-
   return sorted.map(ev => ({ ...ev, ...layout[ev.id] }));
 };
 
-// ── Detail Modal ───────────────────────────────────────────────────────────────
-const EventModal = ({ event, onClose, onDelete }) => {
-  if (!event) return null;
+// ── Edit Modal ─────────────────────────────────────────────────────────────────
+const EditModal = ({ event, teachers, rooms, onClose, onSave, onDelete }) => {
+  const [form, setForm] = useState(null);
+
+  useEffect(() => {
+    if (event) setForm({
+      day_of_week: event.day_of_week,
+      time_start:  event.time_start?.slice(0,5) || '08:00',
+      time_end:    event.time_end?.slice(0,5)   || '09:00',
+      teacher_id:  event.teacher_id || '',
+      room_id:     event.room_id    || '',
+    });
+  }, [event]);
+
+  if (!event || !form) return null;
+
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
-      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 shadow-xl"
+      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-5 shadow-xl"
         onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-lg font-bold text-gray-800">{getLabel(event)}</h3>
-            <p className="text-sm text-gray-500">{event.class_name}</p>
+            <h3 className="text-base font-bold text-gray-800">{getLabel(event)}</h3>
+            <p className="text-xs text-gray-400">{event.class_name}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">✕</button>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
         </div>
-        <div className="flex flex-col gap-2">
-          {[
-            { icon: '📅', label: 'Ngày học',  value: DAY_NAMES[event.day_of_week] },
-            { icon: '🕐', label: 'Giờ học',   value: `${event.time_start?.slice(0,5)} – ${event.time_end?.slice(0,5)}` },
-            { icon: '👨‍🏫', label: 'Giáo viên', value: event.teacher_name },
-            { icon: '🚪', label: 'Phòng học', value: event.room_name },
-            ...(event.class_type === 'group' ? [{ icon: '👥', label: 'Sĩ số', value: `${event.student_count} học viên` }] : []),
-          ].map(row => (
-            <div key={row.label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-              <span className="text-xl">{row.icon}</span>
-              <div>
-                <p className="text-xs text-gray-400">{row.label}</p>
-                <p className="text-sm font-medium text-gray-800">{row.value}</p>
-              </div>
+
+        <div className="flex flex-col gap-3">
+          {/* Ngày */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">📅 Thứ trong tuần</label>
+            <select name="day_of_week" value={form.day_of_week} onChange={handleChange} className="input-field text-sm">
+              {DAYS_OPT.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+          </div>
+
+          {/* Giờ */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600">🕐 Giờ bắt đầu</label>
+              <input type="time" name="time_start" value={form.time_start} onChange={handleChange} className="input-field text-sm" />
             </div>
-          ))}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600">🕐 Giờ kết thúc</label>
+              <input type="time" name="time_end" value={form.time_end} onChange={handleChange} className="input-field text-sm" />
+            </div>
+          </div>
+
+          {/* Giáo viên */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">👨‍🏫 Giáo viên</label>
+            <select name="teacher_id" value={form.teacher_id} onChange={handleChange} className="input-field text-sm">
+              <option value="">-- Chọn --</option>
+              {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+
+          {/* Phòng */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">🚪 Phòng học</label>
+            <select name="room_id" value={form.room_id} onChange={handleChange} className="input-field text-sm">
+              <option value="">-- Chọn --</option>
+              {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
         </div>
-        <button onClick={() => { onDelete(event.id); onClose(); }}
-          className="mt-4 w-full py-3 rounded-xl bg-red-50 text-red-500 font-medium text-sm hover:bg-red-100 transition-colors">
-          🗑️ Xóa lịch học này
-        </button>
+
+        <div className="flex gap-2 mt-4">
+          <button onClick={() => { onDelete(event.id); onClose(); }}
+            className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm hover:bg-red-100 transition-colors">
+            🗑️ Xóa
+          </button>
+          <button onClick={() => { onSave(event.id, event, form); onClose(); }}
+            className="flex-2 flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm hover:bg-primary-700 transition-colors">
+            💾 Lưu thay đổi
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -146,22 +183,31 @@ const ScheduleCalendar = () => {
   const gridRef     = useRef(null);
   const gridWrapRef = useRef(null);
   const dragData    = useRef(null);
+  const rafRef      = useRef(null); // for DnD throttle
   const touchRef    = useRef({ active: false, schedule: null, ghost: null, timer: null, startX: 0, startY: 0 });
 
   const [schedules, setSchedules]         = useState([]);
+  const [teachers, setTeachers]           = useState([]);
+  const [rooms, setRooms]                 = useState([]);
   const [loading, setLoading]             = useState(true);
   const [tab, setTab]                     = useState('week');
   const [draggingId, setDraggingId]       = useState(null);
   const [dropTarget, setDropTarget]       = useState(null);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [editEvent, setEditEvent]         = useState(null);
   const [selectedDate, setSelectedDate]   = useState(new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await api.get('/schedules');
-      setSchedules(data.rows || []);
+      const [sched, teach, rm] = await Promise.all([
+        api.get('/schedules'),
+        api.get('/teachers'),
+        api.get('/rooms'),
+      ]);
+      setSchedules(sched.rows || []);
+      setTeachers(teach.rows || []);
+      setRooms(rm.rows || []);
     } catch (err) { toast.error(err.message); }
     finally { setLoading(false); }
   }, []);
@@ -177,7 +223,26 @@ const ScheduleCalendar = () => {
     } catch (err) { toast.error(err.message); }
   };
 
-  const updateSchedule = async (id, schedule, newDow, newStart, newEnd) => {
+  const handleSave = async (id, schedule, form) => {
+    const newStart = form.time_start.length === 5 ? form.time_start + ':00' : form.time_start;
+    const newEnd   = form.time_end.length   === 5 ? form.time_end   + ':00' : form.time_end;
+    setSchedules(prev => prev.map(s =>
+      s.id === id ? { ...s, day_of_week: Number(form.day_of_week), time_start: newStart, time_end: newEnd,
+        teacher_id: form.teacher_id, room_id: form.room_id } : s
+    ));
+    try {
+      await api.put(`/schedules/${id}`, {
+        class_id: schedule.class_id, teacher_id: form.teacher_id,
+        room_id: form.room_id, day_of_week: Number(form.day_of_week),
+        time_start: newStart, time_end: newEnd,
+        type: schedule.type, note: schedule.note,
+      });
+      toast.success('Cập nhật lịch thành công!');
+      load(); // reload to get updated teacher/room names
+    } catch (err) { toast.error(err.message); load(); }
+  };
+
+  const updateScheduleDnD = async (id, schedule, newDow, newStart, newEnd) => {
     setSchedules(prev => prev.map(s =>
       s.id === id ? { ...s, day_of_week: newDow, time_start: newStart, time_end: newEnd } : s
     ));
@@ -192,7 +257,7 @@ const ScheduleCalendar = () => {
     } catch (err) { toast.error(err.message); load(); }
   };
 
-  // Mouse DnD
+  // ── Mouse DnD with RAF throttle ────────────────────────────────────────────
   const calcDropPos = (clientY, dayIdx) => {
     const grid = gridRef.current;
     if (!grid) return null;
@@ -208,11 +273,18 @@ const ScheduleCalendar = () => {
     setDraggingId(s.id);
     e.dataTransfer.effectAllowed = 'move';
   };
-  const onDragEnd = () => { setDraggingId(null); setDropTarget(null); dragData.current = null; };
+  const onDragEnd = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    setDraggingId(null); setDropTarget(null); dragData.current = null;
+  };
   const onDragOver = (e, dayIdx) => {
     e.preventDefault();
-    const pos = calcDropPos(e.clientY, dayIdx);
-    if (pos) setDropTarget(pos);
+    const clientY = e.clientY;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const pos = calcDropPos(clientY, dayIdx);
+      if (pos) setDropTarget(pos);
+    });
   };
   const onDrop = async (e, dayIdx) => {
     e.preventDefault();
@@ -224,21 +296,19 @@ const ScheduleCalendar = () => {
       return;
     }
     setDraggingId(null); setDropTarget(null);
-    await updateSchedule(id, schedule, DAY_MAP[dayIdx], minsToTime(pos.mins), minsToTime(pos.mins+duration));
+    await updateScheduleDnD(id, schedule, DAY_MAP[dayIdx], minsToTime(pos.mins), minsToTime(pos.mins+duration));
   };
 
-  // Touch DnD
+  // ── Touch DnD ──────────────────────────────────────────────────────────────
   const calcTouchDropPos = (clientX, clientY) => {
-    const wrap = gridWrapRef.current;
-    const grid = gridRef.current;
+    const wrap = gridWrapRef.current, grid = gridRef.current;
     if (!wrap || !grid) return null;
-    const wrapRect = wrap.getBoundingClientRect();
-    const gridRect = grid.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect(), gridRect = grid.getBoundingClientRect();
     const colWidth = (wrapRect.width - 56) / 7;
-    const relX     = clientX - wrapRect.left - 56 + wrap.scrollLeft;
-    const dayIdx   = Math.max(0, Math.min(6, Math.floor(relX / colWidth)));
-    const relY     = clientY - gridRect.top + grid.scrollTop;
-    let mins       = Math.round((relY / SLOT_HEIGHT) * 60 / SNAP_MINS) * SNAP_MINS + START_HOUR * 60;
+    const relX = clientX - wrapRect.left - 56 + wrap.scrollLeft;
+    const dayIdx = Math.max(0, Math.min(6, Math.floor(relX / colWidth)));
+    const relY = clientY - gridRect.top + grid.scrollTop;
+    let mins = Math.round((relY / SLOT_HEIGHT) * 60 / SNAP_MINS) * SNAP_MINS + START_HOUR * 60;
     return { dayIdx, mins: Math.max(START_HOUR*60, Math.min(END_HOUR*60-30, mins)) };
   };
 
@@ -255,7 +325,6 @@ const ScheduleCalendar = () => {
       touchRef.current.ghost = ghost;
     }, 450);
   };
-
   const onTouchMove = (e) => {
     const touch = e.touches[0];
     const dx = Math.abs(touch.clientX - touchRef.current.startX);
@@ -267,23 +336,27 @@ const ScheduleCalendar = () => {
       touchRef.current.ghost.style.left = `${touch.clientX-80}px`;
       touchRef.current.ghost.style.top  = `${touch.clientY-30}px`;
     }
-    const pos = calcTouchDropPos(touch.clientX, touch.clientY);
-    if (pos) setDropTarget(pos);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const cx = touch.clientX, cy = touch.clientY;
+    rafRef.current = requestAnimationFrame(() => {
+      const pos = calcTouchDropPos(cx, cy);
+      if (pos) setDropTarget(pos);
+    });
   };
-
   const onTouchEnd = async (e) => {
     clearTimeout(touchRef.current.timer);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (touchRef.current.ghost) { document.body.removeChild(touchRef.current.ghost); touchRef.current.ghost = null; }
     if (touchRef.current.active && touchRef.current.schedule) {
-      const touch    = e.changedTouches[0];
-      const pos      = calcTouchDropPos(touch.clientX, touch.clientY);
+      const touch = e.changedTouches[0];
+      const pos = calcTouchDropPos(touch.clientX, touch.clientY);
       const schedule = touchRef.current.schedule;
-      const dur      = timeToMins(schedule.time_end) - timeToMins(schedule.time_start);
+      const dur = timeToMins(schedule.time_end) - timeToMins(schedule.time_start);
       if (pos && pos.mins + dur <= END_HOUR*60)
-        await updateSchedule(schedule.id, schedule, DAY_MAP[pos.dayIdx], minsToTime(pos.mins), minsToTime(pos.mins+dur));
+        await updateScheduleDnD(schedule.id, schedule, DAY_MAP[pos.dayIdx], minsToTime(pos.mins), minsToTime(pos.mins+dur));
       setDraggingId(null); setDropTarget(null);
     } else if (touchRef.current.schedule) {
-      setSelectedEvent(touchRef.current.schedule);
+      setEditEvent(touchRef.current.schedule);
     }
     touchRef.current.active = false; touchRef.current.schedule = null;
   };
@@ -293,22 +366,18 @@ const ScheduleCalendar = () => {
   const totalHeight = hours.length * SLOT_HEIGHT;
   const colorMap    = {};
   schedules.forEach(s => { if (!colorMap[s.class_id]) colorMap[s.class_id] = COLORS[Object.keys(colorMap).length % COLORS.length]; });
-
-  // Apply overlap layout per day
-  const byDay = DAY_MAP.map(dow => layoutEvents(schedules.filter(s => s.day_of_week === dow)));
-
+  const byDay           = DAY_MAP.map(dow => layoutEvents(schedules.filter(s => s.day_of_week === dow)));
   const schedulesByDate = schedules.filter(s => s.day_of_week === getDayOfWeek(selectedDate));
   const daysInMonth     = getDaysInMonth(selectedMonth);
 
-  // Event card for time grid
+  // Grid event card
   const GridEvent = ({ s }) => {
-    const color      = colorMap[s.class_id] || COLORS[0];
-    const top        = timeToTop(s.time_start);
-    const height     = Math.max(timeToPx(s.time_start, s.time_end), 28);
+    const color = colorMap[s.class_id] || COLORS[0];
+    const top   = timeToTop(s.time_start);
+    const height = Math.max(timeToPx(s.time_start, s.time_end), 28);
     const isDragging = draggingId === s.id;
     const { lane = 0, totalLanes = 1 } = s;
-    const GAP        = 2;
-    const pct        = 100 / totalLanes;
+    const pct = 100 / totalLanes;
     return (
       <div
         draggable
@@ -317,32 +386,23 @@ const ScheduleCalendar = () => {
         onTouchStart={e => onTouchStart(e, s)}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onClick={() => setSelectedEvent(s)}
-        className="absolute rounded-xl border cursor-pointer select-none overflow-hidden active:scale-95"
+        onClick={() => setEditEvent(s)}
+        className="absolute rounded-xl border cursor-pointer select-none overflow-hidden"
         style={{
-          top:    top + 1,
-          height: height - 4,
-          left:   `calc(${lane * pct}% + ${GAP}px)`,
-          width:  `calc(${pct}% - ${GAP * 2}px)`,
-          backgroundColor: color.bg,
-          borderColor:     color.border,
-          opacity: isDragging ? 0.4 : 1,
-          zIndex:  isDragging ? 1 : 5,
+          top: top+1, height: height-4,
+          left: `calc(${lane*pct}% + 2px)`,
+          width: `calc(${pct}% - 4px)`,
+          backgroundColor: color.bg, borderColor: color.border,
+          opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 1 : 5,
           touchAction: 'none',
+          transition: 'opacity 0.15s',
         }}
       >
-        <div className="px-1.5 py-1 h-full flex flex-col justify-between">
-          <div>
-            <p className="text-xs font-bold leading-tight truncate" style={{ color: color.text }}>{getLabel(s)}</p>
-            {height > 34 && <p className="text-xs leading-tight" style={{ color: color.text, opacity: 0.8 }}>{s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}</p>}
-            {height > 50 && <p className="text-xs truncate" style={{ color: color.text, opacity: 0.7 }}>{s.teacher_name}</p>}
-            {height > 66 && <p className="text-xs truncate" style={{ color: color.text, opacity: 0.6 }}>{s.room_name}</p>}
-          </div>
-          {height > 56 && (
-            <button onClick={e => { e.stopPropagation(); handleDelete(s.id); }}
-              onDragStart={e => e.stopPropagation()}
-              className="text-xs text-red-400 hover:text-red-600 text-left">🗑️</button>
-          )}
+        <div className="px-1.5 py-1 h-full flex flex-col">
+          <p className="text-xs font-bold leading-tight truncate" style={{ color: color.text }}>{getLabel(s)}</p>
+          {height > 34 && <p className="text-xs leading-tight" style={{ color: color.text, opacity: 0.8 }}>{s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}</p>}
+          {height > 50 && <p className="text-xs truncate" style={{ color: color.text, opacity: 0.7 }}>{s.teacher_name}</p>}
+          {height > 66 && <p className="text-xs truncate" style={{ color: color.text, opacity: 0.6 }}>{s.room_name}</p>}
         </div>
       </div>
     );
@@ -350,20 +410,25 @@ const ScheduleCalendar = () => {
 
   return (
     <MainLayout title="Lịch học">
-      <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} onDelete={handleDelete} />
+      <EditModal
+        event={editEvent} teachers={teachers} rooms={rooms}
+        onClose={() => setEditEvent(null)}
+        onSave={handleSave}
+        onDelete={handleDelete}
+      />
 
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-gray-400 hidden sm:block">
-          {tab === 'week' ? '🖱️ Kéo thả để di chuyển · Bấm để xem chi tiết' : 'Bấm vào lịch để xem chi tiết'}
+          {tab === 'week' ? '✏️ Bấm để sửa · 🖱️ Kéo thả để di chuyển' : '✏️ Bấm vào lịch để sửa'}
         </p>
         <Button icon="➕" onClick={() => navigate('/admin/schedule/new')}>Thêm lịch học</Button>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 bg-gray-100 p-1 rounded-2xl">
-        {[{ key:'week', label:'📅 Lịch tuần' },{ key:'date', label:'🗓️ Theo ngày' },{ key:'month', label:'📆 Theo tháng' }].map(t => (
+        {[{key:'week',label:'📅 Lịch tuần'},{key:'date',label:'🗓️ Theo ngày'},{key:'month',label:'📆 Theo tháng'}].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${tab===t.key ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
+            className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${tab===t.key?'bg-white shadow text-primary-600':'text-gray-500'}`}>
             {t.label}
           </button>
         ))}
@@ -386,7 +451,6 @@ const ScheduleCalendar = () => {
                   </div>
                   <div ref={gridRef} className="overflow-y-auto" style={{ maxHeight:'70vh' }}>
                     <div className="grid" style={{ gridTemplateColumns:'56px repeat(7, 1fr)' }}>
-                      {/* Time labels */}
                       <div className="relative" style={{ height: totalHeight }}>
                         {hours.map(h => (
                           <div key={h} className="absolute w-full flex items-start justify-end pr-2"
@@ -395,29 +459,22 @@ const ScheduleCalendar = () => {
                           </div>
                         ))}
                       </div>
-                      {/* Day columns */}
                       {DAYS.map((day, dayIdx) => (
                         <div key={day} className="relative border-l border-gray-100"
                           style={{ height: totalHeight }}
                           onDragOver={e => onDragOver(e, dayIdx)}
                           onDrop={e => onDrop(e, dayIdx)}>
                           {hours.map(h => (
-                            <div key={h} className="absolute w-full border-t border-gray-50"
-                              style={{ top:(h-START_HOUR)*SLOT_HEIGHT }} />
+                            <div key={h} className="absolute w-full border-t border-gray-50" style={{ top:(h-START_HOUR)*SLOT_HEIGHT }} />
                           ))}
-                          {/* Drop indicator */}
                           {dropTarget?.dayIdx === dayIdx && (dragData.current || touchRef.current.active) && (() => {
-                            const dur = dragData.current
-                              ? dragData.current.duration
-                              : touchRef.current.schedule
-                                ? timeToMins(touchRef.current.schedule.time_end) - timeToMins(touchRef.current.schedule.time_start)
-                                : 0;
+                            const dur = dragData.current ? dragData.current.duration
+                              : touchRef.current.schedule ? timeToMins(touchRef.current.schedule.time_end) - timeToMins(touchRef.current.schedule.time_start) : 0;
                             return dur > 0 ? (
                               <div className="absolute left-0 right-0 mx-1 rounded-xl opacity-50 border-2 border-dashed border-primary-400 bg-primary-100 pointer-events-none z-20"
                                 style={{ top: timeToTop(minsToTime(dropTarget.mins))+1, height: timeToPx(minsToTime(dropTarget.mins), minsToTime(dropTarget.mins+dur))-4 }} />
                             ) : null;
                           })()}
-                          {/* Events with overlap layout */}
                           {byDay[dayIdx].map(s => <GridEvent key={s.id} s={s} />)}
                         </div>
                       ))}
@@ -425,12 +482,7 @@ const ScheduleCalendar = () => {
                   </div>
                 </div>
               </div>
-              {schedules.length === 0 && (
-                <div className="text-center py-16">
-                  <p className="text-4xl mb-3">📅</p>
-                  <p className="text-gray-400">Chưa có lịch học nào</p>
-                </div>
-              )}
+              {schedules.length === 0 && <div className="text-center py-16"><p className="text-4xl mb-3">📅</p><p className="text-gray-400">Chưa có lịch học nào</p></div>}
             </div>
           )}
 
@@ -442,12 +494,10 @@ const ScheduleCalendar = () => {
                 <p className="text-sm font-semibold text-gray-700 mb-3">
                   {new Date(selectedDate).toLocaleDateString('vi-VN', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
                 </p>
-                {schedulesByDate.length === 0 ? (
-                  <p className="text-center text-gray-400 py-8">Không có lịch học ngày này</p>
-                ) : (
+                {schedulesByDate.length === 0 ? <p className="text-center text-gray-400 py-8">Không có lịch học ngày này</p> : (
                   <div className="flex flex-col gap-3">
                     {schedulesByDate.sort((a,b) => a.time_start?.localeCompare(b.time_start)).map((s,j) => (
-                      <div key={s.id} onClick={() => setSelectedEvent(s)}
+                      <div key={s.id} onClick={() => setEditEvent(s)}
                         className={`p-4 rounded-2xl border cursor-pointer active:scale-95 transition-transform ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                         <p className="font-bold text-gray-800">{getLabel(s)}</p>
                         <p className="text-sm text-gray-600 mt-1">🕐 {s.time_start?.slice(0,5)} – {s.time_end?.slice(0,5)}</p>
@@ -479,7 +529,7 @@ const ScheduleCalendar = () => {
                       </div>
                       <div className="p-3 flex flex-col gap-2">
                         {ds.sort((a,b) => a.time_start?.localeCompare(b.time_start)).map((s,j) => (
-                          <div key={s.id} onClick={() => setSelectedEvent(s)}
+                          <div key={s.id} onClick={() => setEditEvent(s)}
                             className={`p-3 rounded-xl border cursor-pointer active:scale-95 transition-transform ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                             <p className="text-sm font-bold text-gray-800">{getLabel(s)}</p>
                             <p className="text-xs text-gray-600">{s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · {s.teacher_name} · {s.room_name}</p>
