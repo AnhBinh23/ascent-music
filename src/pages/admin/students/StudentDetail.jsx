@@ -53,6 +53,11 @@ const StudentDetail = () => {
 
   if (loading) return <MainLayout title="Chi tiết học viên"><Loading /></MainLayout>;
 
+  const total    = Number(student?.total_sessions || 0);
+  const attended = Number(student?.attended || 0);
+  const remaining = total > 0 ? total - attended : null;
+  const pct      = total > 0 ? Math.min(Math.round(attended / total * 100), 100) : 0;
+
   return (
     <MainLayout title="Chi tiết học viên">
       <div className="flex items-center gap-4 mb-5">
@@ -85,13 +90,46 @@ const StudentDetail = () => {
           <Row label="Giới tính"     value={student?.gender} />
           <Row label="SĐT"           value={student?.phone} />
           <Row label="Địa chỉ"       value={student?.address} />
-          <Row label="Tên phụ huynh" value={student?.parentName} />
+          <Row label="Tên phụ huynh" value={student?.parentName || student?.parent_name} />
         </Card>
+
         <Card title="Thông tin học tập">
           <Row label="Nhạc cụ"    value={student?.instrument} />
           <Row label="Trình độ"   value={student?.level} />
           <Row label="Trạng thái" value={student?.status === 'active' ? 'Đang học' : 'Nghỉ học'} />
           <Row label="Ghi chú"    value={student?.note} />
+
+          {/* Số buổi học */}
+          <div className="py-2.5 border-b border-gray-50 last:border-0">
+            <div className="flex justify-between mb-1.5">
+              <span className="text-sm text-gray-500">Số buổi học (khóa)</span>
+              <span className="text-sm font-medium text-gray-800">
+                {total > 0 ? (
+                  <span className="flex items-center gap-1.5">
+                    <span>{total} buổi</span>
+                    {remaining !== null && remaining <= 0 && (
+                      <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">🔴 Hết khóa</span>
+                    )}
+                    {remaining !== null && remaining > 0 && remaining < 5 && (
+                      <span className="text-xs bg-orange-50 text-orange-500 px-1.5 py-0.5 rounded-full">⚠️ Còn {remaining}</span>
+                    )}
+                  </span>
+                ) : '—'}
+              </span>
+            </div>
+            {total > 0 && (
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: pct >= 100 ? '#dc2626' : pct >= 80 ? '#ea580c' : '#16a34a'
+                  }} />
+              </div>
+            )}
+            {total > 0 && (
+              <p className="text-xs text-gray-400 mt-1">{pct}% hoàn thành</p>
+            )}
+          </div>
         </Card>
       </div>
 
