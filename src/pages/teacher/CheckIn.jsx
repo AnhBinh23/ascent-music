@@ -6,7 +6,11 @@ import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import checkinService from '../../services/checkinService';
 import scheduleService from '../../services/scheduleService';
+import api from '../../services/api';
 import { toast } from 'react-toastify';
+
+// Chuyển JS getDay() (0=CN,1=T2...) sang DB format (1=CN,2=T2...)
+const jsDayToDb = d => d === 0 ? 1 : d + 1;
 
 const CheckIn = () => {
   const { user } = useAuth();
@@ -16,10 +20,8 @@ const CheckIn = () => {
   const [loading, setLoading]           = useState({});
   const [history, setHistory]           = useState([]);
   const [now, setNow]                   = useState(new Date());
-  const [tab, setTab]                   = useState('today'); // 'today' | 'history'
-  const [filterMonth, setFilterMonth]   = useState(
-    new Date().toISOString().slice(0, 7) // YYYY-MM
-  );
+  const [tab, setTab]                   = useState('today');
+  const [filterMonth, setFilterMonth]   = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30000);
@@ -29,17 +31,23 @@ const CheckIn = () => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const schedules    = await scheduleService.getByTeacher(user?.id || 'teacher-001');
-        const today        = new Date().getDay() || 7;
-        const todaySchedule = schedules.filter(s => s.day_of_week === today);
+        // Lấy teacher record từ user_id
+        const teacherRes = await api.get(`/teachers/by-user/${user?.id}`).catch(() => ({row: null}));
+        const teacherId  = teacherRes?.row?.id || user?.id;
+
+        // Lấy lịch dạy theo teacher ID thực
+        const schedules     = await scheduleService.getByTeacher(teacherId);
+        const todayDbDay    = jsDayToDb(new Date().getDay()); // đúng format DB
+        const todaySchedule = schedules.filter(s => Number(s.day_of_week) === todayDbDay);
         setTodayClasses(todaySchedule);
 
-        const hist = await checkinService.getByTeacher(user?.id || 'teacher-001');
+        // Lịch sử chấm công
+        const hist = await checkinService.getByTeacher(teacherId);
         setHistory(hist);
 
-        const todayStr     = new Date().toISOString().split('T')[0];
+        const todayStr      = new Date().toISOString().split('T')[0];
         const todayCheckins = hist.filter(h => h.date === todayStr);
-        const checkedMap   = {};
+        const checkedMap    = {};
         todayCheckins.forEach(c => { checkedMap[c.class_id] = c; });
         setCheckedIn(checkedMap);
       } catch (err) {
@@ -71,7 +79,9 @@ const CheckIn = () => {
 
       toast.success(`✅ Chấm công thành công! Lương: ${salaryEarned.toLocaleString('vi-VN')}đ`);
 
-      const hist = await checkinService.getByTeacher(user?.id || 'teacher-001');
+      const teacherRes = await api.get(`/teachers/by-user/${user?.id}`).catch(() => ({row: null}));
+      const teacherId  = teacherRes?.row?.id || user?.id;
+      const hist = await checkinService.getByTeacher(teacherId);
       setHistory(hist);
     } catch (err) {
       toast.error(err.message);
@@ -80,28 +90,23 @@ const CheckIn = () => {
     }
   };
 
-  const todaySalary  = Object.values(checkedIn).reduce((sum, c) => sum + Number(c.salary_earned || 0), 0);
-  const totalDone    = Object.keys(checkedIn).length;
+  const todaySalary = Object.values(checkedIn).reduce((sum, c) => sum + Number(c.salary_earned || 0), 0);
+  const totalDone   = Object.keys(checkedIn).length;
 
-  // Lọc lịch sử theo tháng
   const filteredHistory = history.filter(h => h.date?.slice(0, 7) === filterMonth);
   const monthSalary     = filteredHistory.reduce((sum, h) => sum + Number(h.salary_earned || 0), 0);
 
-  // Nhóm theo ngày
   const groupedHistory = filteredHistory.reduce((acc, h) => {
-    const date = h.date;
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(h);
+    if (!acc[h.date]) acc[h.date] = [];
+    acc[h.date].push(h);
     return acc;
   }, {});
   const sortedDates = Object.keys(groupedHistory).sort((a, b) => b.localeCompare(a));
 
-  // Tạo danh sách tháng có dữ liệu
   const availableMonths = [...new Set(history.map(h => h.date?.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
 
   return (
     <MainLayout title="Chấm công">
-      {/* Tổng quan */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <div className="card text-center">
           <p className="text-2xl font-bold text-primary-600">{todayClasses.length}</p>
@@ -117,30 +122,19 @@ const CheckIn = () => {
         </div>
       </div>
 
-      {/* Tab */}
       <div className="flex gap-2 mb-5 bg-gray-100 p-1 rounded-2xl">
-        <button
-          onClick={() => setTab('today')}
-          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-            tab === 'today' ? 'bg-white shadow text-primary-600' : 'text-gray-500'
-          }`}
-        >
+        <button onClick={() => setTab('today')}
+          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${tab==='today'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
           📅 Hôm nay
         </button>
-        <button
-          onClick={() => setTab('history')}
-          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-            tab === 'history' ? 'bg-white shadow text-primary-600' : 'text-gray-500'
-          }`}
-        >
+        <button onClick={() => setTab('history')}
+          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${tab==='history'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
           📋 Lịch sử chấm công
         </button>
       </div>
 
-      {/* ── TAB HÔM NAY ── */}
       {tab === 'today' && (
         <>
-          {/* Giờ hiện tại */}
           <div className="flex items-center gap-3 mb-5 p-4 bg-primary-50 rounded-2xl border border-primary-100">
             <span className="text-2xl">🕐</span>
             <div className="flex-1">
@@ -154,9 +148,7 @@ const CheckIn = () => {
           </div>
 
           {todayClasses.length === 0 ? (
-            <Card>
-              <p className="text-center text-gray-400 py-10">Không có lịch dạy hôm nay 🎉</p>
-            </Card>
+            <Card><p className="text-center text-gray-400 py-10">Không có lịch dạy hôm nay 🎉</p></Card>
           ) : (
             <div className="flex flex-col gap-4">
               {todayClasses.map(cls => {
@@ -191,8 +183,7 @@ const CheckIn = () => {
                           </div>
                         ) : (
                           <div className="mt-3">
-                            <input type="text"
-                              placeholder="Ghi chú (không bắt buộc)..."
+                            <input type="text" placeholder="Ghi chú (không bắt buộc)..."
                               value={notes[cls.id] || ''}
                               onChange={e => setNotes(prev => ({ ...prev, [cls.id]: e.target.value }))}
                               className="input-field text-sm" />
@@ -200,8 +191,7 @@ const CheckIn = () => {
                         )}
                       </div>
                       {!isDone && (
-                        <Button loading={loading[cls.id]} onClick={() => handleCheckIn(cls)}
-                          icon="✅" className="flex-shrink-0">
+                        <Button loading={loading[cls.id]} onClick={() => handleCheckIn(cls)} icon="✅" className="flex-shrink-0">
                           Chấm công
                         </Button>
                       )}
@@ -214,30 +204,20 @@ const CheckIn = () => {
         </>
       )}
 
-      {/* ── TAB LỊCH SỬ ── */}
       {tab === 'history' && (
         <>
-          {/* Filter tháng */}
           <div className="flex items-center gap-3 mb-4">
-            <select
-              value={filterMonth}
-              onChange={e => setFilterMonth(e.target.value)}
-              className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 outline-none"
-            >
+            <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+              className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 outline-none">
               {availableMonths.length === 0 && (
-                <option value={filterMonth}>
-                  {new Date(filterMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
-                </option>
+                <option value={filterMonth}>{new Date(filterMonth+'-01').toLocaleDateString('vi-VN',{month:'long',year:'numeric'})}</option>
               )}
               {availableMonths.map(m => (
-                <option key={m} value={m}>
-                  {new Date(m + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
-                </option>
+                <option key={m} value={m}>{new Date(m+'-01').toLocaleDateString('vi-VN',{month:'long',year:'numeric'})}</option>
               ))}
             </select>
           </div>
 
-          {/* Tổng kết tháng */}
           <div className="grid grid-cols-2 gap-3 mb-5">
             <div className="p-4 bg-orange-50 rounded-2xl text-center border border-orange-100">
               <p className="text-xs text-orange-600 mb-1">Tổng lương tháng</p>
@@ -249,28 +229,21 @@ const CheckIn = () => {
             </div>
           </div>
 
-          {/* Danh sách theo ngày */}
           {sortedDates.length === 0 ? (
-            <Card>
-              <p className="text-center text-gray-400 py-10">Chưa có dữ liệu tháng này</p>
-            </Card>
+            <Card><p className="text-center text-gray-400 py-10">Chưa có dữ liệu tháng này</p></Card>
           ) : (
             <div className="flex flex-col gap-4">
               {sortedDates.map(date => {
-                const items      = groupedHistory[date];
-                const daySalary  = items.reduce((sum, h) => sum + Number(h.salary_earned || 0), 0);
-                const dateObj    = new Date(date);
-                const dateLabel  = dateObj.toLocaleDateString('vi-VN', {
-                  weekday: 'long', day: 'numeric', month: 'numeric'
-                });
+                const items     = groupedHistory[date];
+                const daySalary = items.reduce((sum, h) => sum + Number(h.salary_earned || 0), 0);
                 return (
                   <div key={date}>
-                    {/* Tiêu đề ngày */}
                     <div className="flex items-center justify-between px-1 mb-2">
-                      <p className="text-sm font-semibold text-gray-600 capitalize">{dateLabel}</p>
+                      <p className="text-sm font-semibold text-gray-600 capitalize">
+                        {new Date(date).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric'})}
+                      </p>
                       <p className="text-sm font-bold text-orange-500">+{daySalary.toLocaleString('vi-VN')}đ</p>
                     </div>
-                    {/* Buổi học trong ngày */}
                     <div className="flex flex-col gap-2">
                       {items.map((h, i) => (
                         <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -278,13 +251,8 @@ const CheckIn = () => {
                             <span className="text-lg">✅</span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">
-                              {h.class_name || 'Buổi học'}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              Chấm công lúc {h.time?.slice(0,5)}
-                              {h.note ? ` · ${h.note}` : ''}
-                            </p>
+                            <p className="text-sm font-semibold text-gray-800 truncate">{h.class_name || 'Buổi học'}</p>
+                            <p className="text-xs text-gray-400">Chấm công lúc {h.time?.slice(0,5)}{h.note ? ` · ${h.note}` : ''}</p>
                           </div>
                           <p className="text-sm font-bold text-green-600 flex-shrink-0">
                             +{Number(h.salary_earned).toLocaleString('vi-VN')}đ
