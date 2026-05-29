@@ -37,10 +37,6 @@ const snapY = (cy,grid) => {
   const m=Math.round(((cy-rect.top+grid.scrollTop)/SH)*60/SNAP)*SNAP+START_HOUR*60;
   return Math.max(START_HOUR*60, Math.min(END_HOUR*60-30, m));
 };
-const snapDI = (cx,wrap) => {
-  const rect=wrap.getBoundingClientRect();
-  return Math.max(0,Math.min(6,Math.floor((cx-rect.left-48+wrap.scrollLeft)/((rect.width-48)/7))));
-};
 const getLabel = s => {
   if(s.class_type==='1v1'&&s.student_name) return `${s.student_name}: ${s.instrument||s.class_name}`;
   if(s.class_type==='group') return `Nhóm (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
