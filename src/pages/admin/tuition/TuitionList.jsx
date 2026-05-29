@@ -12,18 +12,14 @@ const STATUS_VARIANT = {
   'Thanh toán 1 phần':'orange',
 };
 const METHODS = ['Tiền mặt', 'Chuyển khoản', 'Ví điện tử'];
-const MONTHS  = Array.from({ length: 12 }, (_, i) => {
-  const d = new Date(); d.setMonth(d.getMonth() - i);
-  return d.toISOString().slice(0, 7);
-});
 
-// ── Modal tạo hóa đơn ──────────────────────────────────────────────────────────
+// ── Modal tạo hóa đơn theo khóa ───────────────────────────────────────────────
 const CreateModal = ({ onClose, onCreated }) => {
   const [students, setStudents] = useState([]);
   const [classes,  setClasses]  = useState([]);
   const [form, setForm] = useState({
-    student_id: '', class_id: '', amount: '', month: new Date().toISOString().slice(0,7),
-    sessions: 0, note: '',
+    student_id: '', class_id: '', amount: '', sessions: 0,
+    start_date: '', end_date: '', note: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -32,14 +28,22 @@ const CreateModal = ({ onClose, onCreated }) => {
     api.get('/classes').then(d => setClasses(d.rows || [])).catch(() => {});
   }, []);
 
-  // Tự điền học phí khi chọn lớp
+  // Khi chọn lớp → tự điền học phí + ngày từ lớp
   const handleClassChange = (e) => {
     const cls = classes.find(c => c.id === e.target.value);
-    setForm(f => ({ ...f, class_id: e.target.value, amount: cls?.fee || f.amount }));
+    setForm(f => ({
+      ...f,
+      class_id:   e.target.value,
+      amount:     cls?.tuition_fee || cls?.fee || '',
+      start_date: cls?.start_date?.slice(0, 10) || '',
+      end_date:   cls?.end_date?.slice(0, 10)   || '',
+    }));
   };
 
   const handleSave = async () => {
-    if (!form.student_id || !form.amount) { toast.error('Chọn học viên và nhập học phí!'); return; }
+    if (!form.student_id || !form.amount) {
+      toast.error('Chọn học viên và nhập học phí!'); return;
+    }
     setSaving(true);
     try {
       await api.post('/tuition', {
@@ -48,16 +52,19 @@ const CreateModal = ({ onClose, onCreated }) => {
         amount:     Number(form.amount),
         paid:       0,
         status:     'Chưa thanh toán',
-        month:      form.month,
+        // Dùng start_date làm "month" để tương thích DB cũ
+        month:      form.start_date?.slice(0, 7) || new Date().toISOString().slice(0, 7),
         sessions:   Number(form.sessions) || 0,
         note:       form.note,
       });
-      toast.success('Đã tạo hóa đơn!');
+      toast.success('Đã tạo hóa đơn khóa học!');
       onCreated();
       onClose();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   };
+
+  const selectedClass = classes.find(c => c.id === form.class_id);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
@@ -69,6 +76,7 @@ const CreateModal = ({ onClose, onCreated }) => {
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
         </div>
         <div className="p-5 flex flex-col gap-4">
+
           {/* Học viên */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Học viên <span className="text-red-500">*</span></label>
@@ -77,40 +85,74 @@ const CreateModal = ({ onClose, onCreated }) => {
               {students.map(s => <option key={s.id} value={s.id}>{s.name} — {s.phone}</option>)}
             </select>
           </div>
+
           {/* Lớp học */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Lớp học</label>
+            <label className="text-sm font-medium text-gray-700">Lớp học / Khóa học</label>
             <select value={form.class_id} onChange={handleClassChange} className="input-field">
-              <option value="">-- Chọn lớp (tùy chọn) --</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name} — {c.instrument}</option>)}
+              <option value="">-- Chọn lớp --</option>
+              {classes.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name} — {c.instrument} {c.tuition_fee ? `(${Number(c.tuition_fee).toLocaleString('vi-VN')}đ)` : ''}
+                </option>
+              ))}
             </select>
           </div>
-          {/* Tháng */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Tháng</label>
-            <select value={form.month} onChange={e => setForm(f => ({...f, month: e.target.value}))} className="input-field">
-              {MONTHS.map(m => <option key={m} value={m}>{new Date(m+'-01').toLocaleDateString('vi-VN',{month:'long',year:'numeric'})}</option>)}
-            </select>
+
+          {/* Thông tin khóa học (hiển thị khi chọn lớp) */}
+          {selectedClass && (
+            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 text-sm text-blue-700">
+              <p className="font-semibold mb-1">📚 Thông tin khóa: {selectedClass.name}</p>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <p>🎵 Môn: {selectedClass.instrument}</p>
+                <p>👥 Loại: {selectedClass.type === '1v1' ? '1 kèm 1' : 'Nhóm'}</p>
+                {selectedClass.start_date && <p>📅 Bắt đầu: {new Date(selectedClass.start_date).toLocaleDateString('vi-VN')}</p>}
+                {selectedClass.end_date   && <p>🏁 Kết thúc: {new Date(selectedClass.end_date).toLocaleDateString('vi-VN')}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Ngày bắt đầu / kết thúc khóa */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">📅 Bắt đầu khóa</label>
+              <input type="date" value={form.start_date}
+                onChange={e => setForm(f => ({...f, start_date: e.target.value}))}
+                className="input-field" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">🏁 Kết thúc khóa</label>
+              <input type="date" value={form.end_date}
+                onChange={e => setForm(f => ({...f, end_date: e.target.value}))}
+                className="input-field" />
+            </div>
           </div>
+
           {/* Học phí */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Học phí (đ) <span className="text-red-500">*</span></label>
-            <input type="number" value={form.amount} onChange={e => setForm(f => ({...f, amount: e.target.value}))}
-              placeholder="VD: 800000" className="input-field" />
+            <label className="text-sm font-medium text-gray-700">Học phí cả khóa (đ) <span className="text-red-500">*</span></label>
+            <input type="number" value={form.amount}
+              onChange={e => setForm(f => ({...f, amount: e.target.value}))}
+              placeholder="VD: 2400000" className="input-field text-lg font-semibold" />
+            {form.amount && <p className="text-xs text-gray-400 mt-0.5">{Number(form.amount).toLocaleString('vi-VN')}đ</p>}
           </div>
+
           {/* Số buổi */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Số buổi học</label>
-            <input type="number" value={form.sessions} onChange={e => setForm(f => ({...f, sessions: e.target.value}))}
+            <label className="text-sm font-medium text-gray-700">Số buổi học cả khóa</label>
+            <input type="number" value={form.sessions}
+              onChange={e => setForm(f => ({...f, sessions: e.target.value}))}
               placeholder="VD: 16" className="input-field" />
           </div>
+
           {/* Ghi chú */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Ghi chú</label>
             <textarea value={form.note} onChange={e => setForm(f => ({...f, note: e.target.value}))}
-              rows={2} className="input-field resize-none" placeholder="Ghi chú thêm..." />
+              rows={2} className="input-field resize-none" placeholder="VD: Khóa 2 - Piano cơ bản" />
           </div>
         </div>
+
         <div className="flex gap-3 p-5 border-t border-gray-100">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">Hủy</button>
           <button onClick={handleSave} disabled={saving}
@@ -153,34 +195,36 @@ const CollectModal = ({ item, onClose, onDone }) => {
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
         </div>
         <div className="p-5 flex flex-col gap-4">
-          {/* Info */}
           <div className="p-4 bg-gray-50 rounded-2xl">
             <p className="font-semibold text-gray-800">{item.student_name}</p>
-            <p className="text-sm text-gray-500">{item.instrument} · {item.month}</p>
+            <p className="text-sm text-gray-500">{item.class_name || item.instrument} · Khóa {item.month?.slice(0,7)}</p>
             <div className="flex justify-between mt-2">
-              <p className="text-sm text-gray-600">Học phí: <span className="font-medium">{Number(item.amount).toLocaleString('vi-VN')}đ</span></p>
+              <p className="text-sm text-gray-600">Học phí khóa: <span className="font-medium">{Number(item.amount).toLocaleString('vi-VN')}đ</span></p>
               <p className="text-sm text-gray-600">Đã thu: <span className="font-medium text-green-600">{Number(item.paid||0).toLocaleString('vi-VN')}đ</span></p>
             </div>
             <div className="mt-2 p-2 bg-red-50 rounded-xl text-center">
               <p className="text-sm font-bold text-red-600">Còn lại: {remaining.toLocaleString('vi-VN')}đ</p>
             </div>
           </div>
-          {/* Số tiền */}
+
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Số tiền thu <span className="text-red-500">*</span></label>
-            <input type="number" value={form.amount} onChange={e => setForm(f => ({...f, amount: e.target.value}))}
+            <input type="number" value={form.amount}
+              onChange={e => setForm(f => ({...f, amount: e.target.value}))}
               className="input-field text-lg font-bold" />
+            {form.amount && <p className="text-xs text-gray-400">{Number(form.amount).toLocaleString('vi-VN')}đ</p>}
           </div>
-          {/* Phương thức */}
+
           <div className="flex gap-2">
             {METHODS.map(m => (
               <button key={m} onClick={() => setForm(f => ({...f, method: m}))}
-                className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-all ${form.method===m?'bg-primary-600 text-white border-primary-600':'bg-white text-gray-600 border-gray-200'}`}>
+                className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-all
+                  ${form.method === m ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200'}`}>
                 {m === 'Tiền mặt' ? '💵' : m === 'Chuyển khoản' ? '🏦' : '📱'} {m}
               </button>
             ))}
           </div>
-          {/* Ghi chú */}
+
           <input value={form.note} onChange={e => setForm(f => ({...f, note: e.target.value}))}
             placeholder="Ghi chú..." className="input-field text-sm" />
         </div>
@@ -198,9 +242,9 @@ const CollectModal = ({ item, onClose, onDone }) => {
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 const TuitionList = () => {
-  const [data, setData]           = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState('');
+  const [data, setData]                 = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [search, setSearch]             = useState('');
   const [filterStatus, setFilterStatus] = useState('Tất cả');
   const [filterMonth, setFilterMonth]   = useState('Tất cả');
   const [showCreate, setShowCreate]     = useState(false);
@@ -216,7 +260,6 @@ const TuitionList = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Filtered
   const filtered = data.filter(d => {
     const matchStatus = filterStatus === 'Tất cả' || d.status === filterStatus;
     const matchMonth  = filterMonth  === 'Tất cả' || d.month === filterMonth;
@@ -224,15 +267,13 @@ const TuitionList = () => {
     return matchStatus && matchMonth && matchSearch;
   });
 
-  // Stats
   const currentMonth = new Date().toISOString().slice(0, 7);
   const thisMonth    = data.filter(d => d.month === currentMonth);
-  const totalRevenue = thisMonth.filter(d => d.status === 'Đã thanh toán').reduce((s,d) => s + Number(d.paid||0), 0);
-  const totalUnpaid  = thisMonth.filter(d => d.status !== 'Đã thanh toán').length;
-  const totalPartial = thisMonth.filter(d => d.status === 'Thanh toán 1 phần').length;
+  const totalRevenue = thisMonth.filter(d => d.status === 'Đã thanh toán').reduce((s, d) => s + Number(d.paid||0), 0);
+  const totalUnpaid  = data.filter(d => d.status !== 'Đã thanh toán').length;
+  const totalPartial = data.filter(d => d.status === 'Thanh toán 1 phần').length;
 
-  // Available months
-  const availableMonths = ['Tất cả', ...new Set(data.map(d => d.month).filter(Boolean))].sort((a,b) => {
+  const availableMonths = ['Tất cả', ...new Set(data.map(d => d.month).filter(Boolean))].sort((a, b) => {
     if (a === 'Tất cả') return -1; if (b === 'Tất cả') return 1; return b.localeCompare(a);
   });
 
@@ -253,7 +294,7 @@ const TuitionList = () => {
         </div>
         <div className="card text-center">
           <p className="text-2xl font-bold text-blue-600">{data.length}</p>
-          <p className="text-xs text-gray-500 mt-1">Tổng học viên</p>
+          <p className="text-xs text-gray-500 mt-1">Tổng hóa đơn</p>
         </div>
         <div className="card text-center">
           <p className="text-2xl font-bold text-orange-500">{totalPartial}</p>
@@ -261,14 +302,16 @@ const TuitionList = () => {
         </div>
       </div>
 
-      {/* Filters + Tạo hóa đơn */}
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="flex-1">
           <SearchBar value={search} onChange={setSearch} placeholder="Tìm tên học viên..." />
         </div>
         <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="input-field w-auto">
           {availableMonths.map(m => (
-            <option key={m} value={m}>{m === 'Tất cả' ? 'Tất cả tháng' : new Date(m+'-01').toLocaleDateString('vi-VN',{month:'long',year:'numeric'})}</option>
+            <option key={m} value={m}>
+              {m === 'Tất cả' ? 'Tất cả khóa' : new Date(m+'-01').toLocaleDateString('vi-VN',{month:'long',year:'numeric'})}
+            </option>
           ))}
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field w-auto">
@@ -284,9 +327,8 @@ const TuitionList = () => {
         <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
           <p className="text-4xl mb-3">📭</p>
           <p className="text-gray-500 font-medium">Chưa có dữ liệu</p>
-          <p className="text-gray-400 text-sm mt-1">Thêm mới để bắt đầu</p>
           <button onClick={() => setShowCreate(true)}
-            className="mt-4 px-6 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors">
+            className="mt-4 px-6 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700">
             ➕ Tạo hóa đơn đầu tiên
           </button>
         </div>
@@ -294,46 +336,49 @@ const TuitionList = () => {
         <div className="flex flex-col gap-3">
           {filtered.map((row, i) => {
             const remaining = Number(row.amount||0) - Number(row.paid||0);
-            const pct = row.amount > 0 ? Math.round(Number(row.paid||0)/Number(row.amount)*100) : 0;
+            const pct = row.amount > 0 ? Math.round(Number(row.paid||0) / Number(row.amount) * 100) : 0;
             return (
               <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start justify-between gap-3">
-                  {/* Info */}
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-700 font-bold flex-shrink-0">
                       {row.student_name?.charAt(0)}
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-800 truncate">{row.student_name}</p>
-                      <p className="text-xs text-gray-500">{row.instrument} · {row.month}</p>
+                      <p className="text-xs text-gray-500">
+                        {row.class_name || row.instrument}
+                        {row.month && ` · Khóa ${new Date(row.month+'-01').toLocaleDateString('vi-VN',{month:'long',year:'numeric'})}`}
+                      </p>
                     </div>
                   </div>
-                  {/* Status */}
                   <Badge label={row.status} variant={STATUS_VARIANT[row.status]||'gray'} dot />
                 </div>
 
-                {/* Progress bar */}
+                {/* Progress */}
                 <div className="mt-3">
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-500">Học phí: <span className="font-medium text-gray-700">{Number(row.amount).toLocaleString('vi-VN')}đ</span></span>
+                    <span className="text-gray-500">Học phí khóa: <span className="font-medium text-gray-700">{Number(row.amount).toLocaleString('vi-VN')}đ</span></span>
                     <span className="text-gray-500">Đã thu: <span className="font-medium text-green-600">{Number(row.paid||0).toLocaleString('vi-VN')}đ</span></span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all"
                       style={{ width: `${pct}%`, backgroundColor: pct >= 100 ? '#16a34a' : pct > 0 ? '#ea580c' : '#e5e7eb' }} />
                   </div>
-                  {row.method && <p className="text-xs text-gray-400 mt-1">💳 {row.method}</p>}
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-xs text-gray-400">{pct}% đã thanh toán</span>
+                    {row.method && <span className="text-xs text-gray-400">💳 {row.method}</span>}
+                  </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2 mt-3">
-                  {row.status !== 'Đã thanh toán' && (
+                  {row.status !== 'Đã thanh toán' ? (
                     <button onClick={() => setCollectItem(row)}
-                      className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
+                      className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700">
                       💰 Thu {remaining.toLocaleString('vi-VN')}đ
                     </button>
-                  )}
-                  {row.status === 'Đã thanh toán' && (
+                  ) : (
                     <div className="flex-1 py-2.5 rounded-xl bg-green-50 text-green-600 text-sm font-medium text-center">
                       ✅ Đã thanh toán đủ
                     </div>
@@ -349,5 +394,3 @@ const TuitionList = () => {
 };
 
 export default TuitionList;
-
-;
