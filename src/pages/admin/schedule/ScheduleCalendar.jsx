@@ -45,7 +45,6 @@ const getLabel = s => {
   if(s.class_type==='group') return `Nhóm (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
   return s.class_name||'Lớp học';
 };
-const DAY_NAMES={1:'CN',2:'T2',3:'T3',4:'T4',5:'T5',6:'T6',7:'T7'};
 const getDIM = ym=>{
   const[y,mo]=ym.split('-').map(Number); const d=[]; const dt=new Date(y,mo-1,1);
   while(dt.getMonth()===mo-1){d.push(new Date(dt).toISOString().split('T')[0]);dt.setDate(dt.getDate()+1);}
@@ -154,12 +153,6 @@ const ScheduleCalendar = () => {
     finally{setLoading(false);}
   },[]);
   useEffect(()=>{load();},[load]);
-
-  const getTouchDayIdx = useCallback(cx=>{
-    const w=gridWrapRef.current; if(!w) return 0;
-    const rect=w.getBoundingClientRect();
-    return Math.max(0,Math.min(6,Math.floor((cx-rect.left-56+w.scrollLeft)/((rect.width-56)/7))));
-  },[]);
 
   const showInd = useCallback((dayIdx,mins,dur)=>{
     Object.values(indicatorRefs.current).forEach(el=>{if(el)el.style.display='none';});
