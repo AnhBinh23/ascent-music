@@ -249,14 +249,15 @@ const ClassForm = () => {
               </select>
             </div>
 
-            {/* ✅ Số buổi/tuần */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">📅 Số buổi/tuần</label>
-              <select name="sessions_per_week" value={form.sessions_per_week} onChange={handleChange} className="input-field">
-                <option value={1}>1 buổi/tuần</option>
-                <option value={2}>2 buổi/tuần</option>
-              </select>
-            </div>
+                      {/* Số buổi/tuần */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">📅 Số buổi/tuần</label>
+            <select name="sessions_per_week" value={form.sessions_per_week} onChange={handleChange} className="input-field">
+              {[1,2,3,4,5,6,7].map(n => (
+                <option key={n} value={n}>{n} buổi/tuần</option>
+              ))}
+            </select>
+          </div>
 
             <Input label="Học phí cả khóa (đ)" name="tuition_fee" type="number"
               value={form.tuition_fee} onChange={handleChange} placeholder="VD: 2400000" />
