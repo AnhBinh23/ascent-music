@@ -10,19 +10,28 @@ import api from '../../services/api';
 const DAY_LABEL = { 1: 'CN', 2: 'T2', 3: 'T3', 4: 'T4', 5: 'T5', 6: 'T6', 7: 'T7' };
 
 const MyClasses = () => {
-  const navigate    = useNavigate();
-  const { user }    = useAuth();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        // Lấy lớp của giáo viên hiện tại
-        const data = await api.get(`/classes?teacher_id=${user?.id}`);
+        // Bước 1: Lấy teachers.id từ user.id (user-001 → gv-001)
+        const teacherData = await api.get(`/teachers/by-user/${user?.id}`);
+        const teacher = teacherData.row || teacherData;
+        const teacherId = teacher?.id;
+        if (!teacherId) {
+          setClasses([]);
+          return;
+        }
+
+        // Bước 2: Lấy lớp theo teachers.id
+        const data = await api.get(`/classes?teacher_id=${teacherId}`);
         const rows = data.rows || data || [];
 
-        // Lấy học viên + tỉ lệ điểm danh từng lớp
+        // Bước 3: Lấy học viên + tỉ lệ điểm danh từng lớp
         const enriched = await Promise.all(rows.map(async (cls) => {
           try {
             const students = await api.get(`/classes/${cls.id}/students`);
@@ -35,6 +44,7 @@ const MyClasses = () => {
         setClasses(enriched);
       } catch (err) {
         console.error(err.message);
+        setClasses([]);
       } finally {
         setLoading(false);
       }
@@ -79,7 +89,6 @@ const MyClasses = () => {
                 />
               }
             >
-              {/* Danh sách học viên */}
               {cls.students.length === 0 ? (
                 <p className="text-sm text-gray-400 mt-3">Chưa có học viên</p>
               ) : (
@@ -109,7 +118,6 @@ const MyClasses = () => {
                 </div>
               )}
 
-              {/* Actions */}
               <div className="flex gap-2 mt-4">
                 <Button
                   size="sm" variant="secondary" icon="✅"
