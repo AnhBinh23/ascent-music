@@ -17,24 +17,38 @@ const DAYS        = [
 ];
 const DAY_LABEL = { 1:'CN', 2:'T2', 3:'T3', 4:'T4', 5:'T5', 6:'T6', 7:'T7' };
 
+// ✅ 2 gói khóa học cố định
+const COURSE_PACKAGES = [
+  { sessions: 16, label: 'Khóa 16 buổi' },
+  { sessions: 24, label: 'Khóa 24 buổi' },
+];
+
 const EMPTY_CLASS = {
   name: '', instrument: 'Piano', type: '1v1', teacher_id: '',
-  level: 'Sơ cấp', schedule: '', fee: '', start_date: '', end_date: '',
-  max_students: 1, status: 'active', note: '',
+  level: 'Sơ cấp', schedule: '', tuition_fee: '', start_date: '', end_date: '',
+  max_students: 1, sessions_per_week: 1, total_sessions: 16, status: 'active', note: '',
 };
-
 const EMPTY_SLOT = { day_of_week: 2, time_start: '08:00', time_end: '09:00', room_id: '' };
+
+// Tính ngày kết thúc từ ngày bắt đầu + số buổi/tuần + tổng buổi
+const calcEndDate = (startDate, sessionsPerWeek, totalSessions) => {
+  if (!startDate || !sessionsPerWeek || !totalSessions) return '';
+  const weeks = Math.ceil(totalSessions / sessionsPerWeek);
+  const end   = new Date(startDate);
+  end.setDate(end.getDate() + weeks * 7);
+  return end.toISOString().split('T')[0];
+};
 
 const ClassForm = () => {
   const { id }   = useParams();
   const navigate = useNavigate();
   const isEdit   = !!id;
 
-  const [form, setForm]       = useState(EMPTY_CLASS);
-  const [slots, setSlots]     = useState([{ ...EMPTY_SLOT }]);
+  const [form, setForm]         = useState(EMPTY_CLASS);
+  const [slots, setSlots]       = useState([{ ...EMPTY_SLOT }]);
   const [teachers, setTeachers] = useState([]);
-  const [rooms, setRooms]     = useState([]);
-  const [saving, setSaving]   = useState(false);
+  const [rooms, setRooms]       = useState([]);
+  const [saving, setSaving]     = useState(false);
   const [fetching, setFetching] = useState(isEdit);
 
   useEffect(() => {
@@ -48,20 +62,21 @@ const ClassForm = () => {
       ]).then(([cls, sched]) => {
         const c = cls.row || cls.rows?.[0] || {};
         setForm({
-          name:         c.name         || '',
-          instrument:   c.instrument   || 'Piano',
-          type:         c.type         || '1v1',
-          teacher_id:   c.teacher_id   || '',
-          level:        c.level        || 'Sơ cấp',
-          schedule:     c.schedule     || '',
-          fee:          c.fee          || '',
-          start_date:   c.start_date?.slice(0,10) || '',
-          end_date:     c.end_date?.slice(0,10)   || '',
-          max_students: c.max_students || 1,
-          status:       c.status       || 'active',
-          note:         c.note         || '',
+          name:              c.name              || '',
+          instrument:        c.instrument        || 'Piano',
+          type:              c.type              || '1v1',
+          teacher_id:        c.teacher_id        || '',
+          level:             c.level             || 'Sơ cấp',
+          schedule:          c.schedule          || '',
+          tuition_fee:       c.tuition_fee || c.fee || '',
+          start_date:        c.start_date?.slice(0,10) || '',
+          end_date:          c.end_date?.slice(0,10)   || '',
+          max_students:      c.max_students      || 1,
+          sessions_per_week: c.sessions_per_week || 1,
+          total_sessions:    c.total_sessions    || 16,
+          status:            c.status            || 'active',
+          note:              c.note              || '',
         });
-        // Load existing schedules for this class
         const existing = (sched.rows || []).filter(s => s.class_id === id);
         if (existing.length > 0) {
           setSlots(existing.map(s => ({
@@ -77,33 +92,65 @@ const ClassForm = () => {
     }
   }, [id, isEdit]);
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = e => {
+    const { name, value } = e.target;
+    const next = { ...form, [name]: value };
 
-  // ── Slots (schedule) ─────────────────────────────────────────────────────────
-  const addSlot = () => setSlots([...slots, { ...EMPTY_SLOT }]);
+    // Tự tính ngày kết thúc khi đổi start_date / sessions_per_week / total_sessions
+    if (['start_date', 'sessions_per_week', 'total_sessions'].includes(name)) {
+      next.end_date = calcEndDate(
+        name === 'start_date'        ? value : next.start_date,
+        name === 'sessions_per_week' ? Number(value) : Number(next.sessions_per_week),
+        name === 'total_sessions'    ? Number(value) : Number(next.total_sessions),
+      );
+    }
+
+    // Khi chọn nhóm thì max_students mặc định > 1
+    if (name === 'type') {
+      next.max_students = value === '1v1' ? 1 : next.max_students < 2 ? 5 : next.max_students;
+    }
+
+    setForm(next);
+  };
+
+  // ── Slots ────────────────────────────────────────────────────────────────────
+  const addSlot    = () => setSlots([...slots, { ...EMPTY_SLOT }]);
   const removeSlot = (i) => setSlots(slots.filter((_, idx) => idx !== i));
   const updateSlot = (i, field, value) => {
-    const next = [...slots];
-    next[i] = { ...next[i], [field]: value };
-    setSlots(next);
+    const next = [...slots]; next[i] = { ...next[i], [field]: value }; setSlots(next);
   };
+  const buildScheduleText = (sl) =>
+    sl.map(s => `${DAY_LABEL[s.day_of_week]} ${s.time_start}-${s.time_end}`).join(', ');
 
-  // Auto-generate schedule text from slots
-  const buildScheduleText = (sl) => {
-    if (!sl.length) return '';
-    return sl.map(s => `${DAY_LABEL[s.day_of_week]} ${s.time_start}-${s.time_end}`).join(', ');
-  };
+  // Validate: số slot phải = sessions_per_week
+  const spw = Number(form.sessions_per_week) || 1;
 
   // ── Save ─────────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!form.name || !form.teacher_id) { toast.error('Vui lòng điền tên lớp và chọn giáo viên!'); return; }
+    if (!form.name || !form.teacher_id) {
+      toast.error('Vui lòng điền tên lớp và chọn giáo viên!'); return;
+    }
+    if (slots.length !== spw) {
+      toast.error(`Cần thêm đúng ${spw} khung giờ (${spw} buổi/tuần)!`); return;
+    }
     setSaving(true);
     try {
       const payload = {
-        ...form,
-        schedule: buildScheduleText(slots),
-        fee: Number(form.fee) || 0,
-        max_students: Number(form.max_students) || 1,
+        name:              form.name,
+        instrument:        form.instrument,
+        type:              form.type,
+        teacher_id:        form.teacher_id,
+        level:             form.level,
+        schedule:          buildScheduleText(slots),
+        tuition_fee:       Number(form.tuition_fee) || 0,
+        fee:               Number(form.tuition_fee) || 0,
+        start_date:        form.start_date,
+        end_date:          form.end_date,
+        max_students:      Number(form.max_students) || 1,
+        sessions_per_week: Number(form.sessions_per_week) || 1,
+        total_sessions:    Number(form.total_sessions) || 16,
+        status:            form.status,
+        note:              form.note,
       };
 
       let classId = id;
@@ -116,16 +163,12 @@ const ClassForm = () => {
         toast.success('Tạo lớp học thành công!');
       }
 
-      // Save schedules
       if (classId) {
-        // Delete old schedules if editing
         if (isEdit) {
-          // Get current schedules and delete them
-          const cur = await api.get('/schedules');
+          const cur      = await api.get('/schedules');
           const existing = (cur.rows || []).filter(s => s.class_id === id);
           await Promise.all(existing.map(s => api.delete(`/schedules/${s.id}`).catch(() => {})));
         }
-        // Create new schedules
         await Promise.all(slots.map(s =>
           api.post('/schedules', {
             class_id:    classId,
@@ -163,7 +206,7 @@ const ClassForm = () => {
           <p className="text-sm font-bold text-gray-700 mb-4">📚 Thông tin lớp học</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <Input label="Tên lớp *" name="name" value={form.name} onChange={handleChange} placeholder="VD: Piano 1-1 Mint" required />
+              <Input label="Tên lớp *" name="name" value={form.name} onChange={handleChange} placeholder="VD: Piano 1-1 Mint" />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -196,10 +239,47 @@ const ClassForm = () => {
               </select>
             </div>
 
-            <Input label="Học phí (đ)" name="fee" type="number" value={form.fee} onChange={handleChange} placeholder="800000" />
-            <Input label="Sĩ số tối đa" name="max_students" type="number" value={form.max_students} onChange={handleChange} />
-            <Input label="Ngày bắt đầu" name="start_date" type="date" value={form.start_date} onChange={handleChange} />
-            <Input label="Ngày kết thúc" name="end_date"   type="date" value={form.end_date}   onChange={handleChange} />
+            {/* ✅ Gói khóa học */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">📦 Gói khóa học</label>
+              <select name="total_sessions" value={form.total_sessions} onChange={handleChange} className="input-field">
+                {COURSE_PACKAGES.map(p => (
+                  <option key={p.sessions} value={p.sessions}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* ✅ Số buổi/tuần */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">📅 Số buổi/tuần</label>
+              <select name="sessions_per_week" value={form.sessions_per_week} onChange={handleChange} className="input-field">
+                <option value={1}>1 buổi/tuần</option>
+                <option value={2}>2 buổi/tuần</option>
+              </select>
+            </div>
+
+            <Input label="Học phí cả khóa (đ)" name="tuition_fee" type="number"
+              value={form.tuition_fee} onChange={handleChange} placeholder="VD: 2400000" />
+
+            {form.type === 'group' && (
+              <Input label="Sĩ số tối đa" name="max_students" type="number"
+                value={form.max_students} onChange={handleChange} />
+            )}
+
+            <Input label="Ngày bắt đầu" name="start_date" type="date"
+              value={form.start_date} onChange={handleChange} />
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Ngày kết thúc</label>
+              <input type="date" name="end_date" value={form.end_date}
+                onChange={handleChange} className="input-field bg-gray-50" />
+              {form.start_date && form.end_date && (
+                <p className="text-xs text-primary-500 mt-0.5">
+                  📦 {form.total_sessions} buổi · {form.sessions_per_week} buổi/tuần
+                  · ~{Math.ceil(Number(form.total_sessions) / Number(form.sessions_per_week))} tuần
+                </p>
+              )}
+            </div>
 
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Trạng thái</label>
@@ -212,23 +292,38 @@ const ClassForm = () => {
 
             <div className="flex flex-col gap-1 sm:col-span-2">
               <label className="text-sm font-medium text-gray-700">Ghi chú</label>
-              <textarea name="note" value={form.note} onChange={handleChange} rows={2} className="input-field resize-none" />
+              <textarea name="note" value={form.note} onChange={handleChange}
+                rows={2} className="input-field resize-none" />
             </div>
           </div>
         </div>
 
         {/* ── Lịch học ── */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div>
               <p className="text-sm font-bold text-gray-700">📅 Lịch học trong tuần</p>
-              <p className="text-xs text-gray-400 mt-0.5">Có thể thêm nhiều khung giờ khác nhau</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Cần {spw} khung giờ ({spw} buổi/tuần) · Hiện có {slots.length}
+              </p>
             </div>
-            <button type="button" onClick={addSlot}
-              className="flex items-center gap-1.5 px-3 py-2 bg-primary-50 text-primary-600 rounded-xl text-sm font-medium hover:bg-primary-100 transition-colors">
-              ➕ Thêm khung giờ
-            </button>
+            {slots.length < spw && (
+              <button type="button" onClick={addSlot}
+                className="flex items-center gap-1.5 px-3 py-2 bg-primary-50 text-primary-600 rounded-xl text-sm font-medium hover:bg-primary-100">
+                ➕ Thêm khung giờ
+              </button>
+            )}
           </div>
+
+          {/* Cảnh báo số slot */}
+          {slots.length !== spw && (
+            <div className={`mb-3 p-2 rounded-xl text-xs font-medium
+              ${slots.length < spw ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
+              {slots.length < spw
+                ? `⚠️ Cần thêm ${spw - slots.length} khung giờ nữa`
+                : `⚠️ Đang có ${slots.length} khung giờ, chỉ cần ${spw}`}
+            </div>
+          )}
 
           {slots.length === 0 ? (
             <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl">
@@ -239,7 +334,6 @@ const ClassForm = () => {
             <div className="flex flex-col gap-3">
               {slots.map((slot, i) => (
                 <div key={i} className="flex flex-col sm:flex-row gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                  {/* Thứ */}
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="text-xs font-medium text-gray-500">Thứ</label>
                     <select value={slot.day_of_week}
@@ -248,24 +342,18 @@ const ClassForm = () => {
                       {DAYS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                     </select>
                   </div>
-
-                  {/* Giờ bắt đầu */}
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="text-xs font-medium text-gray-500">Giờ bắt đầu</label>
                     <input type="time" value={slot.time_start}
                       onChange={e => updateSlot(i, 'time_start', e.target.value)}
                       className="input-field text-sm py-2" />
                   </div>
-
-                  {/* Giờ kết thúc */}
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="text-xs font-medium text-gray-500">Giờ kết thúc</label>
                     <input type="time" value={slot.time_end}
                       onChange={e => updateSlot(i, 'time_end', e.target.value)}
                       className="input-field text-sm py-2" />
                   </div>
-
-                  {/* Phòng */}
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="text-xs font-medium text-gray-500">Phòng học</label>
                     <select value={slot.room_id}
@@ -275,11 +363,9 @@ const ClassForm = () => {
                       {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                     </select>
                   </div>
-
-                  {/* Xóa */}
                   <div className="flex items-end">
                     <button type="button" onClick={() => removeSlot(i)}
-                      className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-400 hover:bg-red-100 transition-colors flex-shrink-0">
+                      className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-400 hover:bg-red-100 flex-shrink-0">
                       🗑️
                     </button>
                   </div>
@@ -288,7 +374,6 @@ const ClassForm = () => {
             </div>
           )}
 
-          {/* Preview lịch */}
           {slots.length > 0 && (
             <div className="mt-3 p-3 bg-primary-50 rounded-xl">
               <p className="text-xs text-primary-600 font-medium">
@@ -298,7 +383,6 @@ const ClassForm = () => {
           )}
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 justify-end">
           <Button variant="secondary" type="button" onClick={() => navigate('/admin/classes')}>Hủy</Button>
           <Button loading={saving} icon={isEdit ? '💾' : '➕'} onClick={handleSubmit}>

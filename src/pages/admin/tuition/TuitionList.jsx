@@ -137,12 +137,21 @@ const CreateModal = ({ onClose, onCreated }) => {
             {form.amount && <p className="text-xs text-gray-400 mt-0.5">{Number(form.amount).toLocaleString('vi-VN')}đ</p>}
           </div>
 
-          {/* Số buổi */}
+                    {/* Gói khóa học */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Số buổi học cả khóa</label>
-            <input type="number" value={form.sessions}
-              onChange={e => setForm(f => ({...f, sessions: e.target.value}))}
-              placeholder="VD: 16" className="input-field" />
+            <label className="text-sm font-medium text-gray-700">📦 Gói khóa học</label>
+            <div className="flex gap-3">
+              {[16, 24].map(n => (
+                <button key={n} type="button"
+                  onClick={() => setForm(f => ({ ...f, sessions: n }))}
+                  className={`flex-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all
+                    ${form.sessions === n
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'}`}>
+                  {n} buổi
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Ghi chú */}
