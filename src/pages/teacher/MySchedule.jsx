@@ -168,7 +168,6 @@ const MySchedule = () => {
   const indicatorRefs = useRef({});
   const dragData      = useRef(null);
   const rafRef        = useRef(null);
-  const touchState    = useRef({active:false,schedule:null,ghost:null,timer:null,startX:0,startY:0,cardEl:null});
 
   const [schedules, setSchedules]   = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -265,69 +264,7 @@ const MySchedule = () => {
     await applyDrop(id,sched,DAY_MAP[di],m2t(mins),m2t(mins+dur));
   },[hideInd,applyDrop]);
 
-  // Touch DnD — native listeners
-  useEffect(()=>{
-    const grid=gridRef.current;
-    const wrap=gridWrapRef.current;
-    if(!grid||!wrap) return;
 
-    const cleanup=()=>{
-      clearTimeout(touchState.current.timer);
-      if(rafRef.current)cancelAnimationFrame(rafRef.current);
-      if(touchState.current.ghost){try{document.body.removeChild(touchState.current.ghost);}catch(_){} touchState.current.ghost=null;}
-      if(touchState.current.cardEl){touchState.current.cardEl.style.opacity='';touchState.current.cardEl.style.transform='';touchState.current.cardEl=null;}
-      hideInd();
-      touchState.current.active=false; touchState.current.schedule=null;
-    };
-
-    const onMove=(e)=>{
-      const ts=touchState.current; if(!ts.schedule) return;
-      const t0=e.touches[0];
-      const dx=Math.abs(t0.clientX-ts.startX), dy=Math.abs(t0.clientY-ts.startY);
-      if(!ts.active){ if(dx>10||dy>10) clearTimeout(ts.timer); return; }
-      e.preventDefault();
-      if(ts.ghost){ts.ghost.style.left=`${t0.clientX-90}px`;ts.ghost.style.top=`${t0.clientY-35}px`;}
-      if(rafRef.current)cancelAnimationFrame(rafRef.current);
-      const cx=t0.clientX, cy=t0.clientY;
-      rafRef.current=requestAnimationFrame(()=>{
-        if(!ts.schedule) return;
-        showInd(snapDI(cx,wrap), snapY(cy,grid), t2m(ts.schedule.time_end)-t2m(ts.schedule.time_start));
-      });
-    };
-
-    const onEnd=async(e)=>{
-      const ts=touchState.current; if(!ts.schedule) return;
-      const wasActive=ts.active; const sched=ts.schedule;
-      const t0=e.changedTouches[0]; const cx=t0.clientX, cy=t0.clientY;
-      cleanup();
-      if(wasActive&&sched){
-        const di=snapDI(cx,wrap); const mins=snapY(cy,grid);
-        const dur=t2m(sched.time_end)-t2m(sched.time_start);
-        if(mins+dur<=END_HOUR*60) await applyDrop(sched.id,sched,DAY_MAP[di],m2t(mins),m2t(mins+dur));
-      } else if(sched){ setEditEv(sched); }
-    };
-
-    grid.addEventListener('touchmove',onMove,{passive:false});
-    grid.addEventListener('touchend',onEnd);
-    grid.addEventListener('touchcancel',cleanup);
-    return()=>{
-      grid.removeEventListener('touchmove',onMove);
-      grid.removeEventListener('touchend',onEnd);
-      grid.removeEventListener('touchcancel',cleanup);
-    };
-  },[hideInd,showInd,applyDrop]);
-
-  const onTouchStart = useCallback((e,s)=>{
-    const t0=e.touches[0]; const cardEl=e.currentTarget;
-    touchState.current={...touchState.current,schedule:s,active:false,startX:t0.clientX,startY:t0.clientY,cardEl};
-    touchState.current.timer=setTimeout(()=>{
-      touchState.current.active=true;
-      if(touchState.current.cardEl){touchState.current.cardEl.style.opacity='0.4';touchState.current.cardEl.style.transform='scale(0.95)';}
-      const ghost=document.createElement('div');
-      ghost.style.cssText=`position:fixed;z-index:9999;pointer-events:none;background:#ea580c;color:white;border-radius:12px;padding:8px 14px;font-size:12px;font-weight:700;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 8px 24px rgba(0,0,0,.35);left:${t0.clientX-90}px;top:${t0.clientY-35}px;`;
-      ghost.textContent=getLabel(s); document.body.appendChild(ghost); touchState.current.ghost=ghost;
-    },350);
-  },[]);
 
   // Computed
   const hours=Array.from({length:END_HOUR-START_HOUR},(_,i)=>START_HOUR+i);
@@ -341,7 +278,7 @@ const MySchedule = () => {
       <EditModal event={editEv} onClose={()=>setEditEv(null)} onSave={saveSchedule}/>
 
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs text-gray-400">📱 Giữ 0.35s để kéo thả · ✏️ Bấm để chỉnh sửa</p>
+        <p className="text-xs text-gray-400">✏️ Bấm vào lịch để sửa ngày/giờ · 🖱️ Kéo thả trên máy tính</p>
       </div>
 
       <div className="flex gap-2 mb-5 bg-gray-100 p-1 rounded-2xl">
@@ -392,8 +329,7 @@ const MySchedule = () => {
                                 draggable
                                 onDragStart={e=>{e.stopPropagation();onDragStart(e,s);}}
                                 onDragEnd={onDragEnd}
-                                onTouchStart={e=>onTouchStart(e,s)}
-                                onClick={()=>setEditEv(s)}
+                                                onClick={()=>setEditEv(s)}
                                 className="absolute rounded-lg border cursor-pointer select-none overflow-hidden active:scale-95 transition-transform"
                                 style={{top:t0+1,height:h0-4,left:`calc(${lane*pct}%+1px)`,width:`calc(${pct}%-2px)`,
                                   backgroundColor:c.bg,borderColor:c.border,
