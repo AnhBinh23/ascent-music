@@ -276,7 +276,7 @@ const ScheduleCalendar = () => {
       ghost.textContent=getLabel(s);
       document.body.appendChild(ghost);
       touchRef.current.ghost=ghost;
-    }, 400);
+    }, 300);
   },[]);
 
   const onTouchMove = useCallback((e) => {

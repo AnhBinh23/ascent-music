@@ -207,6 +207,7 @@ const MySchedule = () => {
   const onTouchStart = useCallback((e,s)=>{
     const t=e.touches[0];
     touchRef.current={...touchRef.current,schedule:s,active:false,startX:t.clientX,startY:t.clientY};
+    if(gridRef.current) gridRef.current.style.overflow='hidden';
     touchRef.current.timer=setTimeout(()=>{
       touchRef.current.active=true; setDraggingId(s.id);
       const ghost=document.createElement('div');
@@ -217,7 +218,7 @@ const MySchedule = () => {
   const onTouchMove = useCallback((e)=>{
     const t=e.touches[0];
     if(!touchRef.current.active){
-      if(Math.abs(t.clientX-touchRef.current.startX)>8||Math.abs(t.clientY-touchRef.current.startY)>8)
+      if(Math.abs(t.clientX-touchRef.current.startX)>12||Math.abs(t.clientY-touchRef.current.startY)>12)
         clearTimeout(touchRef.current.timer);
       return;
     }
