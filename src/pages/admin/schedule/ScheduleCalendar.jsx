@@ -9,8 +9,8 @@ const DAYS       = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7',
 const DAY_MAP    = [2,3,4,5,6,7,1];
 const START_HOUR = 7;
 const END_HOUR   = 21;
-const SH         = 80; // slot height px
-const SNAP       = 30; // snap minutes
+const SH         = 80;
+const SNAP       = 30;
 
 const COLORS = [
   {bg:'#dbeafe',border:'#93c5fd',text:'#1e40af'},
@@ -31,10 +31,10 @@ const DAYS_OPT = [
 
 const t2m = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
 const m2t = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}:00`;
-const top = t => (t2m(t)-START_HOUR*60)/60*SH;
-const hpx = (s,e) => (t2m(e)-t2m(s))/60*SH;
+const top  = t => (t2m(t)-START_HOUR*60)/60*SH;
+const hpx  = (s,e) => (t2m(e)-t2m(s))/60*SH;
 const dow  = d => { const x=new Date(d).getDay(); return x===0?1:x+1; };
-const snapY = (cy, grid) => {
+const snapY = (cy,grid) => {
   const rect=grid.getBoundingClientRect();
   const y=cy-rect.top+grid.scrollTop;
   const m=Math.round((y/SH)*60/SNAP)*SNAP+START_HOUR*60;
@@ -52,7 +52,7 @@ const getDIM = ym=>{
 };
 
 // Overlap layout
-const layout = evs => {
+const layoutEvs = evs => {
   if(!evs.length) return [];
   const s=[...evs].sort((a,b)=>t2m(a.time_start)-t2m(b.time_start));
   const groups=[]; const seen=new Set();
@@ -115,7 +115,7 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
         </div>
         <div className="flex gap-2 mt-4">
           <button onClick={()=>{onDelete(event.id);onClose();}} className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">🗑️ Xóa</button>
-          <button onClick={()=>{onSave(event.id,event,f);onClose();}} className="flex-grow flex-2 py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm">💾 Lưu</button>
+          <button onClick={()=>{onSave(event.id,event,f);onClose();}} className="flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm">💾 Lưu</button>
         </div>
       </div>
     </div>
@@ -130,9 +130,6 @@ const ScheduleCalendar = () => {
   const indicatorRefs = useRef({});
   const dragData      = useRef(null);
   const rafRef        = useRef(null);
-  // Touch state — NO React state to avoid re-render breaking touch
-  const touch = useRef({ active:false, schedule:null, ghost:null, timer:null,
-                         startX:0, startY:0, cardEl:null });
 
   const [schedules, setSchedules]   = useState([]);
   const [teachers, setTeachers]     = useState([]);
@@ -140,7 +137,7 @@ const ScheduleCalendar = () => {
   const [loading, setLoading]       = useState(true);
   const [tab, setTab]               = useState('week');
   const [editEvent, setEditEvent]   = useState(null);
-  const [draggingId, setDraggingId] = useState(null); // only for mouse DnD
+  const [draggingId, setDraggingId] = useState(null);
   const [selDate, setSelDate]       = useState(new Date().toISOString().split('T')[0]);
   const [selMonth, setSelMonth]     = useState(new Date().toISOString().slice(0,7));
 
@@ -189,7 +186,7 @@ const ScheduleCalendar = () => {
     catch(e){toast.error(e.message);}
   };
 
-  // ── Mouse DnD ───────────────────────────────────────────────────────────────
+  // Mouse DnD
   const onDragStart = useCallback((e,s)=>{
     dragData.current={id:s.id,dur:t2m(s.time_end)-t2m(s.time_start),sched:s};
     setDraggingId(s.id); e.dataTransfer.effectAllowed='move';
@@ -219,106 +216,12 @@ const ScheduleCalendar = () => {
     await applyDrop(id,sched,DAY_MAP[dayIdx],m2t(mins),m2t(mins+dur));
   },[hideInd,applyDrop]);
 
-  // ── Touch DnD — native listeners on grid, no React state during drag ────────
-  useEffect(()=>{
-    const grid=gridRef.current; if(!grid) return;
-
-    const cleanup=()=>{
-      clearTimeout(touch.current.timer);
-      if(rafRef.current)cancelAnimationFrame(rafRef.current);
-      if(touch.current.ghost){
-        try{document.body.removeChild(touch.current.ghost);}catch(_){}
-        touch.current.ghost=null;
-      }
-      if(touch.current.cardEl){
-        touch.current.cardEl.style.opacity='';
-        touch.current.cardEl.style.boxShadow='';
-        touch.current.cardEl=null;
-      }
-      hideInd();
-      touch.current.active=false;
-      touch.current.schedule=null;
-    };
-
-    const onMove=(e)=>{
-      if(!touch.current.schedule) return;
-      const t0=e.touches[0];
-      const dx=Math.abs(t0.clientX-touch.current.startX);
-      const dy=Math.abs(t0.clientY-touch.current.startY);
-      if(!touch.current.active){
-        if(dx>12||dy>12) clearTimeout(touch.current.timer);
-        return;
-      }
-      e.preventDefault(); // works because passive:false
-      if(touch.current.ghost){
-        touch.current.ghost.style.left=`${t0.clientX-80}px`;
-        touch.current.ghost.style.top=`${t0.clientY-30}px`;
-      }
-      if(rafRef.current)cancelAnimationFrame(rafRef.current);
-      const cx=t0.clientX,cy=t0.clientY;
-      rafRef.current=requestAnimationFrame(()=>{
-        if(!touch.current.schedule)return;
-        const dayIdx=Math.max(0,Math.min(6,Math.floor((cx-grid.parentElement.getBoundingClientRect().left-56+grid.parentElement.scrollLeft)/((grid.parentElement.getBoundingClientRect().width-56)/7))));
-        const dur=t2m(touch.current.schedule.time_end)-t2m(touch.current.schedule.time_start);
-        showInd(dayIdx,snapY(cy,grid),dur);
-      });
-    };
-
-    const onEnd=async(e)=>{
-      if(!touch.current.schedule) return;
-      const wasActive=touch.current.active;
-      const sched=touch.current.schedule;
-      const t0=e.changedTouches[0];
-      const cx=t0.clientX,cy=t0.clientY;
-      cleanup();
-      if(wasActive&&sched){
-        const dayIdx=Math.max(0,Math.min(6,Math.floor((cx-grid.parentElement.getBoundingClientRect().left-56+grid.parentElement.scrollLeft)/((grid.parentElement.getBoundingClientRect().width-56)/7))));
-        const mins=snapY(cy,grid);
-        const dur=t2m(sched.time_end)-t2m(sched.time_start);
-        if(mins+dur<=END_HOUR*60)
-          await applyDrop(sched.id,sched,DAY_MAP[dayIdx],m2t(mins),m2t(mins+dur));
-      } else if(sched){
-        setEditEvent(sched);
-      }
-    };
-
-    grid.addEventListener('touchmove',onMove,{passive:false});
-    grid.addEventListener('touchend',onEnd);
-    grid.addEventListener('touchcancel',cleanup);
-    return()=>{
-      grid.removeEventListener('touchmove',onMove);
-      grid.removeEventListener('touchend',onEnd);
-      grid.removeEventListener('touchcancel',cleanup);
-    };
-  },[hideInd,showInd,applyDrop]);
-
-  // onTouchStart — only on card, stores ref, starts timer, NO setDraggingId
-  const onTouchStart = useCallback((e,s)=>{
-    const t0=e.touches[0];
-    const cardEl=e.currentTarget;
-    touch.current={...touch.current,schedule:s,active:false,startX:t0.clientX,startY:t0.clientY,cardEl};
-    touch.current.timer=setTimeout(()=>{
-      touch.current.active=true;
-      // Visual feedback via direct DOM — no React re-render!
-      if(touch.current.cardEl){
-        touch.current.cardEl.style.opacity='0.4';
-        touch.current.cardEl.style.boxShadow='0 0 0 2px #ea580c';
-      }
-      const ghost=document.createElement('div');
-      ghost.style.cssText=`position:fixed;z-index:9999;pointer-events:none;background:#ea580c;color:white;border-radius:12px;padding:8px 12px;font-size:12px;font-weight:600;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 4px 20px rgba(0,0,0,.3);left:${t0.clientX-80}px;top:${t0.clientY-30}px;`;
-      ghost.textContent=getLabel(s);
-      document.body.appendChild(ghost);
-      touch.current.ghost=ghost;
-    },300);
-  },[]);
-
   // Computed
   const hours=Array.from({length:END_HOUR-START_HOUR},(_,i)=>START_HOUR+i);
   const totalH=hours.length*SH;
   const cmap={}; schedules.forEach(s=>{if(!cmap[s.class_id])cmap[s.class_id]=COLORS[Object.keys(cmap).length%COLORS.length];});
-  const byDay=DAY_MAP.map(d=>layout(schedules.filter(s=>s.day_of_week===d)));
+  const byDay=DAY_MAP.map(d=>layoutEvs(schedules.filter(s=>s.day_of_week===d)));
   const byDate=schedules.filter(s=>s.day_of_week===dow(selDate));
-  const dim=getDIM(selMonth);
 
   return(
     <MainLayout title="Lịch học">
@@ -326,7 +229,7 @@ const ScheduleCalendar = () => {
         onClose={()=>setEditEvent(null)} onSave={handleSave} onDelete={handleDelete}/>
 
       <div className="flex items-center justify-between mb-4">
-        <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm để sửa · 🖱️ Kéo để di chuyển · 📱 Giữ 0.3s để kéo</p>
+        <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm để sửa · 🖱️ Kéo thả để di chuyển</p>
         <Button icon="➕" onClick={()=>navigate('/admin/schedule/new')}>Thêm lịch học</Button>
       </div>
 
@@ -380,16 +283,14 @@ const ScheduleCalendar = () => {
                                 draggable
                                 onDragStart={e=>{e.stopPropagation();onDragStart(e,s);}}
                                 onDragEnd={onDragEnd}
-                                onTouchStart={e=>onTouchStart(e,s)}
                                 onClick={()=>setEditEvent(s)}
-                                className="absolute rounded-xl border cursor-pointer select-none overflow-hidden"
+                                className="absolute rounded-xl border cursor-grab active:cursor-grabbing select-none overflow-hidden"
                                 style={{
                                   top:t0+1,height:h0-4,
                                   left:`calc(${lane*pct}% + 2px)`,width:`calc(${pct}% - 4px)`,
                                   backgroundColor:c.bg,borderColor:c.border,
                                   opacity:draggingId===s.id?0.35:1,
                                   zIndex:draggingId===s.id?1:5,
-                                  touchAction:'none',willChange:'transform',
                                 }}>
                                 <div className="px-1.5 py-1 h-full flex flex-col">
                                   <p className="text-xs font-bold leading-tight truncate" style={{color:c.text}}>{getLabel(s)}</p>
@@ -441,7 +342,7 @@ const ScheduleCalendar = () => {
             <>
               <input type="month" value={selMonth} onChange={e=>setSelMonth(e.target.value)} className="input-field w-full mb-4"/>
               <div className="flex flex-col gap-3">
-                {dim.map(d=>{
+                {getDIM(selMonth).map(d=>{
                   const ds=schedules.filter(s=>s.day_of_week===dow(d));
                   if(!ds.length) return null;
                   return(
