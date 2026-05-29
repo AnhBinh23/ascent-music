@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import { useAuth } from '../../context/AuthContext';
 import attendanceService from '../../services/attendanceService';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
@@ -14,34 +15,47 @@ const STATUS_LIST = [
 ];
 
 const Attendance = () => {
-  const [classes, setClasses]     = useState([]);
+  const { user } = useAuth();
+  const [classes, setClasses]         = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
-  const [students, setStudents]   = useState([]);
-  const [attendance, setAttendance] = useState({});
-  const [date, setDate]           = useState(new Date().toISOString().split('T')[0]);
-  const [saving, setSaving]       = useState(false);
-  const [loading, setLoading]     = useState(false);
+  const [students, setStudents]       = useState([]);
+  const [attendance, setAttendance]   = useState({});
+  const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
+  const [saving, setSaving]           = useState(false);
+  const [loading, setLoading]         = useState(false);
+
+  // ✅ Chỉ load lớp của giáo viên hiện tại
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        const teacherRes = await api.get(`/teachers/by-user/${user?.id}`);
+        const teacherId  = teacherRes?.row?.id;
+        if (!teacherId) return;
+        const data = await api.get(`/classes?teacher_id=${teacherId}`);
+        setClasses(data.rows || []);
+      } catch (err) {
+        console.error(err.message);
+      }
+    };
+    if (user?.id) loadClasses();
+  }, [user]);
 
   useEffect(() => {
-    api.get('/classes').then(d => setClasses(d.rows || [])).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-  if (!selectedClass) return;
-  setLoading(true);
-  Promise.all([
-    api.get(`/classes/${selectedClass}/students`),
-    attendanceService.getByClass(selectedClass),
-  ]).then(([classData, attData]) => {
-    setStudents(classData.rows || []);
-    const map = {};
-    attData.filter(a => a.date === date).forEach(a => {
-      map[a.student_id] = a.status;
-    });
-    setAttendance(map);
-  }).catch(err => toast.error(err.message))
-  .finally(() => setLoading(false));
-}, [selectedClass, date]);
+    if (!selectedClass) return;
+    setLoading(true);
+    Promise.all([
+      api.get(`/classes/${selectedClass}/students`),
+      attendanceService.getByClass(selectedClass),
+    ]).then(([classData, attData]) => {
+      setStudents(classData.rows || []);
+      const map = {};
+      attData.filter(a => a.date === date).forEach(a => {
+        map[a.student_id] = a.status;
+      });
+      setAttendance(map);
+    }).catch(err => toast.error(err.message))
+      .finally(() => setLoading(false));
+  }, [selectedClass, date]);
 
   const handleSave = async () => {
     if (!selectedClass) { toast.error('Chọn lớp học!'); return; }
@@ -56,8 +70,11 @@ const Attendance = () => {
       }));
       await attendanceService.save(list);
       toast.success('Lưu điểm danh thành công!');
-    } catch (err) { toast.error(err.message); }
-    finally { setSaving(false); }
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
