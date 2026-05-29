@@ -357,7 +357,6 @@ const ScheduleCalendar = () => {
         onTouchStart={e=>onTouchStart(e,s)}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchCancel}
         onClick={()=>setEditEvent(s)}
         className="absolute rounded-xl border cursor-pointer select-none overflow-hidden"
         style={{
