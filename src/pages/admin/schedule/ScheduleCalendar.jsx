@@ -177,6 +177,17 @@ const ScheduleCalendar = () => {
 
   useEffect(()=>{load();},[load]);
 
+  // Native touchmove with passive:false to block scroll during drag
+  useEffect(()=>{
+    const grid = gridRef.current;
+    if(!grid) return;
+    const handler = (e) => {
+      if(touchRef.current.active) e.preventDefault();
+    };
+    grid.addEventListener('touchmove', handler, { passive: false });
+    return () => grid.removeEventListener('touchmove', handler);
+  }, []);
+
   const handleDelete = async id => {
     if(!window.confirm('Xóa lịch học này?')) return;
     try{await api.delete(`/schedules/${id}`);setSchedules(p=>p.filter(s=>s.id!==id));toast.success('Đã xóa!');}
@@ -346,6 +357,7 @@ const ScheduleCalendar = () => {
         onTouchStart={e=>onTouchStart(e,s)}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchCancel}
         onClick={()=>setEditEvent(s)}
         className="absolute rounded-xl border cursor-pointer select-none overflow-hidden"
         style={{

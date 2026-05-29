@@ -141,6 +141,13 @@ const MySchedule = () => {
 
   useEffect(()=>{ load(); },[load]);
 
+  useEffect(()=>{
+    const grid = gridRef.current; if(!grid) return;
+    const handler = (e) => { if(touchRef.current.active) e.preventDefault(); };
+    grid.addEventListener('touchmove', handler, { passive: false });
+    return () => grid.removeEventListener('touchmove', handler);
+  }, []);
+
   const applyDrop = useCallback(async (id, schedule, newDow, newStart, newEnd) => {
     setSchedules(p=>p.map(s=>s.id===id?{...s,day_of_week:newDow,time_start:newStart,time_end:newEnd}:s));
     try {
@@ -204,10 +211,18 @@ const MySchedule = () => {
     const rect=wrap.getBoundingClientRect();
     return Math.max(0,Math.min(6,Math.floor((cx-rect.left-56+wrap.scrollLeft)/((rect.width-56)/7))));
   },[]);
+  const cleanupTouch = useCallback(()=>{
+    clearTimeout(touchRef.current.timer);
+    if(rafRef.current) cancelAnimationFrame(rafRef.current);
+    if(touchRef.current.ghost){ try{document.body.removeChild(touchRef.current.ghost);}catch(e){} touchRef.current.ghost=null; }
+    hideAll(); setDraggingId(null);
+    touchRef.current.active=false; touchRef.current.schedule=null; dragData.current=null;
+  },[hideAll]);
+  const onTouchCancel = useCallback(()=>{ cleanupTouch(); },[cleanupTouch]);
+
   const onTouchStart = useCallback((e,s)=>{
     const t=e.touches[0];
     touchRef.current={...touchRef.current,schedule:s,active:false,startX:t.clientX,startY:t.clientY};
-    if(gridRef.current) gridRef.current.style.overflow='hidden';
     touchRef.current.timer=setTimeout(()=>{
       touchRef.current.active=true; setDraggingId(s.id);
       const ghost=document.createElement('div');
@@ -234,19 +249,18 @@ const MySchedule = () => {
     });
   },[getTouchDayIdx,showIndicator]);
   const onTouchEnd = useCallback(async(e)=>{
-    clearTimeout(touchRef.current.timer);
-    if(rafRef.current)cancelAnimationFrame(rafRef.current);
-    hideAll();
-    if(touchRef.current.ghost){document.body.removeChild(touchRef.current.ghost);touchRef.current.ghost=null;}
-    if(touchRef.current.active&&touchRef.current.schedule){
-      const t=e.changedTouches[0];
-      const dayIdx=getTouchDayIdx(t.clientX); const mins=snap(t.clientY,gridRef.current);
-      const s=touchRef.current.schedule; const dur=timeToMins(s.time_end)-timeToMins(s.time_start);
-      setDraggingId(null);
-      if(mins+dur<=END_HOUR*60) await applyDrop(s.id,s,DAY_MAP[dayIdx],minsToTime(mins),minsToTime(mins+dur));
-    } else if(touchRef.current.schedule){ setDetailEvent(touchRef.current.schedule); }
-    touchRef.current.active=false; touchRef.current.schedule=null;
-  },[hideAll,getTouchDayIdx,applyDrop]);
+    const wasActive = touchRef.current.active;
+    const schedule  = touchRef.current.schedule;
+    const touch     = e.changedTouches[0];
+    cleanupTouch();
+    if(wasActive && schedule){
+      const dayIdx = getTouchDayIdx(touch.clientX);
+      const mins   = snap(touch.clientY, gridRef.current);
+      const dur    = timeToMins(schedule.time_end)-timeToMins(schedule.time_start);
+      if(mins+dur<=END_HOUR*60)
+        await applyDrop(schedule.id, schedule, DAY_MAP[dayIdx], minsToTime(mins), minsToTime(mins+dur));
+    } else if(schedule){ setDetailEvent(schedule); }
+  },[cleanupTouch,getTouchDayIdx,applyDrop]);
 
   const hours       = Array.from({length:END_HOUR-START_HOUR},(_,i)=>START_HOUR+i);
   const totalHeight = hours.length*SLOT_HEIGHT;
@@ -267,6 +281,7 @@ const MySchedule = () => {
         onTouchStart={e=>onTouchStart(e,s)}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchCancel}
         onClick={()=>setDetailEvent(s)}
         className="absolute rounded-xl border cursor-pointer select-none overflow-hidden"
         style={{top:top+1,height:height-4,left:`calc(${lane*pct}%+2px)`,width:`calc(${pct}%-4px)`,
