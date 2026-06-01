@@ -12,12 +12,12 @@ const SH         = 80;
 const SNAP       = 30;
 
 const COLORS = [
-  {bg:'#1e3a5f',border:'#3b82f6',text:'#93c5fd'},
-  {bg:'#14532d',border:'#22c55e',text:'#86efac'},
-  {bg:'#3b0764',border:'#a855f7',text:'#d8b4fe'},
-  {bg:'#7c2d12',border:'#f97316',text:'#fdba74'},
-  {bg:'#831843',border:'#ec4899',text:'#f9a8d4'},
-  {bg:'#134e4a',border:'#14b8a6',text:'#99f6e4'},
+  {bg:'#dbeafe',border:'#93c5fd',text:'#1e40af'},
+  {bg:'#dcfce7',border:'#86efac',text:'#166534'},
+  {bg:'#f3e8ff',border:'#d8b4fe',text:'#6b21a8'},
+  {bg:'#ffedd5',border:'#fdba74',text:'#9a3412'},
+  {bg:'#fce7f3',border:'#f9a8d4',text:'#9d174d'},
+  {bg:'#ccfbf1',border:'#5eead4',text:'#134e4a'},
 ];
 const CARD_COLORS = [
   'bg-blue-50 border-blue-200','bg-green-50 border-green-200',
