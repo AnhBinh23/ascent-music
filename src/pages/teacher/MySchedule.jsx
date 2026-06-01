@@ -314,69 +314,71 @@ const MySchedule = () => {
   },[]);
 
   const saveSchedule = useCallback(async(sched, f, applyTo) => {
-    const ns = f.time_start.length===5 ? f.time_start+':00' : f.time_start;
-    const ne = f.time_end.length===5   ? f.time_end+':00'   : f.time_end;
-    const newDow = Number(f.day_of_week);
-    const dayLabel = DAYS_OPT.find(d=>d.value===newDow)?.label || '';
+  const ns     = f.time_start.length===5 ? f.time_start+':00' : f.time_start;
+  const ne     = f.time_end.length===5   ? f.time_end+':00'   : f.time_end;
+  const newDow = Number(f.day_of_week);
+  const dayLabel = DAYS_OPT.find(d=>d.value===newDow)?.label || '';
 
-    if(applyTo === 'revert'){
-      // Hoàn tác override
-      try{
-        await api.delete(`/schedule-overrides/${sched.id}/${sched.actual_date}`);
-        toast.success('↩️ Đã về lịch bình thường!');
-        await loadOverrides();
-      }catch(e){ toast.error(e.message); }
-      return;
-    }
+  // Helper: reload overrides cho tuần hiện tại
+  const reloadOverrides = async () => {
+    if(!teacherId) return;
+    const wStart = getWeekStart(weekOffset);
+    const wDates = getWeekDates(wStart);
+    const start  = wDates[0].toISOString().split('T')[0];
+    const end    = wDates[6].toISOString().split('T')[0];
+    try{
+      const res = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}&teacher_id=${teacherId}`);
+      setOverrides(res.rows || []);
+    }catch(e){ console.error(e.message); }
+  };
 
-    if(applyTo === 'week'){
-      // Lưu override cho tuần này
-      try{
-        await api.post('/schedule-overrides',{
-          schedule_id:     sched.id,
-          original_date:   sched.actual_date,
-          new_day_of_week: newDow,
-          new_time_start:  ns,
-          new_time_end:    ne,
-          room_id:         sched.room_id || null,
-          status:          'rescheduled',
-          note:            `GV đổi lịch tuần ${sched.actual_date}`,
-        });
-        // Thông báo admin
-        await api.post('/notifications',{
-          title:   '⚡ Giáo viên đổi lịch tuần này',
-          message: `${teacherName} đổi "${getLabel(sched)}" tuần ${sched.actual_date} sang ${dayLabel} ${f.time_start}–${f.time_end}`,
-          type:    'schedule_change',
-          role:    'admin',
-        }).catch(()=>{});
-        toast.success('✅ Đã đổi lịch tuần này! Admin đã được thông báo.');
-        await loadOverrides();
-      }catch(e){ toast.error(e.message); }
-    } else {
-      // Đổi lịch cố định
-      setSchedules(p=>p.map(s=>s.id===sched.id?{...s,day_of_week:newDow,time_start:ns,time_end:ne}:s));
-      try{
-        await api.put(`/schedules/${sched.id}`,{
-          class_id:    sched.class_id,
-          teacher_id:  sched.teacher_id,
-          room_id:     sched.room_id,
-          day_of_week: newDow,
-          time_start:  ns,
-          time_end:    ne,
-          type:        sched.type,
-          note:        sched.note,
-        });
-        await api.post('/notifications',{
-          title:   '📅 Giáo viên đổi lịch dạy cố định',
-          message: `${teacherName} đổi lịch "${getLabel(sched)}" sang ${dayLabel} ${f.time_start}–${f.time_end} (tất cả các tuần)`,
-          type:    'schedule_change',
-          role:    'admin',
-        }).catch(()=>{});
-        toast.success('✅ Đã lưu lịch cố định! Admin đã được thông báo.');
-        load();
-      }catch(e){ toast.error(e.message); load(); }
-    }
-  },[load, loadOverrides, teacherName]);
+  if(applyTo === 'revert'){
+    try{
+      await api.delete(`/schedule-overrides/${sched.id}/${sched.actual_date}`);
+      await reloadOverrides();
+      toast.success('↩️ Đã về lịch bình thường!');
+    }catch(e){ toast.error(e.message); }
+    return;
+  }
+
+  if(applyTo === 'week'){
+    try{
+      await api.post('/schedule-overrides',{
+        schedule_id:     sched.id,
+        original_date:   sched.actual_date,
+        new_day_of_week: newDow,
+        new_time_start:  ns,
+        new_time_end:    ne,
+        room_id:         sched.room_id || null,
+        status:          'rescheduled',
+        note:            `GV đổi lịch tuần ${sched.actual_date}`,
+      });
+      await api.post('/notifications',{
+        title:   '⚡ Giáo viên đổi lịch tuần này',
+        message: `${teacherName} đổi "${getLabel(sched)}" tuần ${sched.actual_date} sang ${dayLabel} ${f.time_start}–${f.time_end}`,
+        type:    'schedule_change', role: 'admin',
+      }).catch(()=>{});
+      await reloadOverrides(); // ✅ Reload trực tiếp với đúng teacherId + weekOffset
+      toast.success('✅ Đã đổi lịch tuần này! Admin đã được thông báo.');
+    }catch(e){ toast.error(e.message); }
+  } else {
+    setSchedules(p=>p.map(s=>s.id===sched.id?{...s,day_of_week:newDow,time_start:ns,time_end:ne}:s));
+    try{
+      await api.put(`/schedules/${sched.id}`,{
+        class_id: sched.class_id, teacher_id: sched.teacher_id,
+        room_id: sched.room_id, day_of_week: newDow,
+        time_start: ns, time_end: ne, type: sched.type, note: sched.note,
+      });
+      await api.post('/notifications',{
+        title:   '📅 Giáo viên đổi lịch dạy cố định',
+        message: `${teacherName} đổi lịch "${getLabel(sched)}" sang ${dayLabel} ${f.time_start}–${f.time_end} (tất cả các tuần)`,
+        type: 'schedule_change', role: 'admin',
+      }).catch(()=>{});
+      toast.success('✅ Đã lưu lịch cố định! Admin đã được thông báo.');
+      load();
+    }catch(e){ toast.error(e.message); load(); }
+  }
+},[load, teacherName, teacherId, weekOffset]);
 
   const applyDrop = useCallback(async(id,sched,newDow,newStart,newEnd)=>{
     setSchedules(p=>p.map(s=>s.id===id?{...s,day_of_week:newDow,time_start:newStart,time_end:newEnd}:s));
