@@ -77,6 +77,7 @@ const mergeWithOverrides = (baseSchedules, overrides, weekDates) => {
     if (override) {
       result.push({
         ...sched,
+        day_of_week: override.new_day_of_week || sched.day_of_week,
         time_start:    override.new_time_start || sched.time_start,
         time_end:      override.new_time_end   || sched.time_end,
         override_id:   override.id,
@@ -189,11 +190,14 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
         <div className="flex flex-col gap-3">
           {applyTo === 'permanent' && (
   <div className="flex flex-col gap-1">
-    <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
-    <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
-      {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
-    </select>
-  </div>
+  <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
+  <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
+    {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
+  </select>
+  {applyTo==='week' && (
+    <p className="text-xs text-orange-500">⚡ Chỉ đổi ngày/giờ tuần này, tuần sau về lịch gốc</p>
+  )}
+</div>
 )}
 {applyTo === 'week' && (
   <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
@@ -343,6 +347,7 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
         await api.post('/schedule-overrides',{
           schedule_id:  event.id,
           original_date: event.actual_date,
+          new_day_of_week: Number(f.day_of_week),
           new_time_start: ns,
           new_time_end:   ne,
           room_id:        f.room_id||null,
