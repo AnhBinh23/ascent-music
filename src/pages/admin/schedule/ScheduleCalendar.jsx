@@ -45,12 +45,11 @@ const getLabel = s => {
   if(s.class_type==='group') return `Nhóm (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
   return s.class_name||'Lớp học';
 };
-const getDIM = ym=>{
+const getDIM = ym => {
   const[y,mo]=ym.split('-').map(Number); const d=[]; const dt=new Date(y,mo-1,1);
   while(dt.getMonth()===mo-1){d.push(new Date(dt).toISOString().split('T')[0]);dt.setDate(dt.getDate()+1);}
   return d;
 };
-
 const getWeekStart = (offsetWeeks=0) => {
   const today=new Date(); const day=today.getDay();
   const diff=day===0?-6:1-day;
@@ -59,8 +58,37 @@ const getWeekStart = (offsetWeeks=0) => {
   monday.setHours(0,0,0,0);
   return monday;
 };
-const getWeekDates = (weekStart) =>
+const getWeekDates = weekStart =>
   Array.from({length:7},(_,i)=>{ const d=new Date(weekStart); d.setDate(weekStart.getDate()+i); return d; });
+
+// dow(2=T2..7=T7,1=CN) → weekDates index (0=Mon..6=Sun)
+const dowToWeekIdx = dow => dow===1 ? 6 : dow-2;
+
+// Merge base schedules + overrides cho tuần cụ thể
+const mergeWithOverrides = (baseSchedules, overrides, weekDates) => {
+  const result = [];
+  for (const sched of baseSchedules) {
+    const wIdx       = dowToWeekIdx(sched.day_of_week);
+    const actualDate = weekDates[wIdx]?.toISOString().split('T')[0];
+    const override   = overrides.find(o =>
+      String(o.schedule_id) === String(sched.id) && o.original_date?.slice(0,10) === actualDate
+    );
+    if (override?.status === 'cancelled') continue;
+    if (override) {
+      result.push({
+        ...sched,
+        time_start:    override.new_time_start || sched.time_start,
+        time_end:      override.new_time_end   || sched.time_end,
+        override_id:   override.id,
+        is_override:   true,
+        actual_date:   actualDate,
+      });
+    } else {
+      result.push({ ...sched, is_override: false, actual_date: actualDate });
+    }
+  }
+  return result;
+};
 
 const layoutEvs = evs => {
   if(!evs.length) return [];
@@ -93,18 +121,33 @@ const layoutEvs = evs => {
 
 // ── Edit Modal ────────────────────────────────────────────────────────────────
 const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
-  const [f,setF]=useState(null);
+  const [f, setF]       = useState(null);
+  const [applyTo, setApplyTo] = useState('permanent'); // 'week' | 'permanent'
+  const [saving, setSaving]   = useState(false);
+
   useEffect(()=>{
-    if(event) setF({
-      day_of_week:event.day_of_week,
-      time_start:event.time_start?.slice(0,5)||'08:00',
-      time_end:event.time_end?.slice(0,5)||'09:00',
-      teacher_id:event.teacher_id||'',
-      room_id:event.room_id||'',
-    });
+    if(event){
+      setF({
+        day_of_week: event.day_of_week,
+        time_start:  event.time_start?.slice(0,5)||'08:00',
+        time_end:    event.time_end?.slice(0,5)||'09:00',
+        teacher_id:  event.teacher_id||'',
+        room_id:     event.room_id||'',
+      });
+      setApplyTo('permanent');
+    }
   },[event]);
+
   if(!event||!f) return null;
-  const hc=e=>setF({...f,[e.target.name]:e.target.value});
+  const hc = e => setF({...f,[e.target.name]:e.target.value});
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(event, f, applyTo);
+    setSaving(false);
+    onClose();
+  };
+
   return(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40"/>
@@ -114,15 +157,43 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
           <div>
             <h3 className="text-base font-bold text-gray-800">{getLabel(event)}</h3>
             <p className="text-xs text-gray-400">{event.class_name}</p>
+            {event.is_override && (
+              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">⚡ Lịch ngoại lệ tuần này</span>
+            )}
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
         </div>
+
+        {/* Áp dụng cho */}
+        <div className="mb-4 p-3 bg-gray-50 rounded-xl">
+          <p className="text-xs font-semibold text-gray-600 mb-2">📅 Áp dụng thay đổi cho:</p>
+          <div className="flex gap-2">
+            <button onClick={()=>setApplyTo('week')}
+              className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all
+                ${applyTo==='week'?'bg-orange-500 text-white border-orange-500':'bg-white text-gray-600 border-gray-200'}`}>
+              📆 Tuần này thôi
+            </button>
+            <button onClick={()=>setApplyTo('permanent')}
+              className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all
+                ${applyTo==='permanent'?'bg-primary-600 text-white border-primary-600':'bg-white text-gray-600 border-gray-200'}`}>
+              🔁 Tất cả các tuần
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            {applyTo==='week'
+              ? '⚡ Chỉ đổi lịch ngày '+new Date(event.actual_date||'').toLocaleDateString('vi-VN')+', tuần sau trở về bình thường'
+              : '🔁 Thay đổi lịch cố định cho tất cả các tuần'}
+          </p>
+        </div>
+
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
-            <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
+            <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm"
+              disabled={applyTo==='week'}>
               {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
+            {applyTo==='week'&&<p className="text-xs text-gray-400">* Đổi tuần này không thay đổi ngày, chỉ đổi giờ</p>}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
@@ -134,26 +205,42 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
               <input type="time" name="time_end" value={f.time_end} onChange={hc} className="input-field text-sm"/>
             </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">👨‍🏫 Giáo viên</label>
-            <select name="teacher_id" value={f.teacher_id} onChange={hc} className="input-field text-sm">
-              <option value="">-- Chọn --</option>
-              {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">🚪 Phòng</label>
-            <select name="room_id" value={f.room_id} onChange={hc} className="input-field text-sm">
-              <option value="">-- Chọn --</option>
-              {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
+          {applyTo==='permanent'&&(
+            <>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">👨‍🏫 Giáo viên</label>
+                <select name="teacher_id" value={f.teacher_id} onChange={hc} className="input-field text-sm">
+                  <option value="">-- Chọn --</option>
+                  {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">🚪 Phòng</label>
+                <select name="room_id" value={f.room_id} onChange={hc} className="input-field text-sm">
+                  <option value="">-- Chọn --</option>
+                  {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+            </>
+          )}
         </div>
+
         <div className="flex gap-2 mt-4">
-          <button onClick={()=>{onDelete(event.id);onClose();}}
-            className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">🗑️ Xóa</button>
-          <button onClick={()=>{onSave(event.id,event,f);onClose();}}
-            className="flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm">💾 Lưu</button>
+          {/* Nút hoàn tác nếu đang là override */}
+          {event.is_override && (
+            <button onClick={()=>{ onDelete(event, 'override'); onClose(); }}
+              className="px-3 py-2.5 rounded-xl bg-orange-50 text-orange-500 font-medium text-sm">
+              ↩️ Về lịch gốc
+            </button>
+          )}
+          {applyTo==='permanent'&&(
+            <button onClick={()=>{ onDelete(event, 'permanent'); onClose(); }}
+              className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">🗑️ Xóa</button>
+          )}
+          <button onClick={handleSave} disabled={saving}
+            className="flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm disabled:opacity-50">
+            {saving?'⏳...':'💾 Lưu'}
+          </button>
         </div>
       </div>
     </div>
@@ -169,16 +256,17 @@ const ScheduleCalendar = () => {
   const dragData      = useRef(null);
   const rafRef        = useRef(null);
 
-  const [schedules, setSchedules]   = useState([]);
-  const [teachers, setTeachers]     = useState([]);
-  const [rooms, setRooms]           = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [tab, setTab]               = useState('week');
-  const [editEvent, setEditEvent]   = useState(null);
-  const [draggingId, setDraggingId] = useState(null);
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [selDate, setSelDate]       = useState(new Date().toISOString().split('T')[0]);
-  const [selMonth, setSelMonth]     = useState(new Date().toISOString().slice(0,7));
+  const [schedules, setSchedules]     = useState([]);
+  const [overrides, setOverrides]     = useState([]);
+  const [teachers, setTeachers]       = useState([]);
+  const [rooms, setRooms]             = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [tab, setTab]                 = useState('week');
+  const [editEvent, setEditEvent]     = useState(null);
+  const [draggingId, setDraggingId]   = useState(null);
+  const [weekOffset, setWeekOffset]   = useState(0);
+  const [selDate, setSelDate]         = useState(new Date().toISOString().split('T')[0]);
+  const [selMonth, setSelMonth]       = useState(new Date().toISOString().slice(0,7));
   const [filterTeacher, setFilterTeacher] = useState('');
 
   const weekStart = getWeekStart(weekOffset);
@@ -194,21 +282,26 @@ const ScheduleCalendar = () => {
     return `${s} – ${e}`;
   };
 
-  const load = useCallback(async()=>{
+  const loadBase = useCallback(async()=>{
     try{
       setLoading(true);
-      const[s,t,r]=await Promise.all([
-        api.get('/schedules'),
-        api.get('/teachers'),
-        api.get('/rooms'),
-      ]);
-      setSchedules(s.rows||[]);
-      setTeachers(t.rows||[]);
-      setRooms(r.rows||[]);
+      const[s,t,r]=await Promise.all([api.get('/schedules'),api.get('/teachers'),api.get('/rooms')]);
+      setSchedules(s.rows||[]); setTeachers(t.rows||[]); setRooms(r.rows||[]);
     }catch(e){ toast.error(e.message); }
     finally{ setLoading(false); }
   },[]);
-  useEffect(()=>{ load(); },[load]);
+
+  const loadOverrides = useCallback(async()=>{
+    try{
+      const start = weekDates[0].toISOString().split('T')[0];
+      const end   = weekDates[6].toISOString().split('T')[0];
+      const res   = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}`);
+      setOverrides(res.rows||[]);
+    }catch(e){ console.error(e.message); }
+  },[weekDates[0].toISOString()]);
+
+  useEffect(()=>{ loadBase(); },[loadBase]);
+  useEffect(()=>{ loadOverrides(); },[weekOffset]);
 
   const showInd = useCallback((dayIdx,mins,dur)=>{
     Object.values(indicatorRefs.current).forEach(el=>{if(el)el.style.display='none';});
@@ -229,30 +322,59 @@ const ScheduleCalendar = () => {
         day_of_week:newDow,time_start:newStart,time_end:newEnd,type:sched.type,note:sched.note,
       });
       toast.success('Di chuyển lịch thành công!');
-    }catch(e){ toast.error(e.message); load(); }
-  },[load]);
+    }catch(e){ toast.error(e.message); loadBase(); }
+  },[loadBase]);
 
-  const handleSave = useCallback(async(id,sched,f)=>{
+  const handleSave = useCallback(async(event, f, applyTo)=>{
     const ns=f.time_start.length===5?f.time_start+':00':f.time_start;
     const ne=f.time_end.length===5?f.time_end+':00':f.time_end;
-    setSchedules(p=>p.map(s=>s.id===id?{...s,day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,teacher_id:f.teacher_id,room_id:f.room_id}:s));
-    try{
-      await api.put(`/schedules/${id}`,{
-        class_id:sched.class_id,teacher_id:f.teacher_id,room_id:f.room_id,
-        day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,type:sched.type,note:sched.note,
-      });
-      toast.success('Cập nhật thành công!'); load();
-    }catch(e){ toast.error(e.message); load(); }
-  },[load]);
 
-  const handleDelete = async id=>{
-    if(!window.confirm('Xóa lịch học này?')) return;
-    try{
-      await api.delete(`/schedules/${id}`);
-      setSchedules(p=>p.filter(s=>s.id!==id));
-      toast.success('Đã xóa!');
-    }catch(e){ toast.error(e.message); }
-  };
+    if(applyTo==='week'){
+      // Tạo override cho ngày cụ thể
+      try{
+        await api.post('/schedule-overrides',{
+          schedule_id:  event.id,
+          original_date: event.actual_date,
+          new_time_start: ns,
+          new_time_end:   ne,
+          room_id:        f.room_id||null,
+          status:         'rescheduled',
+          note:           `Đổi lịch tuần ${event.actual_date}`,
+        });
+        toast.success('✅ Đã đổi lịch tuần này! Tuần sau sẽ trở về bình thường.');
+        await loadOverrides();
+      }catch(e){ toast.error(e.message); }
+    } else {
+      // Cập nhật lịch cố định
+      setSchedules(p=>p.map(s=>s.id===event.id?{...s,day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,teacher_id:f.teacher_id,room_id:f.room_id}:s));
+      try{
+        await api.put(`/schedules/${event.id}`,{
+          class_id:event.class_id,teacher_id:f.teacher_id,room_id:f.room_id,
+          day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,type:event.type,note:event.note,
+        });
+        toast.success('✅ Cập nhật lịch cố định thành công!');
+        loadBase();
+      }catch(e){ toast.error(e.message); loadBase(); }
+    }
+  },[loadBase, loadOverrides]);
+
+  const handleDelete = useCallback(async(event, type)=>{
+    if(type==='override'){
+      // Hoàn tác override
+      try{
+        await api.delete(`/schedule-overrides/${event.id}/${event.actual_date}`);
+        toast.success('↩️ Đã về lịch bình thường!');
+        await loadOverrides();
+      }catch(e){ toast.error(e.message); }
+    } else {
+      if(!window.confirm('Xóa lịch học này vĩnh viễn?')) return;
+      try{
+        await api.delete(`/schedules/${event.id}`);
+        setSchedules(p=>p.filter(s=>s.id!==event.id));
+        toast.success('Đã xóa!');
+      }catch(e){ toast.error(e.message); }
+    }
+  },[loadOverrides]);
 
   const onDragStart = useCallback((e,s)=>{
     dragData.current={id:s.id,dur:t2m(s.time_end)-t2m(s.time_start),sched:s};
@@ -282,16 +404,19 @@ const ScheduleCalendar = () => {
     await applyDrop(id,sched,DAY_MAP[di],m2t(mins),m2t(mins+dur));
   },[hideInd,applyDrop]);
 
-  // Filter theo giáo viên
-  const filtered = filterTeacher
-    ? schedules.filter(s=>s.teacher_id===filterTeacher)
-    : schedules;
+  // ── Computed ──────────────────────────────────────────────────────────────
+  const filtered = filterTeacher ? schedules.filter(s=>s.teacher_id===filterTeacher) : schedules;
+
+  // Merge base + overrides cho tuần đang xem
+  const weekSchedules = mergeWithOverrides(filtered, overrides, weekDates);
 
   const hours  = Array.from({length:END_HOUR-START_HOUR},(_,i)=>START_HOUR+i);
   const totalH = hours.length*SH;
   const cmap   = {};
   filtered.forEach(s=>{if(!cmap[s.class_id])cmap[s.class_id]=COLORS[Object.keys(cmap).length%COLORS.length];});
-  const byDay  = DAY_MAP.map(d=>layoutEvs(filtered.filter(s=>s.day_of_week===d)));
+
+  // byDay dùng weekSchedules (đã merge override)
+  const byDay  = DAY_MAP.map(d=>layoutEvs(weekSchedules.filter(s=>s.day_of_week===d)));
   const byDate = filtered.filter(s=>s.day_of_week===dow(selDate));
 
   return(
@@ -301,11 +426,8 @@ const ScheduleCalendar = () => {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm để sửa · 🖱️ Kéo thả = đổi cố định</p>
         <div className="flex items-center gap-2">
-          <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm để sửa · 🖱️ Kéo thả để di chuyển</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Filter giáo viên */}
           <select value={filterTeacher} onChange={e=>setFilterTeacher(e.target.value)}
             className="input-field text-sm w-auto">
             <option value="">Tất cả giáo viên</option>
@@ -328,13 +450,12 @@ const ScheduleCalendar = () => {
 
       {loading?<div className="text-center py-20 text-gray-400">Đang tải...</div>:(
         <>
-          {/* ── Lịch tuần ── */}
           {tab==='week'&&(
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               {/* Navigation tuần */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                 <button onClick={()=>setWeekOffset(w=>w-1)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                  className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
                   ← Tuần trước
                 </button>
                 <div className="text-center">
@@ -347,18 +468,20 @@ const ScheduleCalendar = () => {
                   )}
                 </div>
                 <button onClick={()=>setWeekOffset(w=>w+1)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                  className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
                   Tuần sau →
                 </button>
               </div>
 
               <div ref={gridWrapRef} className="overflow-x-auto">
                 <div style={{minWidth:560}}>
-                  {/* Header */}
                   <div className="grid border-b border-gray-100" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
                     <div className="p-2 bg-gray-50"/>
                     {weekDates.map((date,di)=>{
                       const isToday=date.toDateString()===new Date().toDateString();
+                      // Có override trong ngày này không?
+                      const dateStr=date.toISOString().split('T')[0];
+                      const hasOverride=overrides.some(o=>o.original_date?.slice(0,10)===dateStr);
                       return(
                         <div key={di} className="py-2 bg-gray-50 border-l border-gray-100 text-center">
                           <p className={`text-xs font-semibold ${isToday?'text-primary-600':'text-gray-500'}`}>
@@ -368,12 +491,12 @@ const ScheduleCalendar = () => {
                             {date.getDate()}/{date.getMonth()+1}
                           </p>
                           {isToday&&<div className="w-1.5 h-1.5 bg-primary-500 rounded-full mx-auto mt-0.5"/>}
+                          {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="Có lịch ngoại lệ"/>}
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Grid */}
                   <div ref={gridRef} className="overflow-y-auto" style={{maxHeight:'70vh'}}>
                     <div className="grid" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
                       <div className="relative" style={{height:totalH}}>
@@ -391,8 +514,7 @@ const ScheduleCalendar = () => {
                           <div key={di}
                             className={`relative border-l border-gray-100 ${isPastDay?'bg-black/[0.02]':''}`}
                             style={{height:totalH}}
-                            onDragOver={e=>onDragOver(e,di)}
-                            onDrop={e=>onDrop(e,di)}>
+                            onDragOver={e=>onDragOver(e,di)} onDrop={e=>onDrop(e,di)}>
                             {hours.map(h=>(
                               <div key={h} className="absolute w-full border-t border-gray-50"
                                 style={{top:(h-START_HOUR)*SH}}/>
@@ -415,23 +537,30 @@ const ScheduleCalendar = () => {
                                   onClick={()=>setEditEvent(s)}
                                   className="absolute rounded-xl border cursor-grab active:cursor-grabbing select-none overflow-hidden hover:brightness-95 transition-all"
                                   style={{
-                                    top:t0+1,height:h0-4,
-                                    left:`calc(${lane * pct}% + 1px)`,width:`calc(${pct}% - 2px)`,
-                                    backgroundColor:c.bg,borderColor:c.border,
+                                    top:t0+1, height:h0-4,
+                                    left:`calc(${lane * pct}% + 1px)`,
+                                    width:`calc(${pct}% - 2px)`,
+                                    backgroundColor: s.is_override ? '#fff7ed' : c.bg,
+                                    borderColor:     s.is_override ? '#f97316' : c.border,
+                                    borderStyle:     s.is_override ? 'dashed' : 'solid',
                                     opacity:draggingId===s.id?0.35:1,
                                     zIndex:draggingId===s.id?1:5,
                                   }}>
                                   <div className="px-1.5 py-1 h-full flex flex-col">
-                                    <p className="text-xs font-bold leading-tight truncate" style={{color:c.text}}>
-                                      {getLabel(s)}
+                                    <p className="text-xs font-bold leading-tight truncate"
+                                      style={{color: s.is_override ? '#c2410c' : c.text}}>
+                                      {s.is_override && '⚡'}{getLabel(s)}
                                     </p>
-                                    {h0>34&&<p className="text-xs" style={{color:c.text,opacity:0.8}}>
+                                    {h0>34&&<p className="text-xs"
+                                      style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.8}}>
                                       {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}
                                     </p>}
-                                    {h0>50&&<p className="text-xs truncate" style={{color:c.text,opacity:0.7}}>
+                                    {h0>50&&<p className="text-xs truncate"
+                                      style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.7}}>
                                       {s.teacher_name}
                                     </p>}
-                                    {h0>66&&<p className="text-xs truncate" style={{color:c.text,opacity:0.6}}>
+                                    {h0>66&&<p className="text-xs truncate"
+                                      style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.6}}>
                                       {s.room_name}
                                     </p>}
                                   </div>
@@ -449,7 +578,7 @@ const ScheduleCalendar = () => {
                   </div>
                 </div>
               </div>
-              {!filtered.length&&(
+              {!weekSchedules.length&&(
                 <div className="text-center py-16">
                   <p className="text-4xl mb-3">📅</p>
                   <p className="text-gray-400">Chưa có lịch học nào</p>
@@ -458,11 +587,9 @@ const ScheduleCalendar = () => {
             </div>
           )}
 
-          {/* ── Theo ngày ── */}
           {tab==='date'&&(
             <>
-              <input type="date" value={selDate} onChange={e=>setSelDate(e.target.value)}
-                className="input-field w-full mb-4"/>
+              <input type="date" value={selDate} onChange={e=>setSelDate(e.target.value)} className="input-field w-full mb-4"/>
               <div className="bg-white rounded-2xl border border-gray-100 p-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">
                   {new Date(selDate).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
@@ -472,7 +599,7 @@ const ScheduleCalendar = () => {
                 ):(
                   <div className="flex flex-col gap-3">
                     {[...byDate].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
-                      <div key={s.id} onClick={()=>setEditEvent(s)}
+                      <div key={s.id} onClick={()=>setEditEvent({...s,actual_date:selDate})}
                         className={`p-4 rounded-2xl border cursor-pointer active:scale-95 transition-transform ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                         <p className="font-bold text-gray-800">{getLabel(s)}</p>
                         <p className="text-sm text-gray-600 mt-1">🕐 {s.time_start?.slice(0,5)} – {s.time_end?.slice(0,5)}</p>
@@ -485,11 +612,9 @@ const ScheduleCalendar = () => {
             </>
           )}
 
-          {/* ── Theo tháng ── */}
           {tab==='month'&&(
             <>
-              <input type="month" value={selMonth} onChange={e=>setSelMonth(e.target.value)}
-                className="input-field w-full mb-4"/>
+              <input type="month" value={selMonth} onChange={e=>setSelMonth(e.target.value)} className="input-field w-full mb-4"/>
               <div className="flex flex-col gap-3">
                 {getDIM(selMonth).map(d=>{
                   const ds=filtered.filter(s=>s.day_of_week===dow(d));
@@ -504,7 +629,7 @@ const ScheduleCalendar = () => {
                       </div>
                       <div className="p-3 flex flex-col gap-2">
                         {[...ds].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
-                          <div key={s.id} onClick={()=>setEditEvent(s)}
+                          <div key={s.id} onClick={()=>setEditEvent({...s,actual_date:d})}
                             className={`p-3 rounded-xl border cursor-pointer active:scale-95 ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                             <p className="text-sm font-bold text-gray-800">{getLabel(s)}</p>
                             <p className="text-xs text-gray-600">
