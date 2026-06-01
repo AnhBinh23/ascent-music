@@ -31,9 +31,9 @@ const DAYS_OPT = [
 
 const t2m = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
 const m2t = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}:00`;
-const top  = t => (t2m(t)-START_HOUR*60)/60*SH;
-const hpx  = (s,e) => (t2m(e)-t2m(s))/60*SH;
-const dow  = d => { const x=new Date(d).getDay(); return x===0?1:x+1; };
+const topPx = t => (t2m(t)-START_HOUR*60)/60*SH;
+const hpx   = (s,e) => (t2m(e)-t2m(s))/60*SH;
+const dow   = d => { const x=new Date(d).getDay(); return x===0?1:x+1; };
 const snapY = (cy,grid) => {
   const rect=grid.getBoundingClientRect();
   const y=cy-rect.top+grid.scrollTop;
@@ -51,7 +51,17 @@ const getDIM = ym=>{
   return d;
 };
 
-// Overlap layout
+const getWeekStart = (offsetWeeks=0) => {
+  const today=new Date(); const day=today.getDay();
+  const diff=day===0?-6:1-day;
+  const monday=new Date(today);
+  monday.setDate(today.getDate()+diff+offsetWeeks*7);
+  monday.setHours(0,0,0,0);
+  return monday;
+};
+const getWeekDates = (weekStart) =>
+  Array.from({length:7},(_,i)=>{ const d=new Date(weekStart); d.setDate(weekStart.getDate()+i); return d; });
+
 const layoutEvs = evs => {
   if(!evs.length) return [];
   const s=[...evs].sort((a,b)=>t2m(a.time_start)-t2m(b.time_start));
@@ -81,41 +91,69 @@ const layoutEvs = evs => {
   return s.map(ev=>({...ev,...map[ev.id]}));
 };
 
-// Edit Modal
+// ── Edit Modal ────────────────────────────────────────────────────────────────
 const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
   const [f,setF]=useState(null);
-  useEffect(()=>{ if(event) setF({day_of_week:event.day_of_week,time_start:event.time_start?.slice(0,5)||'08:00',time_end:event.time_end?.slice(0,5)||'09:00',teacher_id:event.teacher_id||'',room_id:event.room_id||''}); },[event]);
+  useEffect(()=>{
+    if(event) setF({
+      day_of_week:event.day_of_week,
+      time_start:event.time_start?.slice(0,5)||'08:00',
+      time_end:event.time_end?.slice(0,5)||'09:00',
+      teacher_id:event.teacher_id||'',
+      room_id:event.room_id||'',
+    });
+  },[event]);
   if(!event||!f) return null;
   const hc=e=>setF({...f,[e.target.name]:e.target.value});
   return(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40"/>
-      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-5 shadow-xl" onClick={e=>e.stopPropagation()}>
+      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-5 shadow-xl"
+        onClick={e=>e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
-          <div><h3 className="text-base font-bold text-gray-800">{getLabel(event)}</h3><p className="text-xs text-gray-400">{event.class_name}</p></div>
+          <div>
+            <h3 className="text-base font-bold text-gray-800">{getLabel(event)}</h3>
+            <p className="text-xs text-gray-400">{event.class_name}</p>
+          </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
         </div>
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">📅 Thứ</label>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
             <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
               {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
-            </select></div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">🕐 Bắt đầu</label><input type="time" name="time_start" value={f.time_start} onChange={hc} className="input-field text-sm"/></div>
-            <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">🕐 Kết thúc</label><input type="time" name="time_end" value={f.time_end} onChange={hc} className="input-field text-sm"/></div>
+            </select>
           </div>
-          <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">👨‍🏫 Giáo viên</label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600">🕐 Bắt đầu</label>
+              <input type="time" name="time_start" value={f.time_start} onChange={hc} className="input-field text-sm"/>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600">🕐 Kết thúc</label>
+              <input type="time" name="time_end" value={f.time_end} onChange={hc} className="input-field text-sm"/>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">👨‍🏫 Giáo viên</label>
             <select name="teacher_id" value={f.teacher_id} onChange={hc} className="input-field text-sm">
-              <option value="">-- Chọn --</option>{teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
-            </select></div>
-          <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">🚪 Phòng</label>
+              <option value="">-- Chọn --</option>
+              {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">🚪 Phòng</label>
             <select name="room_id" value={f.room_id} onChange={hc} className="input-field text-sm">
-              <option value="">-- Chọn --</option>{rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
-            </select></div>
+              <option value="">-- Chọn --</option>
+              {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
         </div>
         <div className="flex gap-2 mt-4">
-          <button onClick={()=>{onDelete(event.id);onClose();}} className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">🗑️ Xóa</button>
-          <button onClick={()=>{onSave(event.id,event,f);onClose();}} className="flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm">💾 Lưu</button>
+          <button onClick={()=>{onDelete(event.id);onClose();}}
+            className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">🗑️ Xóa</button>
+          <button onClick={()=>{onSave(event.id,event,f);onClose();}}
+            className="flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm">💾 Lưu</button>
         </div>
       </div>
     </div>
@@ -138,23 +176,44 @@ const ScheduleCalendar = () => {
   const [tab, setTab]               = useState('week');
   const [editEvent, setEditEvent]   = useState(null);
   const [draggingId, setDraggingId] = useState(null);
+  const [weekOffset, setWeekOffset] = useState(0);
   const [selDate, setSelDate]       = useState(new Date().toISOString().split('T')[0]);
   const [selMonth, setSelMonth]     = useState(new Date().toISOString().slice(0,7));
+  const [filterTeacher, setFilterTeacher] = useState('');
+
+  const weekStart = getWeekStart(weekOffset);
+  const weekDates = getWeekDates(weekStart);
+  const weekEnd   = weekDates[6];
+
+  const formatWeekLabel = () => {
+    const s=weekStart.toLocaleDateString('vi-VN',{day:'numeric',month:'numeric'});
+    const e=weekEnd.toLocaleDateString('vi-VN',{day:'numeric',month:'numeric',year:'numeric'});
+    if(weekOffset===0) return `Tuần này · ${s} – ${e}`;
+    if(weekOffset===-1) return `Tuần trước · ${s} – ${e}`;
+    if(weekOffset===1) return `Tuần sau · ${s} – ${e}`;
+    return `${s} – ${e}`;
+  };
 
   const load = useCallback(async()=>{
     try{
       setLoading(true);
-      const[s,t,r]=await Promise.all([api.get('/schedules'),api.get('/teachers'),api.get('/rooms')]);
-      setSchedules(s.rows||[]); setTeachers(t.rows||[]); setRooms(r.rows||[]);
-    }catch(e){toast.error(e.message);}
-    finally{setLoading(false);}
+      const[s,t,r]=await Promise.all([
+        api.get('/schedules'),
+        api.get('/teachers'),
+        api.get('/rooms'),
+      ]);
+      setSchedules(s.rows||[]);
+      setTeachers(t.rows||[]);
+      setRooms(r.rows||[]);
+    }catch(e){ toast.error(e.message); }
+    finally{ setLoading(false); }
   },[]);
-  useEffect(()=>{load();},[load]);
+  useEffect(()=>{ load(); },[load]);
 
   const showInd = useCallback((dayIdx,mins,dur)=>{
     Object.values(indicatorRefs.current).forEach(el=>{if(el)el.style.display='none';});
     const el=indicatorRefs.current[dayIdx]; if(!el) return;
-    el.style.top=`${top(m2t(mins))+1}px`;
+    el.style.top=`${topPx(m2t(mins))+1}px`;
     el.style.height=`${Math.max(hpx(m2t(mins),m2t(mins+dur))-4,20)}px`;
     el.style.display='block';
   },[]);
@@ -165,9 +224,12 @@ const ScheduleCalendar = () => {
   const applyDrop = useCallback(async(id,sched,newDow,newStart,newEnd)=>{
     setSchedules(p=>p.map(s=>s.id===id?{...s,day_of_week:newDow,time_start:newStart,time_end:newEnd}:s));
     try{
-      await api.put(`/schedules/${id}`,{class_id:sched.class_id,teacher_id:sched.teacher_id,room_id:sched.room_id,day_of_week:newDow,time_start:newStart,time_end:newEnd,type:sched.type,note:sched.note});
+      await api.put(`/schedules/${id}`,{
+        class_id:sched.class_id,teacher_id:sched.teacher_id,room_id:sched.room_id,
+        day_of_week:newDow,time_start:newStart,time_end:newEnd,type:sched.type,note:sched.note,
+      });
       toast.success('Di chuyển lịch thành công!');
-    }catch(e){toast.error(e.message);load();}
+    }catch(e){ toast.error(e.message); load(); }
   },[load]);
 
   const handleSave = useCallback(async(id,sched,f)=>{
@@ -175,18 +237,23 @@ const ScheduleCalendar = () => {
     const ne=f.time_end.length===5?f.time_end+':00':f.time_end;
     setSchedules(p=>p.map(s=>s.id===id?{...s,day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,teacher_id:f.teacher_id,room_id:f.room_id}:s));
     try{
-      await api.put(`/schedules/${id}`,{class_id:sched.class_id,teacher_id:f.teacher_id,room_id:f.room_id,day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,type:sched.type,note:sched.note});
+      await api.put(`/schedules/${id}`,{
+        class_id:sched.class_id,teacher_id:f.teacher_id,room_id:f.room_id,
+        day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,type:sched.type,note:sched.note,
+      });
       toast.success('Cập nhật thành công!'); load();
-    }catch(e){toast.error(e.message);load();}
+    }catch(e){ toast.error(e.message); load(); }
   },[load]);
 
   const handleDelete = async id=>{
     if(!window.confirm('Xóa lịch học này?')) return;
-    try{await api.delete(`/schedules/${id}`);setSchedules(p=>p.filter(s=>s.id!==id));toast.success('Đã xóa!');}
-    catch(e){toast.error(e.message);}
+    try{
+      await api.delete(`/schedules/${id}`);
+      setSchedules(p=>p.filter(s=>s.id!==id));
+      toast.success('Đã xóa!');
+    }catch(e){ toast.error(e.message); }
   };
 
-  // Mouse DnD
   const onDragStart = useCallback((e,s)=>{
     dragData.current={id:s.id,dur:t2m(s.time_end)-t2m(s.time_start),sched:s};
     setDraggingId(s.id); e.dataTransfer.effectAllowed='move';
@@ -195,16 +262,15 @@ const ScheduleCalendar = () => {
     if(rafRef.current)cancelAnimationFrame(rafRef.current);
     hideInd(); setDraggingId(null); dragData.current=null;
   },[hideInd]);
-  const onDragOver = useCallback((e,dayIdx)=>{
-    e.preventDefault();
-    const cy=e.clientY;
+  const onDragOver = useCallback((e,di)=>{
+    e.preventDefault(); const cy=e.clientY;
     if(rafRef.current)cancelAnimationFrame(rafRef.current);
     rafRef.current=requestAnimationFrame(()=>{
       if(!gridRef.current||!dragData.current)return;
-      showInd(dayIdx,snapY(cy,gridRef.current),dragData.current.dur);
+      showInd(di,snapY(cy,gridRef.current),dragData.current.dur);
     });
   },[showInd]);
-  const onDrop = useCallback(async(e,dayIdx)=>{
+  const onDrop = useCallback(async(e,di)=>{
     e.preventDefault();
     if(rafRef.current)cancelAnimationFrame(rafRef.current);
     hideInd();
@@ -213,30 +279,48 @@ const ScheduleCalendar = () => {
     const mins=snapY(e.clientY,gridRef.current);
     if(mins+dur>END_HOUR*60){toast.error('Vượt quá giờ kết thúc!');return;}
     setDraggingId(null); dragData.current=null;
-    await applyDrop(id,sched,DAY_MAP[dayIdx],m2t(mins),m2t(mins+dur));
+    await applyDrop(id,sched,DAY_MAP[di],m2t(mins),m2t(mins+dur));
   },[hideInd,applyDrop]);
 
-  // Computed
-  const hours=Array.from({length:END_HOUR-START_HOUR},(_,i)=>START_HOUR+i);
-  const totalH=hours.length*SH;
-  const cmap={}; schedules.forEach(s=>{if(!cmap[s.class_id])cmap[s.class_id]=COLORS[Object.keys(cmap).length%COLORS.length];});
-  const byDay=DAY_MAP.map(d=>layoutEvs(schedules.filter(s=>s.day_of_week===d)));
-  const byDate=schedules.filter(s=>s.day_of_week===dow(selDate));
+  // Filter theo giáo viên
+  const filtered = filterTeacher
+    ? schedules.filter(s=>s.teacher_id===filterTeacher)
+    : schedules;
+
+  const hours  = Array.from({length:END_HOUR-START_HOUR},(_,i)=>START_HOUR+i);
+  const totalH = hours.length*SH;
+  const cmap   = {};
+  filtered.forEach(s=>{if(!cmap[s.class_id])cmap[s.class_id]=COLORS[Object.keys(cmap).length%COLORS.length];});
+  const byDay  = DAY_MAP.map(d=>layoutEvs(filtered.filter(s=>s.day_of_week===d)));
+  const byDate = filtered.filter(s=>s.day_of_week===dow(selDate));
 
   return(
     <MainLayout title="Lịch học">
       <EditModal event={editEvent} teachers={teachers} rooms={rooms}
         onClose={()=>setEditEvent(null)} onSave={handleSave} onDelete={handleDelete}/>
 
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm để sửa · 🖱️ Kéo thả để di chuyển</p>
-        <Button icon="➕" onClick={()=>navigate('/admin/schedule/new')}>Thêm lịch học</Button>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm để sửa · 🖱️ Kéo thả để di chuyển</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Filter giáo viên */}
+          <select value={filterTeacher} onChange={e=>setFilterTeacher(e.target.value)}
+            className="input-field text-sm w-auto">
+            <option value="">Tất cả giáo viên</option>
+            {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <Button icon="➕" onClick={()=>navigate('/admin/schedule/new')}>Thêm lịch</Button>
+        </div>
       </div>
 
-      <div className="flex gap-2 mb-5 bg-gray-100 p-1 rounded-2xl">
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-2xl">
         {[{key:'week',label:'📅 Lịch tuần'},{key:'date',label:'🗓️ Theo ngày'},{key:'month',label:'📆 Theo tháng'}].map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
-            className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${tab===t.key?'bg-white shadow text-primary-600':'text-gray-500'}`}>
+            className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all
+              ${tab===t.key?'bg-white shadow text-primary-600':'text-gray-500'}`}>
             {t.label}
           </button>
         ))}
@@ -244,87 +328,150 @@ const ScheduleCalendar = () => {
 
       {loading?<div className="text-center py-20 text-gray-400">Đang tải...</div>:(
         <>
+          {/* ── Lịch tuần ── */}
           {tab==='week'&&(
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              {/* Navigation tuần */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <button onClick={()=>setWeekOffset(w=>w-1)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                  ← Tuần trước
+                </button>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-gray-700">{formatWeekLabel()}</p>
+                  {weekOffset!==0&&(
+                    <button onClick={()=>setWeekOffset(0)}
+                      className="text-xs text-primary-500 hover:text-primary-700 mt-0.5">
+                      Về tuần này
+                    </button>
+                  )}
+                </div>
+                <button onClick={()=>setWeekOffset(w=>w+1)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                  Tuần sau →
+                </button>
+              </div>
+
               <div ref={gridWrapRef} className="overflow-x-auto">
                 <div style={{minWidth:560}}>
+                  {/* Header */}
                   <div className="grid border-b border-gray-100" style={{gridTemplateColumns:'56px repeat(7,1fr)'}}>
                     <div className="p-2 bg-gray-50"/>
-                    {DAYS.map(d=>(
-                      <div key={d} className="p-2 bg-gray-50 border-l border-gray-100 text-center">
-                        <p className="text-xs font-semibold text-gray-700">{d}</p>
-                      </div>
-                    ))}
+                    {weekDates.map((date,di)=>{
+                      const isToday=date.toDateString()===new Date().toDateString();
+                      return(
+                        <div key={di} className="py-2 bg-gray-50 border-l border-gray-100 text-center">
+                          <p className={`text-xs font-semibold ${isToday?'text-primary-600':'text-gray-500'}`}>
+                            {DAYS[di]}
+                          </p>
+                          <p className={`text-sm font-bold mt-0.5 ${isToday?'text-primary-600':'text-gray-700'}`}>
+                            {date.getDate()}/{date.getMonth()+1}
+                          </p>
+                          {isToday&&<div className="w-1.5 h-1.5 bg-primary-500 rounded-full mx-auto mt-0.5"/>}
+                        </div>
+                      );
+                    })}
                   </div>
+
+                  {/* Grid */}
                   <div ref={gridRef} className="overflow-y-auto" style={{maxHeight:'70vh'}}>
                     <div className="grid" style={{gridTemplateColumns:'56px repeat(7,1fr)'}}>
                       <div className="relative" style={{height:totalH}}>
                         {hours.map(h=>(
-                          <div key={h} className="absolute w-full flex items-start justify-end pr-2" style={{top:(h-START_HOUR)*SH,height:SH}}>
+                          <div key={h} className="absolute w-full flex items-start justify-end pr-2"
+                            style={{top:(h-START_HOUR)*SH,height:SH}}>
                             <span className="text-xs text-gray-400 -mt-2">{h}:00</span>
                           </div>
                         ))}
                       </div>
-                      {DAYS.map((d,di)=>(
-                        <div key={d} className="relative border-l border-gray-100" style={{height:totalH}}
-                          onDragOver={e=>onDragOver(e,di)} onDrop={e=>onDrop(e,di)}>
-                          {hours.map(h=><div key={h} className="absolute w-full border-t border-gray-50" style={{top:(h-START_HOUR)*SH}}/>)}
-                          <div ref={el=>indicatorRefs.current[di]=el}
-                            className="absolute left-0 right-0 mx-1 rounded-xl border-2 border-dashed border-primary-400 bg-primary-100 pointer-events-none z-20"
-                            style={{display:'none',opacity:0.6}}/>
-                          {byDay[di].map(s=>{
-                            const c=cmap[s.class_id]||COLORS[0];
-                            const t0=top(s.time_start);
-                            const h0=Math.max(hpx(s.time_start,s.time_end),28);
-                            const{lane=0,total=1}=s;
-                            const pct=100/total;
-                            return(
-                              <div key={s.id}
-                                draggable
-                                onDragStart={e=>{e.stopPropagation();onDragStart(e,s);}}
-                                onDragEnd={onDragEnd}
-                                onClick={()=>setEditEvent(s)}
-                                className="absolute rounded-xl border cursor-grab active:cursor-grabbing select-none overflow-hidden"
-                                style={{
-                                  top:t0+1,height:h0-4,
-                                  left:`calc(${lane*pct}% + 2px)`,width:`calc(${pct}% - 4px)`,
-                                  backgroundColor:c.bg,borderColor:c.border,
-                                  opacity:draggingId===s.id?0.35:1,
-                                  zIndex:draggingId===s.id?1:5,
-                                }}>
-                                <div className="px-1.5 py-1 h-full flex flex-col">
-                                  <p className="text-xs font-bold leading-tight truncate" style={{color:c.text}}>{getLabel(s)}</p>
-                                  {h0>34&&<p className="text-xs" style={{color:c.text,opacity:0.8}}>{s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}</p>}
-                                  {h0>50&&<p className="text-xs truncate" style={{color:c.text,opacity:0.7}}>{s.teacher_name}</p>}
-                                  {h0>66&&<p className="text-xs truncate" style={{color:c.text,opacity:0.6}}>{s.room_name}</p>}
+                      {weekDates.map((date,di)=>{
+                        const isToday=date.toDateString()===new Date().toDateString();
+                        const isPastDay=date<new Date(new Date().setHours(0,0,0,0));
+                        return(
+                          <div key={di}
+                            className={`relative border-l border-gray-100 ${isPastDay?'bg-black/[0.02]':''}`}
+                            style={{height:totalH}}
+                            onDragOver={e=>onDragOver(e,di)}
+                            onDrop={e=>onDrop(e,di)}>
+                            {hours.map(h=>(
+                              <div key={h} className="absolute w-full border-t border-gray-50"
+                                style={{top:(h-START_HOUR)*SH}}/>
+                            ))}
+                            {isToday&&<div className="absolute inset-0 bg-primary-500/5 pointer-events-none"/>}
+                            <div ref={el=>indicatorRefs.current[di]=el}
+                              className="absolute left-0 right-0 mx-1 rounded-xl border-2 border-dashed border-primary-400 bg-primary-100 pointer-events-none z-20"
+                              style={{display:'none',opacity:0.6}}/>
+                            {byDay[di].map(s=>{
+                              const c=cmap[s.class_id]||COLORS[0];
+                              const t0=topPx(s.time_start);
+                              const h0=Math.max(hpx(s.time_start,s.time_end),28);
+                              const{lane=0,total=1}=s;
+                              const pct=100/total;
+                              return(
+                                <div key={s.id}
+                                  draggable
+                                  onDragStart={e=>{e.stopPropagation();onDragStart(e,s);}}
+                                  onDragEnd={onDragEnd}
+                                  onClick={()=>setEditEvent(s)}
+                                  className="absolute rounded-xl border cursor-grab active:cursor-grabbing select-none overflow-hidden hover:brightness-95 transition-all"
+                                  style={{
+                                    top:t0+1,height:h0-4,
+                                    left:`calc(${lane*pct}%+2px)`,width:`calc(${pct}%-4px)`,
+                                    backgroundColor:c.bg,borderColor:c.border,
+                                    opacity:draggingId===s.id?0.35:1,
+                                    zIndex:draggingId===s.id?1:5,
+                                  }}>
+                                  <div className="px-1.5 py-1 h-full flex flex-col">
+                                    <p className="text-xs font-bold leading-tight truncate" style={{color:c.text}}>
+                                      {getLabel(s)}
+                                    </p>
+                                    {h0>34&&<p className="text-xs" style={{color:c.text,opacity:0.8}}>
+                                      {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}
+                                    </p>}
+                                    {h0>50&&<p className="text-xs truncate" style={{color:c.text,opacity:0.7}}>
+                                      {s.teacher_name}
+                                    </p>}
+                                    {h0>66&&<p className="text-xs truncate" style={{color:c.text,opacity:0.6}}>
+                                      {s.room_name}
+                                    </p>}
+                                  </div>
+                                  {draggingId===s.id&&(
+                                    <div className="absolute inset-0 z-30" style={{background:'transparent'}}
+                                      onDragOver={e=>onDragOver(e,di)} onDrop={e=>onDrop(e,di)}/>
+                                  )}
                                 </div>
-                                {draggingId===s.id&&(
-                                  <div className="absolute inset-0 z-30" style={{background:'transparent'}}
-                                    onDragOver={e=>onDragOver(e,di)} onDrop={e=>onDrop(e,di)}/>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               </div>
-              {!schedules.length&&<div className="text-center py-16"><p className="text-4xl mb-3">📅</p><p className="text-gray-400">Chưa có lịch học nào</p></div>}
+              {!filtered.length&&(
+                <div className="text-center py-16">
+                  <p className="text-4xl mb-3">📅</p>
+                  <p className="text-gray-400">Chưa có lịch học nào</p>
+                </div>
+              )}
             </div>
           )}
 
+          {/* ── Theo ngày ── */}
           {tab==='date'&&(
             <>
-              <input type="date" value={selDate} onChange={e=>setSelDate(e.target.value)} className="input-field w-full mb-4"/>
+              <input type="date" value={selDate} onChange={e=>setSelDate(e.target.value)}
+                className="input-field w-full mb-4"/>
               <div className="bg-white rounded-2xl border border-gray-100 p-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">
                   {new Date(selDate).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
                 </p>
-                {!byDate.length?<p className="text-center text-gray-400 py-8">Không có lịch học ngày này</p>:(
+                {!byDate.length?(
+                  <p className="text-center text-gray-400 py-8">Không có lịch học ngày này</p>
+                ):(
                   <div className="flex flex-col gap-3">
-                    {byDate.sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
+                    {[...byDate].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
                       <div key={s.id} onClick={()=>setEditEvent(s)}
                         className={`p-4 rounded-2xl border cursor-pointer active:scale-95 transition-transform ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                         <p className="font-bold text-gray-800">{getLabel(s)}</p>
@@ -338,12 +485,14 @@ const ScheduleCalendar = () => {
             </>
           )}
 
+          {/* ── Theo tháng ── */}
           {tab==='month'&&(
             <>
-              <input type="month" value={selMonth} onChange={e=>setSelMonth(e.target.value)} className="input-field w-full mb-4"/>
+              <input type="month" value={selMonth} onChange={e=>setSelMonth(e.target.value)}
+                className="input-field w-full mb-4"/>
               <div className="flex flex-col gap-3">
                 {getDIM(selMonth).map(d=>{
-                  const ds=schedules.filter(s=>s.day_of_week===dow(d));
+                  const ds=filtered.filter(s=>s.day_of_week===dow(d));
                   if(!ds.length) return null;
                   return(
                     <div key={d} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -354,17 +503,25 @@ const ScheduleCalendar = () => {
                         <p className="text-xs text-gray-400">{ds.length} lớp</p>
                       </div>
                       <div className="p-3 flex flex-col gap-2">
-                        {ds.sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
+                        {[...ds].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
                           <div key={s.id} onClick={()=>setEditEvent(s)}
                             className={`p-3 rounded-xl border cursor-pointer active:scale-95 ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                             <p className="text-sm font-bold text-gray-800">{getLabel(s)}</p>
-                            <p className="text-xs text-gray-600">{s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · {s.teacher_name} · {s.room_name}</p>
+                            <p className="text-xs text-gray-600">
+                              {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · {s.teacher_name} · {s.room_name}
+                            </p>
                           </div>
                         ))}
                       </div>
                     </div>
                   );
                 })}
+                {getDIM(selMonth).every(d=>!filtered.filter(s=>s.day_of_week===dow(d)).length)&&(
+                  <div className="text-center py-12 text-gray-400">
+                    <p className="text-3xl mb-2">📆</p>
+                    <p className="text-sm">Không có lịch học trong tháng này</p>
+                  </div>
+                )}
               </div>
             </>
           )}
