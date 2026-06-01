@@ -292,16 +292,18 @@ const ScheduleCalendar = () => {
   },[]);
 
   const loadOverrides = useCallback(async()=>{
-    try{
-      const start = weekDates[0].toISOString().split('T')[0];
-      const end   = weekDates[6].toISOString().split('T')[0];
-      const res   = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}`);
-      setOverrides(res.rows||[]);
-    }catch(e){ console.error(e.message); }
-  },[weekDates[0].toISOString()]);
+  const wStart = getWeekStart(weekOffset);
+  const wDates = getWeekDates(wStart);
+  try{
+    const start = wDates[0].toISOString().split('T')[0];
+    const end   = wDates[6].toISOString().split('T')[0];
+    const res   = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}`);
+    setOverrides(res.rows||[]);
+  }catch(e){ console.error(e.message); }
+},[weekOffset]);
 
-  useEffect(()=>{ loadBase(); },[loadBase]);
-  useEffect(()=>{ loadOverrides(); },[weekOffset]);
+useEffect(()=>{ loadBase(); },[loadBase]);
+useEffect(()=>{ loadOverrides(); },[loadOverrides]);
 
   const showInd = useCallback((dayIdx,mins,dur)=>{
     Object.values(indicatorRefs.current).forEach(el=>{if(el)el.style.display='none';});
