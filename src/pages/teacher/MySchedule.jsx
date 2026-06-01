@@ -475,10 +475,10 @@ const MySchedule = () => {
                       return(
                         <div key={di} className="py-2 bg-gray-50 border-l border-gray-100 text-center">
                           <p className={`text-xs font-semibold ${isToday?'text-primary-600':'text-gray-500'}`}>
-                            {DAYS[di].replace('Thứ ','T').replace('Chủ nhật','CN')}
+                              {DAYS[di]}
                           </p>
                           <p className={`text-sm font-bold mt-0.5 ${isToday?'text-primary-600':'text-gray-700'}`}>
-                            {date.getDate()}
+                            {date.getDate()}/{date.getMonth()+1}
                           </p>
                           {isToday&&<div className="w-1.5 h-1.5 bg-primary-500 rounded-full mx-auto mt-0.5"/>}
                           {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="Có lịch ngoại lệ"/>}
