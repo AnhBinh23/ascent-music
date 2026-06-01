@@ -355,7 +355,7 @@ const ScheduleCalendar = () => {
               <div ref={gridWrapRef} className="overflow-x-auto">
                 <div style={{minWidth:560}}>
                   {/* Header */}
-                  <div className="grid border-b border-gray-100" style={{gridTemplateColumns:'56px repeat(7,1fr)'}}>
+                  <div className="grid border-b border-gray-100" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
                     <div className="p-2 bg-gray-50"/>
                     {weekDates.map((date,di)=>{
                       const isToday=date.toDateString()===new Date().toDateString();
@@ -375,10 +375,10 @@ const ScheduleCalendar = () => {
 
                   {/* Grid */}
                   <div ref={gridRef} className="overflow-y-auto" style={{maxHeight:'70vh'}}>
-                    <div className="grid" style={{gridTemplateColumns:'56px repeat(7,1fr)'}}>
+                    <div className="grid" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
                       <div className="relative" style={{height:totalH}}>
                         {hours.map(h=>(
-                          <div key={h} className="absolute w-full flex items-start justify-end pr-2"
+                          <div key={h} className="absolute w-full flex items-start justify-end pr-1"
                             style={{top:(h-START_HOUR)*SH,height:SH}}>
                             <span className="text-xs text-gray-400 -mt-2">{h}:00</span>
                           </div>
@@ -416,7 +416,7 @@ const ScheduleCalendar = () => {
                                   className="absolute rounded-xl border cursor-grab active:cursor-grabbing select-none overflow-hidden hover:brightness-95 transition-all"
                                   style={{
                                     top:t0+1,height:h0-4,
-                                    left:`calc(${lane*pct}%+2px)`,width:`calc(${pct}%-4px)`,
+                                    left:`calc(${lane*pct}%+1px)`,width:`calc(${pct}%-2px)`,
                                     backgroundColor:c.bg,borderColor:c.border,
                                     opacity:draggingId===s.id?0.35:1,
                                     zIndex:draggingId===s.id?1:5,
