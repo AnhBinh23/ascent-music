@@ -188,17 +188,15 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
         </div>
 
         <div className="flex flex-col gap-3">
-          {applyTo === 'permanent' && (
-  <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
   <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
   <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
     {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
   </select>
   {applyTo==='week' && (
-    <p className="text-xs text-orange-500">⚡ Chỉ đổi ngày/giờ tuần này, tuần sau về lịch gốc</p>
+    <p className="text-xs text-orange-500">⚡ Đổi ngày/giờ tuần này thôi, tuần sau về lịch gốc</p>
   )}
 </div>
-)}
 {applyTo === 'week' && (
   <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
     📅 Ngày dạy: <span className="font-semibold">{DAYS_OPT.find(d=>d.value===Number(f.day_of_week))?.label}</span>
