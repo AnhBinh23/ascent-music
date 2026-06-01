@@ -465,7 +465,7 @@ const MySchedule = () => {
               </div>
 
               <div ref={gridWrapRef} className="overflow-x-auto">
-                <div style={{minWidth:460}}>
+                <div style={{minWidt:560}}>
                   <div className="grid border-b border-gray-100" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
                     <div className="p-2 bg-gray-50"/>
                     {weekDates.map((date,di)=>{
@@ -501,7 +501,7 @@ const MySchedule = () => {
                         const isPastDay= date<new Date(new Date().setHours(0,0,0,0));
                         return(
                           <div key={di}
-                            className={`relative border-l border-gray-100 ${isPastDay?'bg-black/[0.02]':''}`}
+                            className={`relative border-l border-gray-100 overflow-hidden ${isPastDay?'bg-black/[0.02]':''}`}
                             style={{height:totalH}}
                             onDragOver={e=>onDragOver(e,di)} onDrop={e=>onDrop(e,di)}>
                             {hours.map(h=><div key={h} className="absolute w-full border-t border-gray-50" style={{top:(h-START_HOUR)*SH}}/>)}
@@ -526,8 +526,11 @@ const MySchedule = () => {
                                     ${isPast?'cursor-not-allowed':'cursor-grab active:cursor-grabbing hover:brightness-110'}`}
                                   style={{
                                     top:t0+1, height:h0-4,
-                                    left:`calc(${lane * pct}% + 1px)`,
-                                    width:`calc(${pct}% - 2px)`,
+                                    left:`${lane * pct}%`,
+                                    width:`${pct}%`,
+                                    paddingLeft:'1px',
+                                    paddingRight:'1px',
+                                    boxSizing:'border-box',
                                     backgroundColor: s.is_override ? '#fff7ed' : c.bg,
                                     borderColor:     s.is_override ? '#f97316' : c.border,
                                     borderStyle:     s.is_override ? 'dashed'  : 'solid',
@@ -541,6 +544,9 @@ const MySchedule = () => {
                                     </p>
                                     {h0>30&&<p style={{color:s.is_override?'#ea580c':c.text,opacity:0.8,fontSize:9}}>
                                       {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}
+                                    </p>}
+                                    {h0>50&&<p style={{color:s.is_override?'#ea580c':c.text,opacity:0.7,fontSize:9}} className="truncate">
+                                      {s.room_name}
                                     </p>}
                                   </div>
                                   {draggingId===s.id&&(
