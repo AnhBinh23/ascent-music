@@ -416,7 +416,7 @@ const ScheduleCalendar = () => {
                                   className="absolute rounded-xl border cursor-grab active:cursor-grabbing select-none overflow-hidden hover:brightness-95 transition-all"
                                   style={{
                                     top:t0+1,height:h0-4,
-                                    left:`calc(${lane*pct}%+1px)`,width:`calc(${pct}%-2px)`,
+                                    left:`calc(${lane * pct}% + 1px)`,width:`calc(${pct}% - 2px)`,
                                     backgroundColor:c.bg,borderColor:c.border,
                                     opacity:draggingId===s.id?0.35:1,
                                     zIndex:draggingId===s.id?1:5,
