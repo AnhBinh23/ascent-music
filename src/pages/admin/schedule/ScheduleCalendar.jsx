@@ -187,14 +187,20 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
-            <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm"
-              disabled={applyTo==='week'}>
-              {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
-            </select>
-            {applyTo==='week'&&<p className="text-xs text-gray-400">* Đổi tuần này không thay đổi ngày, chỉ đổi giờ</p>}
-          </div>
+          {applyTo === 'permanent' && (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
+    <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
+      {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
+    </select>
+  </div>
+)}
+{applyTo === 'week' && (
+  <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
+    📅 Ngày dạy: <span className="font-semibold">{DAYS_OPT.find(d=>d.value===Number(f.day_of_week))?.label}</span>
+    <p className="text-xs text-gray-400 mt-0.5">⚡ Chỉ đổi giờ, không đổi ngày</p>
+  </div>
+)}
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-gray-600">🕐 Bắt đầu</label>
