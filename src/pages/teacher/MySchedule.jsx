@@ -65,18 +65,22 @@ const dowToWeekIdx = dow => dow===1 ? 6 : dow-2;
 const mergeWithOverrides = (baseSchedules, overrides, weekDates) => {
   const result = [];
   for (const sched of baseSchedules) {
-    const wIdx       = dowToWeekIdx(sched.day_of_week);
+    const wIdx = dowToWeekIdx(Number(sched.day_of_week));
     const actualDate = weekDates[wIdx]?.toISOString().split('T')[0];
-    const override   = overrides.find(o =>
-      String(o.schedule_id) === String(sched.id) && o.original_date?.slice(0,10) === actualDate
-    );
+    let override = null;
+    for (const o of overrides) {
+      if (String(o.schedule_id) === String(sched.id)) {
+        const oDate = o.original_date ? String(o.original_date).slice(0,10) : null;
+        if (oDate === actualDate) { override = o; break; }
+      }
+    }
     if (override?.status === 'cancelled') continue;
     if (override) {
       result.push({
         ...sched,
-        day_of_week:  override.new_day_of_week || sched.day_of_week,
-        time_start:   override.new_time_start  || sched.time_start,
-        time_end:     override.new_time_end    || sched.time_end,
+        day_of_week:  Number(override.new_day_of_week) || Number(sched.day_of_week),
+        time_start:   override.new_time_start || sched.time_start,
+        time_end:     override.new_time_end   || sched.time_end,
         override_id:  override.id,
         is_override:  true,
         actual_date:  actualDate,
@@ -418,7 +422,7 @@ const MySchedule = () => {
   schedules.forEach(s=>{if(!cmap[s.class_id])cmap[s.class_id]=COLORS[Object.keys(cmap).length%COLORS.length];});
 
   const weekSchedules = mergeWithOverrides(schedules, overrides, weekDates);
-  const byDay   = DAY_MAP.map(d=>layoutEvs(weekSchedules.filter(s=>s.day_of_week===d)));
+  const byDay = DAY_MAP.map(d=>layoutEvs(weekSchedules.filter(s=>Number(s.day_of_week)===d)));
   const byDate  = schedules.filter(s=>s.day_of_week===dow(selDate));
 
   return(
