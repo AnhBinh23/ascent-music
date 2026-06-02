@@ -343,6 +343,7 @@ const MySchedule = () => {
   try{
     await api.post('/schedule-overrides',{
       schedule_id:     sched.id,
+      teacher_id:      teacherId,
       original_date:   sched.actual_date,
       new_day_of_week: newDow,
       new_time_start:  ns,
