@@ -319,28 +319,19 @@ const MySchedule = () => {
   const newDow = Number(f.day_of_week);
   const dayLabel = DAYS_OPT.find(d=>d.value===newDow)?.label || '';
 
-  // Helper: reload overrides cho tuần hiện tại
-  const reloadOverrides = async () => {
-    if(!teacherId) return;
-    const wStart = getWeekStart(weekOffset);
-    const wDates = getWeekDates(wStart);
-    const start  = wDates[0].toISOString().split('T')[0];
-    const end    = wDates[6].toISOString().split('T')[0];
-    try{
-      const res = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}&teacher_id=${teacherId}`);
-      setOverrides(res.rows || []);
-    }catch(e){ console.error(e.message); }
-  };
+ 
 
-  if(applyTo === 'revert'){
-  try{
+  if (applyTo === 'revert') {
+  try {
     await api.delete(`/schedule-overrides/${sched.id}/${sched.actual_date}`);
     setOverrides(prev => prev.filter(o =>
       !(String(o.schedule_id) === String(sched.id) &&
-        String(o.original_date).slice(0,10) === String(sched.actual_date).slice(0,10))
+        String(o.original_date).slice(0, 10) === String(sched.actual_date).slice(0, 10))
     ));
     toast.success('↩️ Đã về lịch bình thường!');
-  }catch(e){ toast.error(e.message); }
+  } catch (e) {
+    toast.error(e.message);
+  }
   return;
 }
 
