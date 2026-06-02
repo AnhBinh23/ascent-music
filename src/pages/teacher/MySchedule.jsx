@@ -243,7 +243,7 @@ const MySchedule = () => {
   const indicatorRefs = useRef({});
   const dragData      = useRef(null);
   const rafRef        = useRef(null);
-
+  const loadIdRef     = useRef(0);
   const [schedules, setSchedules]   = useState([]);
   const [overrides, setOverrides]   = useState([]);
   const [teacherId, setTeacherId]   = useState(null);
@@ -288,16 +288,20 @@ const MySchedule = () => {
   }, [user]);
 
   const loadOverrides = useCallback(async () => {
-    if (!teacherId) return;
-    const wStart = getWeekStart(weekOffset);
-    const wDates = getWeekDates(wStart);
-    try {
-      const start = wDates[0].toISOString().split('T')[0];
-      const end   = wDates[6].toISOString().split('T')[0];
-      const res   = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}&teacher_id=${teacherId}`);
+  if (!teacherId) return;
+  const loadId = ++loadIdRef.current; // ✅ đánh dấu request này
+  const wStart = getWeekStart(weekOffset);
+  const wDates = getWeekDates(wStart);
+  try {
+    const start = wDates[0].toISOString().split('T')[0];
+    const end   = wDates[6].toISOString().split('T')[0];
+    const res   = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}&teacher_id=${teacherId}`);
+    // ✅ Chỉ update state nếu đây là request MỚI NHẤT
+    if (loadId === loadIdRef.current) {
       setOverrides(res.rows || []);
-    } catch(e) { console.error(e.message); }
-  }, [weekOffset, teacherId]);
+    }
+  } catch(e) { console.error(e.message); }
+}, [weekOffset, teacherId]);
 
   useEffect(()=>{ if(user?.id) load(); },[load, user]);
   useEffect(()=>{ loadOverrides(); },[loadOverrides]);
