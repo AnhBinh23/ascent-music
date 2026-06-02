@@ -333,13 +333,16 @@ const MySchedule = () => {
   };
 
   if(applyTo === 'revert'){
-    try{
-      await api.delete(`/schedule-overrides/${sched.id}/${sched.actual_date}`);
-      await reloadOverrides();
-      toast.success('↩️ Đã về lịch bình thường!');
-    }catch(e){ toast.error(e.message); }
-    return;
-  }
+  try{
+    await api.delete(`/schedule-overrides/${sched.id}/${sched.actual_date}`);
+    setOverrides(prev => prev.filter(o =>
+      !(String(o.schedule_id) === String(sched.id) &&
+        String(o.original_date).slice(0,10) === String(sched.actual_date).slice(0,10))
+    ));
+    toast.success('↩️ Đã về lịch bình thường!');
+  }catch(e){ toast.error(e.message); }
+  return;
+}
 
   if(applyTo === 'week'){
   try{
@@ -358,8 +361,7 @@ const MySchedule = () => {
       message: `${teacherName} đổi "${getLabel(sched)}" tuần ${sched.actual_date} sang ${dayLabel} ${f.time_start}–${f.time_end}`,
       type:    'schedule_change', role: 'admin',
     }).catch(()=>{});
-
-    // ✅ Cập nhật state NGAY LẬP TỨC để UI phản hồi
+    // ✅ Chỉ cập nhật state trực tiếp — KHÔNG gọi reloadOverrides()
     setOverrides(prev => {
       const filtered = prev.filter(o =>
         !(String(o.schedule_id) === String(sched.id) &&
@@ -374,10 +376,7 @@ const MySchedule = () => {
         status:          'rescheduled',
       }];
     });
-
     toast.success('✅ Đã đổi lịch tuần này! Admin đã được thông báo.');
-    // Reload API để đồng bộ (không await - chạy background)
-    reloadOverrides();
   }catch(e){ toast.error(e.message); }
 } else {
     setSchedules(p=>p.map(s=>s.id===sched.id?{...s,day_of_week:newDow,time_start:ns,time_end:ne}:s));
