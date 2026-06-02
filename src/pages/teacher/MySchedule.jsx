@@ -391,7 +391,7 @@ const MySchedule = () => {
       load();
     }catch(e){ toast.error(e.message); load(); }
   }
-},[load, teacherName]);
+},[load, teacherName, teacherId]);
 
   const applyDrop = useCallback(async(id,sched,newDow,newStart,newEnd)=>{
     setSchedules(p=>p.map(s=>s.id===id?{...s,day_of_week:newDow,time_start:newStart,time_end:newEnd}:s));
