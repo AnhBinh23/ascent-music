@@ -342,26 +342,44 @@ const MySchedule = () => {
   }
 
   if(applyTo === 'week'){
-    try{
-      await api.post('/schedule-overrides',{
+  try{
+    await api.post('/schedule-overrides',{
+      schedule_id:     sched.id,
+      original_date:   sched.actual_date,
+      new_day_of_week: newDow,
+      new_time_start:  ns,
+      new_time_end:    ne,
+      room_id:         sched.room_id || null,
+      status:          'rescheduled',
+      note:            `GV đổi lịch tuần ${sched.actual_date}`,
+    });
+    await api.post('/notifications',{
+      title:   '⚡ Giáo viên đổi lịch tuần này',
+      message: `${teacherName} đổi "${getLabel(sched)}" tuần ${sched.actual_date} sang ${dayLabel} ${f.time_start}–${f.time_end}`,
+      type:    'schedule_change', role: 'admin',
+    }).catch(()=>{});
+
+    // ✅ Cập nhật state NGAY LẬP TỨC để UI phản hồi
+    setOverrides(prev => {
+      const filtered = prev.filter(o =>
+        !(String(o.schedule_id) === String(sched.id) &&
+          String(o.original_date).slice(0,10) === String(sched.actual_date).slice(0,10))
+      );
+      return [...filtered, {
         schedule_id:     sched.id,
         original_date:   sched.actual_date,
         new_day_of_week: newDow,
         new_time_start:  ns,
         new_time_end:    ne,
-        room_id:         sched.room_id || null,
         status:          'rescheduled',
-        note:            `GV đổi lịch tuần ${sched.actual_date}`,
-      });
-      await api.post('/notifications',{
-        title:   '⚡ Giáo viên đổi lịch tuần này',
-        message: `${teacherName} đổi "${getLabel(sched)}" tuần ${sched.actual_date} sang ${dayLabel} ${f.time_start}–${f.time_end}`,
-        type:    'schedule_change', role: 'admin',
-      }).catch(()=>{});
-      await reloadOverrides(); // ✅ Reload trực tiếp với đúng teacherId + weekOffset
-      toast.success('✅ Đã đổi lịch tuần này! Admin đã được thông báo.');
-    }catch(e){ toast.error(e.message); }
-  } else {
+      }];
+    });
+
+    toast.success('✅ Đã đổi lịch tuần này! Admin đã được thông báo.');
+    // Reload API để đồng bộ (không await - chạy background)
+    reloadOverrides();
+  }catch(e){ toast.error(e.message); }
+} else {
     setSchedules(p=>p.map(s=>s.id===sched.id?{...s,day_of_week:newDow,time_start:ns,time_end:ne}:s));
     try{
       await api.put(`/schedules/${sched.id}`,{
