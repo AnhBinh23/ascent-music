@@ -26,6 +26,12 @@ const api = {
     if (!res.ok) throw new Error(data.message);
     return data;
   },
+  patch: async (endpoint, body) => {
+    const res  = await fetch(`${BASE}${endpoint}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    return data;
+  },
   delete: async (endpoint) => {
     const res  = await fetch(`${BASE}${endpoint}`, { method: 'DELETE', headers: headers() });
     const data = await res.json();
