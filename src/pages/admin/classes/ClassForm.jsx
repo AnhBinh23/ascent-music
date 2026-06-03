@@ -17,7 +17,6 @@ const DAYS        = [
 ];
 const DAY_LABEL = { 1:'CN', 2:'T2', 3:'T3', 4:'T4', 5:'T5', 6:'T6', 7:'T7' };
 
-// ✅ 2 gói khóa học cố định
 const COURSE_PACKAGES = [
   { sessions: 16, label: 'Khóa 16 buổi' },
   { sessions: 24, label: 'Khóa 24 buổi' },
@@ -26,11 +25,13 @@ const COURSE_PACKAGES = [
 const EMPTY_CLASS = {
   name: '', instrument: 'Piano', type: '1v1', teacher_id: '',
   level: 'Sơ cấp', schedule: '', tuition_fee: '', start_date: '', end_date: '',
-  max_students: 1, sessions_per_week: 1, total_sessions: 16, status: 'active', note: '',
+  max_students: 1, sessions_per_week: 1, total_sessions: 16,
+  status: 'Đang học', note: '',
+  teacher_salary: '',
+  teacher_salary_partial: '',
 };
 const EMPTY_SLOT = { day_of_week: 2, time_start: '08:00', time_end: '09:00', room_id: '' };
 
-// Tính ngày kết thúc từ ngày bắt đầu + số buổi/tuần + tổng buổi
 const calcEndDate = (startDate, sessionsPerWeek, totalSessions) => {
   if (!startDate || !sessionsPerWeek || !totalSessions) return '';
   const weeks = Math.ceil(totalSessions / sessionsPerWeek);
@@ -38,6 +39,8 @@ const calcEndDate = (startDate, sessionsPerWeek, totalSessions) => {
   end.setDate(end.getDate() + weeks * 7);
   return end.toISOString().split('T')[0];
 };
+
+const fmt = (n) => n ? Number(n).toLocaleString('vi-VN') + 'đ' : '—';
 
 const ClassForm = () => {
   const { id }   = useParams();
@@ -62,20 +65,22 @@ const ClassForm = () => {
       ]).then(([cls, sched]) => {
         const c = cls.row || cls.rows?.[0] || {};
         setForm({
-          name:              c.name              || '',
-          instrument:        c.instrument        || 'Piano',
-          type:              c.type              || '1v1',
-          teacher_id:        c.teacher_id        || '',
-          level:             c.level             || 'Sơ cấp',
-          schedule:          c.schedule          || '',
-          tuition_fee:       c.tuition_fee || c.fee || '',
-          start_date:        c.start_date?.slice(0,10) || '',
-          end_date:          c.end_date?.slice(0,10)   || '',
-          max_students:      c.max_students      || 1,
-          sessions_per_week: c.sessions_per_week || 1,
-          total_sessions:    c.total_sessions    || 16,
-          status:            c.status            || 'active',
-          note:              c.note              || '',
+          name:                   c.name              || '',
+          instrument:             c.instrument        || 'Piano',
+          type:                   c.type              || '1v1',
+          teacher_id:             c.teacher_id        || '',
+          level:                  c.level             || 'Sơ cấp',
+          schedule:               c.schedule          || '',
+          tuition_fee:            c.tuition_fee || c.fee || '',
+          start_date:             c.start_date?.slice(0,10) || '',
+          end_date:               c.end_date?.slice(0,10)   || '',
+          max_students:           c.max_students      || 1,
+          sessions_per_week:      c.sessions_per_week || 1,
+          total_sessions:         c.total_sessions    || 16,
+          status:                 c.status            || 'Đang học',
+          note:                   c.note              || '',
+          teacher_salary:         c.teacher_salary         || '',
+          teacher_salary_partial: c.teacher_salary_partial || '',
         });
         const existing = (sched.rows || []).filter(s => s.class_id === id);
         if (existing.length > 0) {
@@ -95,25 +100,19 @@ const ClassForm = () => {
   const handleChange = e => {
     const { name, value } = e.target;
     const next = { ...form, [name]: value };
-
-    // Tự tính ngày kết thúc khi đổi start_date / sessions_per_week / total_sessions
-    if (['start_date', 'sessions_per_week', 'total_sessions'].includes(name)) {
+    if (['start_date','sessions_per_week','total_sessions'].includes(name)) {
       next.end_date = calcEndDate(
         name === 'start_date'        ? value : next.start_date,
         name === 'sessions_per_week' ? Number(value) : Number(next.sessions_per_week),
         name === 'total_sessions'    ? Number(value) : Number(next.total_sessions),
       );
     }
-
-    // Khi chọn nhóm thì max_students mặc định > 1
     if (name === 'type') {
       next.max_students = value === '1v1' ? 1 : next.max_students < 2 ? 5 : next.max_students;
     }
-
     setForm(next);
   };
 
-  // ── Slots ────────────────────────────────────────────────────────────────────
   const addSlot    = () => setSlots([...slots, { ...EMPTY_SLOT }]);
   const removeSlot = (i) => setSlots(slots.filter((_, idx) => idx !== i));
   const updateSlot = (i, field, value) => {
@@ -122,35 +121,35 @@ const ClassForm = () => {
   const buildScheduleText = (sl) =>
     sl.map(s => `${DAY_LABEL[s.day_of_week]} ${s.time_start}-${s.time_end}`).join(', ');
 
-  // Validate: số slot phải = sessions_per_week
   const spw = Number(form.sessions_per_week) || 1;
 
-  // ── Save ─────────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!form.name || !form.teacher_id) {
       toast.error('Vui lòng điền tên lớp và chọn giáo viên!'); return;
     }
     if (slots.length !== spw) {
-      toast.error(`Cần thêm đúng ${spw} khung giờ (${spw} buổi/tuần)!`); return;
+      toast.error(`Cần đúng ${spw} khung giờ!`); return;
     }
     setSaving(true);
     try {
       const payload = {
-        name:              form.name,
-        instrument:        form.instrument,
-        type:              form.type,
-        teacher_id:        form.teacher_id,
-        level:             form.level,
-        schedule:          buildScheduleText(slots),
-        tuition_fee:       Number(form.tuition_fee) || 0,
-        fee:               Number(form.tuition_fee) || 0,
-        start_date:        form.start_date,
-        end_date:          form.end_date,
-        max_students:      Number(form.max_students) || 1,
-        sessions_per_week: Number(form.sessions_per_week) || 1,
-        total_sessions:    Number(form.total_sessions) || 16,
-        status:            form.status,
-        note:              form.note,
+        name:                   form.name,
+        instrument:             form.instrument,
+        type:                   form.type,
+        teacher_id:             form.teacher_id,
+        level:                  form.level,
+        schedule:               buildScheduleText(slots),
+        tuition_fee:            Number(form.tuition_fee) || 0,
+        fee:                    Number(form.tuition_fee) || 0,
+        start_date:             form.start_date,
+        end_date:               form.end_date,
+        max_students:           Number(form.max_students) || 1,
+        sessions_per_week:      Number(form.sessions_per_week) || 1,
+        total_sessions:         Number(form.total_sessions) || 16,
+        status:                 form.status,
+        note:                   form.note,
+        teacher_salary:         Number(form.teacher_salary)         || 0,
+        teacher_salary_partial: Number(form.teacher_salary_partial) || 0,
       };
 
       let classId = id;
@@ -205,8 +204,10 @@ const ClassForm = () => {
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-sm font-bold text-gray-700 mb-4">📚 Thông tin lớp học</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
             <div className="sm:col-span-2">
-              <Input label="Tên lớp *" name="name" value={form.name} onChange={handleChange} placeholder="VD: Piano 1-1 Mint" />
+              <Input label="Tên lớp *" name="name" value={form.name}
+                onChange={handleChange} placeholder="VD: Piano 1-1 Mint" />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -249,18 +250,17 @@ const ClassForm = () => {
               </select>
             </div>
 
-                      {/* Số buổi/tuần */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">📅 Số buổi/tuần</label>
-            <select name="sessions_per_week" value={form.sessions_per_week} onChange={handleChange} className="input-field">
-              {[1,2,3,4,5,6,7].map(n => (
-                <option key={n} value={n}>{n} buổi/tuần</option>
-              ))}
-            </select>
-          </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">📅 Số buổi/tuần</label>
+              <select name="sessions_per_week" value={form.sessions_per_week} onChange={handleChange} className="input-field">
+                {[1,2,3,4,5,6,7].map(n => (
+                  <option key={n} value={n}>{n} buổi/tuần</option>
+                ))}
+              </select>
+            </div>
 
             <Input label="Học phí cả khóa (đ)" name="tuition_fee" type="number"
-              value={form.tuition_fee} onChange={handleChange} placeholder="VD: 2400000" />
+              value={form.tuition_fee} onChange={handleChange} placeholder="VD: 4800000" />
 
             {form.type === 'group' && (
               <Input label="Sĩ số tối đa" name="max_students" type="number"
@@ -277,7 +277,7 @@ const ClassForm = () => {
               {form.start_date && form.end_date && (
                 <p className="text-xs text-primary-500 mt-0.5">
                   📦 {form.total_sessions} buổi · {form.sessions_per_week} buổi/tuần
-                  · ~{Math.ceil(Number(form.total_sessions) / Number(form.sessions_per_week))} tuần
+                  · ~{Math.ceil(Number(form.total_sessions)/Number(form.sessions_per_week))} tuần
                 </p>
               )}
             </div>
@@ -285,9 +285,9 @@ const ClassForm = () => {
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Trạng thái</label>
               <select name="status" value={form.status} onChange={handleChange} className="input-field">
-                <option value="active">Đang học</option>
-                <option value="inactive">Tạm dừng</option>
-                <option value="completed">Hoàn thành</option>
+                <option value="Đang học">Đang học</option>
+                <option value="Đang tuyển sinh">Đang tuyển sinh</option>
+                <option value="Đã kết thúc">Đã kết thúc</option>
               </select>
             </div>
 
@@ -297,6 +297,70 @@ const ClassForm = () => {
                 rows={2} className="input-field resize-none" />
             </div>
           </div>
+        </div>
+
+        {/* ── Lương giáo viên ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <p className="text-sm font-bold text-gray-700 mb-1">💰 Lương giáo viên theo lớp này</p>
+          <p className="text-xs text-gray-400 mb-4">
+            Mức lương riêng cho lớp này — có thể khác với các lớp khác của cùng giáo viên
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">
+                💰 Lương/buổi {form.type === '1v1' ? '(1 kèm 1)' : '(nhóm đủ HV)'}
+              </label>
+              <input
+                type="number"
+                name="teacher_salary"
+                value={form.teacher_salary}
+                onChange={handleChange}
+                placeholder="VD: 200000"
+                className="input-field"
+              />
+              {form.teacher_salary > 0 && (
+                <p className="text-xs text-green-600 mt-0.5">
+                  ✅ {fmt(form.teacher_salary)}/buổi
+                </p>
+              )}
+            </div>
+
+            {form.type === 'group' && (
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  💰 Lương/buổi (khi có HV vắng)
+                </label>
+                <input
+                  type="number"
+                  name="teacher_salary_partial"
+                  value={form.teacher_salary_partial}
+                  onChange={handleChange}
+                  placeholder="VD: 150000"
+                  className="input-field"
+                />
+                {form.teacher_salary_partial > 0 && (
+                  <p className="text-xs text-orange-500 mt-0.5">
+                    ⚠️ {fmt(form.teacher_salary_partial)}/buổi khi vắng
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Preview tổng lương cả khóa */}
+          {form.teacher_salary > 0 && form.total_sessions > 0 && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-xl">
+              <p className="text-xs font-semibold text-blue-700 mb-1">📊 Dự tính lương cả khóa</p>
+              <p className="text-sm text-blue-600">
+                {form.total_sessions} buổi × {fmt(form.teacher_salary)} = <strong>{fmt(Number(form.teacher_salary) * Number(form.total_sessions))}</strong>
+              </p>
+              {form.type === 'group' && form.teacher_salary_partial > 0 && (
+                <p className="text-xs text-orange-500 mt-1">
+                  Nếu có HV vắng: {fmt(form.teacher_salary_partial)}/buổi
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Lịch học ── */}
@@ -316,7 +380,6 @@ const ClassForm = () => {
             )}
           </div>
 
-          {/* Cảnh báo số slot */}
           {slots.length !== spw && (
             <div className={`mb-3 p-2 rounded-xl text-xs font-medium
               ${slots.length < spw ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
@@ -329,7 +392,10 @@ const ClassForm = () => {
           {slots.length === 0 ? (
             <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl">
               <p className="text-gray-400 text-sm">Chưa có lịch học</p>
-              <button type="button" onClick={addSlot} className="mt-2 text-primary-600 text-sm font-medium">+ Thêm khung giờ</button>
+              <button type="button" onClick={addSlot}
+                className="mt-2 text-primary-600 text-sm font-medium">
+                + Thêm khung giờ
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
