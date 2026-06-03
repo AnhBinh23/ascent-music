@@ -1,72 +1,254 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import MainLayout from '../../../components/layout/MainLayout';
-import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
-import Table from '../../../components/ui/Table';
+import api from '../../../services/api';
 
-const STATUS_VARIANT = { 'Đang tuyển sinh': 'blue', 'Đang học': 'green', 'Đã kết thúc': 'gray' };
-
-const SAMPLE = {
-  id: 'LH001', name: 'Piano cơ bản 01', instrument: 'Piano',
-  type: '1v1', teacher: 'Nguyễn Thị Mai', room: 'Phòng 1',
-  schedule: 'Thứ 2, 4 - 08:00~09:00', level: 'Sơ cấp',
-  tuitionFee: 800000, startDate: '2025-03-01', status: 'Đang học',
-  students: [
-    { id: 'HV001', name: 'Nguyễn Văn An', phone: '0901234567', level: 'Sơ cấp', status: 'active' },
-  ],
+const STATUS_VARIANT = {
+  'Đang tuyển sinh': 'blue',
+  'Đang học':        'green',
+  'Đã kết thúc':     'gray',
 };
 
-const ClassDetail = () => {
-  useParams();
-  const navigate = useNavigate();
-  const cls = SAMPLE;
+const fmt = (n) => n ? Number(n).toLocaleString('vi-VN') + 'đ' : '—';
 
-  const columns = [
-    { key: 'name',   label: 'Học viên' },
-    { key: 'phone',  label: 'SĐT' },
-    { key: 'level',  label: 'Trình độ', render: val => <Badge label={val} variant="blue" /> },
-    { key: 'status', label: 'Trạng thái', render: val => <Badge label={val === 'active' ? 'Đang học' : 'Nghỉ'} variant={val === 'active' ? 'green' : 'gray'} dot /> },
-  ];
+const ClassDetail = () => {
+  const { id }   = useParams();
+  const navigate = useNavigate();
+
+  const [cls, setCls]           = useState(null);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [updating, setUpdating] = useState(null); // studentId đang update
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [clsRes, stuRes] = await Promise.all([
+        api.get(`/classes/${id}`),
+        api.get(`/classes/${id}/students`),
+      ]);
+      setCls(clsRes.row || clsRes.rows?.[0] || {});
+      setStudents(stuRes.rows || []);
+    } catch (e) {
+      toast.error('Không tải được dữ liệu!');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Nâng khóa hoặc giảm khóa cho học viên
+  const updateCourse = async (studentId, newCourse) => {
+    if (newCourse < 1) return;
+    setUpdating(studentId);
+    try {
+      await api.patch(`/classes/${id}/students/${studentId}/course`, {
+        course_number: newCourse,
+      });
+      setStudents(prev => prev.map(s =>
+        s.id === studentId ? { ...s, course_number: newCourse } : s
+      ));
+      toast.success(`✅ Đã chuyển sang Khóa ${newCourse}!`);
+    } catch (e) {
+      toast.error(e.message || 'Có lỗi xảy ra!');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  if (loading) return (
+    <MainLayout title="Chi tiết lớp học">
+      <div className="text-center py-20 text-gray-400">Đang tải...</div>
+    </MainLayout>
+  );
+
+  if (!cls) return (
+    <MainLayout title="Chi tiết lớp học">
+      <div className="text-center py-20 text-gray-400">Không tìm thấy lớp học</div>
+    </MainLayout>
+  );
+
+  const isGroup = cls.type === 'group';
 
   return (
     <MainLayout title="Chi tiết lớp học">
-      <div className="flex items-center gap-4 mb-5">
-        <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-3xl">🎵</div>
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-gray-800">{cls.name}</h2>
+      {/* ── Header ── */}
+      <div className="flex items-start gap-4 mb-5">
+        <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">🎵</div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-bold text-gray-800 truncate">{cls.name}</h2>
           <div className="flex gap-2 mt-1 flex-wrap">
             <Badge label={cls.instrument} variant="blue" />
-            <Badge label={cls.type === '1v1' ? '1 kèm 1' : 'Nhóm'} variant={cls.type === '1v1' ? 'purple' : 'green'} />
-            <Badge label={cls.status} variant={STATUS_VARIANT[cls.status]} dot />
+            <Badge label={isGroup ? 'Nhóm' : '1 kèm 1'} variant={isGroup ? 'green' : 'purple'} />
+            <Badge label={cls.status} variant={STATUS_VARIANT[cls.status] || 'gray'} dot />
           </div>
         </div>
-        <Button variant="secondary" size="sm" icon="✏️" onClick={() => navigate('/admin/classes/new')}>Chỉnh sửa</Button>
+        <Button variant="secondary" size="sm" icon="✏️"
+          onClick={() => navigate(`/admin/classes/${id}/edit`)}>
+          Chỉnh sửa
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <Card title="Thông tin lớp">
+        {/* ── Thông tin lớp ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <p className="text-sm font-bold text-gray-700 mb-3">📚 Thông tin lớp</p>
           {[
-            ['Giáo viên', cls.teacher],
-            ['Phòng học', cls.room],
-            ['Lịch học', cls.schedule],
-            ['Trình độ', cls.level],
-            ['Học phí', `${cls.tuitionFee?.toLocaleString('vi-VN')}đ/tháng`],
-            ['Ngày khai giảng', cls.startDate],
+            ['Giáo viên',      cls.teacher_name || '—'],
+            ['Nhạc cụ',        cls.instrument],
+            ['Lịch học',       cls.schedule || '—'],
+            ['Trình độ',       cls.level || '—'],
+            ['Gói khóa học',   cls.total_sessions ? `${cls.total_sessions} buổi` : '—'],
+            ['Ngày bắt đầu',   cls.start_date?.slice(0,10) || '—'],
+            ['Ngày kết thúc',  cls.end_date?.slice(0,10) || '—'],
+            ['Học phí cả khóa', fmt(cls.tuition_fee)],
           ].map(([label, value]) => (
-            <div key={label} className="flex justify-between py-2.5 border-b border-gray-50 last:border-0">
+            <div key={label} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
               <span className="text-sm text-gray-500">{label}</span>
-              <span className="text-sm font-medium text-gray-800">{value || '—'}</span>
+              <span className="text-sm font-medium text-gray-800">{value}</span>
             </div>
           ))}
-        </Card>
-        <Card title={`Học viên (${cls.students.length}/${cls.type === '1v1' ? 1 : 3})`}>
-          <Table columns={columns} data={cls.students} />
-        </Card>
+        </div>
+
+        {/* ── Lương giáo viên ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <p className="text-sm font-bold text-gray-700 mb-3">💰 Lương giáo viên</p>
+          <div className="flex flex-col gap-3">
+            <div className="p-3 bg-green-50 rounded-xl flex justify-between items-center">
+              <div>
+                <p className="text-xs text-gray-500 mb-0.5">
+                  {isGroup ? 'Lương khi đủ học viên' : 'Lương/buổi dạy'}
+                </p>
+                <p className="text-lg font-bold text-green-700">
+                  {fmt(cls.teacher_salary)}
+                  <span className="text-xs font-normal text-gray-400 ml-1">/buổi</span>
+                </p>
+              </div>
+              <span className="text-2xl">💵</span>
+            </div>
+
+            {isGroup && (
+              <div className="p-3 bg-orange-50 rounded-xl flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Lương khi có HV vắng</p>
+                  <p className="text-lg font-bold text-orange-600">
+                    {fmt(cls.teacher_salary_partial)}
+                    <span className="text-xs font-normal text-gray-400 ml-1">/buổi</span>
+                  </p>
+                </div>
+                <span className="text-2xl">⚠️</span>
+              </div>
+            )}
+
+            {cls.teacher_salary > 0 && cls.total_sessions > 0 && (
+              <div className="p-3 bg-blue-50 rounded-xl">
+                <p className="text-xs text-gray-500 mb-1">Dự tính lương cả khóa</p>
+                <p className="text-sm font-semibold text-blue-700">
+                  {cls.total_sessions} buổi × {fmt(cls.teacher_salary)} = {' '}
+                  <strong>{fmt(cls.teacher_salary * cls.total_sessions)}</strong>
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <Button variant="secondary" onClick={() => navigate('/admin/classes')}>← Quay lại</Button>
+      {/* ── Danh sách học viên + Khóa học ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-bold text-gray-700">
+            👨‍🎓 Học viên ({students.length}{cls.max_students > 1 ? `/${cls.max_students}` : ''})
+          </p>
+        </div>
+
+        {students.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-3xl mb-2">👥</p>
+            <p className="text-gray-400 text-sm">Chưa có học viên</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {students.map(s => {
+              const courseNum = s.course_number || 1;
+              const isUpdating = updating === s.id;
+              return (
+                <div key={s.id}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-primary-200 transition-colors">
+
+                  {/* Avatar */}
+                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-sm font-bold text-primary-600 flex-shrink-0">
+                    {s.name?.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {s.phone && <span className="text-xs text-gray-400">{s.phone}</span>}
+                      {s.instrument && (
+                        <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
+                          {s.instrument}
+                        </span>
+                      )}
+                      {s.attendance_rate > 0 && (
+                        <span className="text-xs text-gray-400">
+                          Điểm danh: {s.attendance_rate}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Khóa học hiện tại */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="text-center">
+                      <p className="text-xs text-gray-400 mb-1">Đang học</p>
+                      <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
+                        Khóa {courseNum}
+                      </span>
+                    </div>
+
+                    {/* Nút tăng/giảm khóa */}
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => updateCourse(s.id, courseNum + 1)}
+                        disabled={isUpdating}
+                        className="w-7 h-7 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 text-xs font-bold flex items-center justify-center disabled:opacity-40"
+                        title="Nâng lên khóa tiếp theo"
+                      >
+                        {isUpdating ? '⏳' : '▲'}
+                      </button>
+                      <button
+                        onClick={() => updateCourse(s.id, courseNum - 1)}
+                        disabled={isUpdating || courseNum <= 1}
+                        className="w-7 h-7 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 text-xs font-bold flex items-center justify-center disabled:opacity-40"
+                        title="Giảm về khóa trước"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Ghi chú */}
+        <div className="mt-4 p-3 bg-yellow-50 rounded-xl">
+          <p className="text-xs text-yellow-700">
+            💡 Nhấn <strong>▲</strong> để nâng học viên lên khóa tiếp theo sau khi hoàn thành khóa hiện tại.
+            Ví dụ: Khóa 1 (16 buổi) → Khóa 2 (24 buổi)
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <Button variant="secondary" onClick={() => navigate('/admin/classes')}>← Quay lại</Button>
+      </div>
     </MainLayout>
   );
 };
