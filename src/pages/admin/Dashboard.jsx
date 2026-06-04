@@ -4,7 +4,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Loading from '../../components/ui/Loading';
 import AnnouncementBanner from '../../components/shared/AnnouncementBanner';
-import BirthdayReminder from './students/BirthdayReminder';
+
 import studentService from '../../services/studentService';
 import teacherService from '../../services/teacherService';
 import tuitionService from '../../services/tuitionService';
@@ -130,8 +130,7 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Sinh nhật & Khóa học sắp hết */}
-      <BirthdayReminder />
+      
 
     </MainLayout>
   );
