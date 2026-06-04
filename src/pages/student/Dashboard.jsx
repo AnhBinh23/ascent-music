@@ -65,7 +65,6 @@ const StudentDashboard = () => {
   const unpaid    = tuition.filter(t => t.status !== 'Đã thanh toán');
   const paid      = tuition.filter(t => t.status === 'Đã thanh toán');
   const totalPaid = paid.reduce((sum, t) => sum + Number(t.paid || 0), 0);
-  const totalDebt = unpaid.reduce((sum, t) => sum + (Number(t.amount || 0) - Number(t.paid || 0)), 0);
   const nextClass = getNextClass(schedules);
 
   if (loading) return (
