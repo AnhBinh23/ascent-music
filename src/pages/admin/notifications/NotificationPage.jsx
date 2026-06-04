@@ -7,10 +7,10 @@ import api from '../../../services/api';
 import teacherService from '../../../services/teacherService';
 
 const NOTIF_TYPES = [
-  { value: 'tuition',  label: '💰 Học phí sắp đến hạn', icon: '💰' },
-  { value: 'dayoff',   label: '📅 Nghỉ học / Đổi lịch', icon: '📅' },
-  { value: 'material', label: '📁 Có tài liệu mới',      icon: '📁' },
-  { value: 'general',  label: '📢 Thông báo chung',       icon: '📢' },
+  { value: 'tuition',  label: '💰 Học phí sắp đến hạn' },
+  { value: 'dayoff',   label: '📅 Nghỉ học / Đổi lịch' },
+  { value: 'material', label: '📁 Có tài liệu mới' },
+  { value: 'general',  label: '📢 Thông báo chung' },
 ];
 
 const RECIPIENTS = [
@@ -20,14 +20,22 @@ const RECIPIENTS = [
   { value: 'specific', icon: '👤', label: 'Chọn từng người'  },
 ];
 
+const BANNER_TYPES = [
+  { value: 'holiday', label: '🎉 Ngày lễ' },
+  { value: 'dayoff',  label: '📅 Nghỉ học' },
+  { value: 'info',    label: '📢 Chung' },
+  { value: 'warning', label: '⚠️ Cảnh báo' },
+  { value: 'success', label: '✅ Tin vui' },
+];
+
 const TEMPLATES = {
   tuition: {
     title: '💰 Nhắc đóng học phí',
-    message: 'Kính gửi Phụ huynh/Học viên,\n\nHọc phí tháng này sẽ đến hạn vào cuối tháng. Vui lòng đóng học phí đúng hạn để tránh gián đoạn việc học.\n\nMọi thắc mắc liên hệ: 0901 234 567\n\nTrân trọng,\nAscent Music Center',
+    message: 'Kính gửi Phụ huynh/Học viên,\n\nHọc phí tháng này sẽ đến hạn vào cuối tháng. Vui lòng đóng học phí đúng hạn để tránh gián đoạn việc học.\n\nTrân trọng,\nAscent Music Center',
   },
   dayoff: {
     title: '📅 Thông báo nghỉ học',
-    message: 'Kính gửi Phụ huynh/Học viên,\n\nTrung tâm xin thông báo lịch học sẽ thay đổi như sau:\n\n[Điền thông tin nghỉ/đổi lịch]\n\nMọi thắc mắc liên hệ: 0901 234 567\n\nTrân trọng,\nAscent Music Center',
+    message: 'Kính gửi Phụ huynh/Học viên,\n\nTrung tâm xin thông báo lịch học sẽ thay đổi như sau:\n\n[Điền thông tin nghỉ/đổi lịch]\n\nTrân trọng,\nAscent Music Center',
   },
   material: {
     title: '📁 Tài liệu học tập mới',
@@ -35,6 +43,8 @@ const TEMPLATES = {
   },
   general: { title: '', message: '' },
 };
+
+const today = () => new Date().toISOString().split('T')[0];
 
 const NotificationPage = () => {
   const [tab, setTab]                     = useState('custom');
@@ -47,7 +57,13 @@ const NotificationPage = () => {
   const [history, setHistory]             = useState([]);
   const [userSearch, setUserSearch]       = useState('');
 
-  // ── Data thật ──
+  // Kênh gửi
+  const [sendPush, setSendPush]       = useState(true);
+  const [showBanner, setShowBanner]   = useState(false);
+  const [bannerType, setBannerType]   = useState('info');
+  const [bannerStart, setBannerStart] = useState(today());
+  const [bannerEnd, setBannerEnd]     = useState(today());
+
   const [students, setStudents] = useState([]);
   const [teachers, setTeachers] = useState([]);
 
@@ -55,9 +71,7 @@ const NotificationPage = () => {
     try {
       const data = await api.get('/notifications/history');
       setHistory(data.rows || []);
-    } catch {
-      setHistory([]);
-    }
+    } catch { setHistory([]); }
   }, []);
 
   useEffect(() => {
@@ -66,7 +80,6 @@ const NotificationPage = () => {
     loadHistory();
   }, [loadHistory]);
 
-  // Gộp tất cả user cho "chọn từng người"
   const allUsers = [
     ...students.map(s => ({ id: s.id, name: s.name, phone: s.phone, role: 'student' })),
     ...teachers.map(t => ({ id: t.id, name: t.name, phone: t.phone, role: 'teacher' })),
@@ -87,14 +100,10 @@ const NotificationPage = () => {
   };
 
   const toggleUser = (id) => {
-    setSelectedUsers(prev =>
-      prev.includes(id) ? prev.filter(u => u !== id) : [...prev, id]
-    );
+    setSelectedUsers(prev => prev.includes(id) ? prev.filter(u => u !== id) : [...prev, id]);
   };
 
-  const filteredUsers = allUsers.filter(u =>
-    u.name?.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  const filteredUsers = allUsers.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()));
 
   const validate = () => {
     if (!title.trim())   { toast.error('Vui lòng nhập tiêu đề!'); return false; }
@@ -102,23 +111,30 @@ const NotificationPage = () => {
     if (recipient === 'specific' && selectedUsers.length === 0) {
       toast.error('Vui lòng chọn người nhận!'); return false;
     }
+    if (!sendPush && !showBanner) {
+      toast.error('Chọn ít nhất 1 cách gửi (push hoặc banner)!'); return false;
+    }
     return true;
   };
 
-  const doSend = async (channel) => {
+  const doSend = async () => {
     if (!validate()) return;
     setSending(true);
     try {
-      await api.post('/notifications', {
+      const res = await api.post('/notifications', {
         title, message, recipient, type,
         specific_ids: recipient === 'specific' ? selectedUsers : [],
+        send_push: sendPush,
+        show_banner: showBanner,
+        banner_type: bannerType,
+        banner_start: showBanner ? bannerStart : null,
+        banner_end: showBanner ? bannerEnd : null,
       });
-      toast.success(
-        channel === 'zalo'
-          ? `✅ Đã gửi qua Zalo cho ${getRecipientCount()} người!`
-          : `✅ Đã gửi thông báo cho ${getRecipientCount()} người!`
-      );
-      setTitle(''); setMessage(''); setSelectedUsers([]);
+      const parts = [];
+      if (res.push > 0)   parts.push(`đẩy ${res.push} push`);
+      if (res.banner)     parts.push('ghim banner');
+      toast.success(`✅ Đã gửi cho ${res.total} người${parts.length ? ' (' + parts.join(', ') + ')' : ''}!`);
+      setTitle(''); setMessage(''); setSelectedUsers([]); setShowBanner(false);
       await loadHistory();
       setTab('history');
     } catch {
@@ -134,7 +150,6 @@ const NotificationPage = () => {
     { key: 'history', label: `🕐 Lịch sử (${history.length})` },
   ];
 
-  // ── Panel người nhận + gửi ──
   const SendPanel = () => (
     <div className="flex flex-col gap-4">
       {/* Người nhận */}
@@ -152,49 +167,90 @@ const NotificationPage = () => {
                 className={`p-3 rounded-xl border text-left transition-all
                   ${active ? 'border-primary-500 bg-primary-50' : 'border-gray-100 hover:bg-gray-50'}`}>
                 <div className="text-xl mb-1">{r.icon}</div>
-                <p className={`text-xs font-medium ${active ? 'text-primary-700' : 'text-gray-600'}`}>
-                  {r.label}
-                </p>
-                {r.value !== 'specific' && (
-                  <p className="text-xs text-gray-400 mt-0.5">{cnt} người</p>
-                )}
+                <p className={`text-xs font-medium ${active ? 'text-primary-700' : 'text-gray-600'}`}>{r.label}</p>
+                {r.value !== 'specific' && <p className="text-xs text-gray-400 mt-0.5">{cnt} người</p>}
               </button>
             );
           })}
         </div>
 
-        {/* Chọn từng người */}
         {recipient === 'specific' && (
           <div className="mt-3">
-            <input
-              type="text"
-              placeholder="🔍 Tìm người nhận..."
-              value={userSearch}
-              onChange={e => setUserSearch(e.target.value)}
-              className="input-field text-sm mb-2"
-            />
+            <input type="text" placeholder="🔍 Tìm người nhận..." value={userSearch}
+              onChange={e => setUserSearch(e.target.value)} className="input-field text-sm mb-2" />
             <div className="flex flex-col gap-1 max-h-52 overflow-y-auto">
               {filteredUsers.length === 0 ? (
                 <p className="text-xs text-gray-400 text-center py-4">Không tìm thấy</p>
-              ) : (
-                filteredUsers.map(u => (
-                  <label key={u.id}
-                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer">
-                    <input type="checkbox" checked={selectedUsers.includes(u.id)}
-                      onChange={() => toggleUser(u.id)}
-                      className="w-4 h-4 accent-orange-500" />
-                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-xs font-bold text-primary-600 flex-shrink-0">
-                      {u.name?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{u.name}</p>
-                      {u.phone && <p className="text-xs text-gray-400">{u.phone}</p>}
-                    </div>
-                    <Badge label={u.role === 'student' ? 'HV' : 'GV'}
-                      variant={u.role === 'student' ? 'green' : 'blue'} />
-                  </label>
-                ))
-              )}
+              ) : filteredUsers.map(u => (
+                <label key={u.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" checked={selectedUsers.includes(u.id)}
+                    onChange={() => toggleUser(u.id)} className="w-4 h-4 accent-orange-500" />
+                  <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-xs font-bold text-primary-600 flex-shrink-0">
+                    {u.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{u.name}</p>
+                    {u.phone && <p className="text-xs text-gray-400">{u.phone}</p>}
+                  </div>
+                  <Badge label={u.role === 'student' ? 'HV' : 'GV'} variant={u.role === 'student' ? 'green' : 'blue'} />
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Cách gửi */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <p className="text-sm font-bold text-gray-700 mb-3">📤 Cách gửi</p>
+        <div className="flex flex-col gap-2">
+          <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all
+            ${sendPush ? 'border-primary-300 bg-primary-50' : 'border-gray-100'}`}>
+            <input type="checkbox" checked={sendPush} onChange={e => setSendPush(e.target.checked)}
+              className="w-4 h-4 accent-orange-500" />
+            <div>
+              <p className="text-sm font-medium text-gray-800">📱 Đẩy về điện thoại</p>
+              <p className="text-xs text-gray-400">Push notification tức thời</p>
+            </div>
+          </label>
+
+          <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all
+            ${showBanner ? 'border-primary-300 bg-primary-50' : 'border-gray-100'}`}>
+            <input type="checkbox" checked={showBanner} onChange={e => setShowBanner(e.target.checked)}
+              className="w-4 h-4 accent-orange-500" />
+            <div>
+              <p className="text-sm font-medium text-gray-800">📌 Ghim banner trong app</p>
+              <p className="text-xs text-gray-400">Hiển thị thường trực trên đầu app</p>
+            </div>
+          </label>
+        </div>
+
+        {/* Cấu hình banner */}
+        {showBanner && (
+          <div className="mt-3 p-3 bg-gray-50 rounded-xl flex flex-col gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Loại banner</label>
+              <div className="flex flex-wrap gap-1.5">
+                {BANNER_TYPES.map(b => (
+                  <button key={b.value} onClick={() => setBannerType(b.value)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all
+                      ${bannerType === b.value ? 'bg-primary-600 text-white border-primary-600' : 'border-gray-200 text-gray-600 hover:bg-white'}`}>
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Từ ngày</label>
+                <input type="date" value={bannerStart} onChange={e => setBannerStart(e.target.value)}
+                  className="input-field text-sm py-2" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Đến ngày</label>
+                <input type="date" value={bannerEnd} onChange={e => setBannerEnd(e.target.value)}
+                  className="input-field text-sm py-2" />
+              </div>
             </div>
           </div>
         )}
@@ -202,7 +258,7 @@ const NotificationPage = () => {
 
       {/* Xem trước & Gửi */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5">
-        <p className="text-sm font-bold text-gray-700 mb-3">📤 Xem trước & Gửi</p>
+        <p className="text-sm font-bold text-gray-700 mb-3">👀 Xem trước & Gửi</p>
         <div className="flex flex-col gap-3">
           <div className="p-3 bg-blue-50 rounded-xl flex items-center gap-3">
             <span className="text-xl">👥</span>
@@ -211,26 +267,15 @@ const NotificationPage = () => {
               <p className="text-base font-bold text-blue-700">{getRecipientCount()} người</p>
             </div>
           </div>
-
           {(title || message) && (
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
               {title && <p className="text-sm font-semibold text-gray-800 mb-1">{title}</p>}
               {message && <p className="text-xs text-gray-600 whitespace-pre-line line-clamp-4">{message}</p>}
             </div>
           )}
-
-          <Button fullWidth loading={sending} icon="💾"
-            onClick={() => doSend('app')} variant="primary">
-            Lưu & Gửi thông báo
+          <Button fullWidth loading={sending} icon="📨" onClick={doSend} variant="primary">
+            Gửi thông báo
           </Button>
-
-          <Button fullWidth loading={sending} icon="📨"
-            onClick={() => doSend('zalo')} variant="outline">
-            Gửi ngay qua Zalo
-          </Button>
-          <p className="text-xs text-gray-400 text-center">
-            ⚠️ Zalo cần cấu hình OA Token
-          </p>
         </div>
       </div>
     </div>
@@ -238,7 +283,6 @@ const NotificationPage = () => {
 
   return (
     <MainLayout title="Gửi thông báo">
-      {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-2xl w-fit">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -249,7 +293,6 @@ const NotificationPage = () => {
         ))}
       </div>
 
-      {/* Tab: Soạn tự do */}
       {tab === 'custom' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
@@ -257,25 +300,17 @@ const NotificationPage = () => {
               <p className="text-sm font-bold text-gray-700 mb-4">✍️ Soạn thông báo theo ý bạn</p>
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">
-                    Tiêu đề <span className="text-red-500">*</span>
-                  </label>
-                  <input value={title} onChange={e => setTitle(e.target.value)}
-                    className="input-field" placeholder="Nhập tiêu đề..." />
+                  <label className="text-sm font-medium text-gray-700">Tiêu đề <span className="text-red-500">*</span></label>
+                  <input value={title} onChange={e => setTitle(e.target.value)} className="input-field" placeholder="Nhập tiêu đề..." />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700">
-                    Nội dung <span className="text-red-500">*</span>
-                  </label>
-                  <textarea value={message} onChange={e => setMessage(e.target.value)}
-                    rows={10} className="input-field resize-none"
-                    placeholder="Nhập nội dung thông báo..." />
+                  <label className="text-sm font-medium text-gray-700">Nội dung <span className="text-red-500">*</span></label>
+                  <textarea value={message} onChange={e => setMessage(e.target.value)} rows={10}
+                    className="input-field resize-none" placeholder="Nhập nội dung thông báo..." />
                   <div className="flex justify-between">
                     <p className="text-xs text-gray-400">{message.length} ký tự</p>
                     <button onClick={() => { setTitle(''); setMessage(''); }}
-                      className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-                      🗑️ Xóa trắng
-                    </button>
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors">🗑️ Xóa trắng</button>
                   </div>
                 </div>
               </div>
@@ -285,7 +320,6 @@ const NotificationPage = () => {
         </div>
       )}
 
-      {/* Tab: Dùng mẫu */}
       {tab === 'compose' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 flex flex-col gap-4">
@@ -306,13 +340,12 @@ const NotificationPage = () => {
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Tiêu đề</label>
-                  <input value={title} onChange={e => setTitle(e.target.value)}
-                    className="input-field" placeholder="Tiêu đề..." />
+                  <input value={title} onChange={e => setTitle(e.target.value)} className="input-field" placeholder="Tiêu đề..." />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Nội dung</label>
-                  <textarea value={message} onChange={e => setMessage(e.target.value)}
-                    rows={8} className="input-field resize-none" placeholder="Nội dung..." />
+                  <textarea value={message} onChange={e => setMessage(e.target.value)} rows={8}
+                    className="input-field resize-none" placeholder="Nội dung..." />
                   <p className="text-xs text-gray-400 text-right">{message.length} ký tự</p>
                 </div>
               </div>
@@ -322,7 +355,6 @@ const NotificationPage = () => {
         </div>
       )}
 
-      {/* Tab: Lịch sử */}
       {tab === 'history' && (
         <div className="flex flex-col gap-3">
           {history.length === 0 ? (
@@ -330,29 +362,28 @@ const NotificationPage = () => {
               <p className="text-4xl mb-2">📭</p>
               <p className="text-gray-400 text-sm">Chưa có thông báo nào được gửi</p>
             </div>
-          ) : (
-            history.map((h, i) => (
-              <div key={h.id || i} className="bg-white rounded-2xl border border-gray-100 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                      {h.type === 'tuition' ? '💰' : h.type === 'dayoff' ? '📅' : h.type === 'material' ? '📁' : '📢'}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-800 truncate">{h.title}</p>
-                      {h.message && (
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{h.message}</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">
-                        👥 {h.recipient} · 🕐 {h.created_at ? new Date(h.created_at).toLocaleString('vi-VN') : '—'}
-                      </p>
-                    </div>
+          ) : history.map((h, i) => (
+            <div key={h.id || i} className="bg-white rounded-2xl border border-gray-100 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                    {h.show_banner ? '📌' : '📢'}
                   </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-800 truncate">{h.title}</p>
+                    {h.message && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{h.message}</p>}
+                    <p className="text-xs text-gray-400 mt-1">
+                      👥 {h.recipient} · 🕐 {h.created_at ? new Date(h.created_at).toLocaleString('vi-VN') : '—'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
                   <Badge label="Đã gửi" variant="green" dot />
+                  {h.show_banner === 1 && <Badge label="📌 Banner" variant="blue" />}
                 </div>
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
       )}
     </MainLayout>

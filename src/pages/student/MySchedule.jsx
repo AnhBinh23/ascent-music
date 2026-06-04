@@ -1,23 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
-const DAYS = ['T2','T3','T4','T5','T6','T7','CN'];
+// DAYS theo thứ tự hiển thị: T2..CN. day_of_week trong DB: 1=CN, 2=T2..7=T7
+const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+// Map day_of_week (DB) -> index trong DAYS
+const dowToIndex = (dow) => (dow === 1 ? 6 : dow - 2);
 
-const SAMPLE = [
-  { id: 1, day: 1, time: '08:00 - 09:00', className: 'Piano cơ bản 01', teacher: 'Nguyễn Thị Mai', room: 'Phòng 1', instrument: 'Piano' },
-  { id: 2, day: 3, time: '10:00 - 11:00', className: 'Piano cơ bản 01', teacher: 'Nguyễn Thị Mai', room: 'Phòng 1', instrument: 'Piano' },
-];
+const INSTRUMENT_ICON = { 'Piano': '🎹', 'Guitar': '🎸', 'Violin': '🎻', 'Thanh nhạc': '🎤' };
+const hhmm = (t) => (t ? String(t).slice(0, 5) : '');
 
 const MySchedule = () => {
-  
-  const [view, setView] = useState('week');
+  const { user } = useAuth();
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [view, setView]           = useState('week');
+
+  useEffect(() => {
+    const load = async () => {
+      if (!user?.id) { setLoading(false); return; }
+      try {
+        // user.id (student-xxx) -> students.id (hv-xxx)
+        const stuRes    = await api.get(`/students/by-user/${user.id}`);
+        const studentId = stuRes.row?.id || stuRes.rows?.[0]?.id;
+        if (!studentId) { setSchedules([]); return; }
+
+        const res = await api.get(`/schedules/student/${studentId}`);
+        setSchedules(res.rows || []);
+      } catch {
+        setSchedules([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [user]);
+
+  // index của hôm nay trong DAYS (getDay: 0=CN,1=T2..6=T7)
+  const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+
+  if (loading) return (
+    <MainLayout title="Lịch học của tôi">
+      <p className="text-center py-16 text-gray-400">Đang tải...</p>
+    </MainLayout>
+  );
 
   return (
     <MainLayout title="Lịch học của tôi">
       <div className="flex gap-2 mb-5">
-        {['week','list'].map(v => (
+        {['week', 'list'].map(v => (
           <button key={v} onClick={() => setView(v)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
               ${view === v ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>
@@ -26,19 +60,24 @@ const MySchedule = () => {
         ))}
       </div>
 
-      {view === 'week' ? (
+      {schedules.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+          <p className="text-4xl mb-2">📅</p>
+          <p className="text-gray-400 text-sm">Bạn chưa có lịch học nào</p>
+        </div>
+      ) : view === 'week' ? (
         <Card title="Lịch học tuần này">
           <div className="grid grid-cols-7 gap-2 mt-3">
             {DAYS.map((day, i) => {
-              const dayClasses = SAMPLE.filter(s => s.day === i + 1);
+              const dayClasses = schedules.filter(s => dowToIndex(s.day_of_week) === i);
               return (
                 <div key={i} className="flex flex-col gap-2">
                   <p className={`text-xs font-medium text-center py-1 rounded-lg
-                    ${i === new Date().getDay() - 1 ? 'bg-primary-600 text-white' : 'text-gray-500'}`}>{day}</p>
+                    ${i === todayIndex ? 'bg-primary-600 text-white' : 'text-gray-500'}`}>{day}</p>
                   {dayClasses.map(cls => (
                     <div key={cls.id} className="p-2 bg-primary-50 rounded-xl">
-                      <p className="text-xs font-medium text-primary-700 truncate">{cls.className}</p>
-                      <p className="text-xs text-gray-500">{cls.time.split(' - ')[0]}</p>
+                      <p className="text-xs font-medium text-primary-700 truncate">{cls.class_name}</p>
+                      <p className="text-xs text-gray-500">{hhmm(cls.time_start)}</p>
                     </div>
                   ))}
                 </div>
@@ -48,16 +87,20 @@ const MySchedule = () => {
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {SAMPLE.map(cls => (
+          {schedules.map(cls => (
             <Card key={cls.id}>
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-2xl">🎹</div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-800">{cls.className}</p>
-                  <p className="text-sm text-gray-500">{cls.teacher} · {cls.room}</p>
-                  <div className="flex gap-2 mt-1">
-                    <Badge label={DAYS[cls.day - 1]} variant="blue" />
-                    <Badge label={cls.time} variant="gray" />
+                <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
+                  {INSTRUMENT_ICON[cls.instrument] || '🎵'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-800 truncate">{cls.class_name}</p>
+                  <p className="text-sm text-gray-500 truncate">
+                    {cls.teacher_name || '—'} · {cls.room_name || 'Chưa có phòng'}
+                  </p>
+                  <div className="flex gap-2 mt-1 flex-wrap">
+                    <Badge label={DAYS[dowToIndex(cls.day_of_week)]} variant="blue" />
+                    <Badge label={`${hhmm(cls.time_start)} - ${hhmm(cls.time_end)}`} variant="gray" />
                   </div>
                 </div>
               </div>

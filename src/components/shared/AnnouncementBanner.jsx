@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../services/api';
 
 const TYPE_STYLE = {
-  holiday: { bg: 'bg-red-50 border-red-200',    icon: '🎉', text: 'text-red-700',    btn: 'text-red-500 hover:text-red-700' },
+  holiday: { bg: 'bg-red-50 border-red-200',       icon: '🎉', text: 'text-red-700',    btn: 'text-red-500 hover:text-red-700' },
   dayoff:  { bg: 'bg-orange-50 border-orange-200', icon: '📅', text: 'text-orange-700', btn: 'text-orange-500 hover:text-orange-700' },
-  info:    { bg: 'bg-blue-50 border-blue-200',   icon: '📢', text: 'text-blue-700',   btn: 'text-blue-500 hover:text-blue-700' },
+  info:    { bg: 'bg-blue-50 border-blue-200',     icon: '📢', text: 'text-blue-700',   btn: 'text-blue-500 hover:text-blue-700' },
   warning: { bg: 'bg-yellow-50 border-yellow-200', icon: '⚠️', text: 'text-yellow-700', btn: 'text-yellow-500 hover:text-yellow-700' },
-  success: { bg: 'bg-green-50 border-green-200', icon: '✅', text: 'text-green-700',  btn: 'text-green-500 hover:text-green-700' },
+  success: { bg: 'bg-green-50 border-green-200',   icon: '✅', text: 'text-green-700',  btn: 'text-green-500 hover:text-green-700' },
 };
 
 const AnnouncementBanner = () => {
@@ -13,20 +14,18 @@ const AnnouncementBanner = () => {
   const [dismissed, setDismissed]         = useState([]);
 
   useEffect(() => {
-    const load = () => {
-      const data    = JSON.parse(localStorage.getItem('announcements') || '[]');
-      const dismiss = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
-      const now     = new Date();
-      const active  = data.filter(a =>
-        a.active &&
-        new Date(a.startDate) <= now &&
-        new Date(a.endDate) >= now
-      );
-      setAnnouncements(active);
-      setDismissed(dismiss);
+    const load = async () => {
+      try {
+        const res = await api.get('/notifications/banners');
+        setAnnouncements(res.rows || []);
+      } catch {
+        setAnnouncements([]);
+      }
     };
+    // Dismiss vẫn lưu local (theo từng thiết bị)
+    setDismissed(JSON.parse(localStorage.getItem('dismissed_announcements') || '[]'));
     load();
-    const interval = setInterval(load, 30000);
+    const interval = setInterval(load, 60000); // refresh mỗi phút
     return () => clearInterval(interval);
   }, []);
 
@@ -44,25 +43,16 @@ const AnnouncementBanner = () => {
       {visible.map(ann => {
         const style = TYPE_STYLE[ann.type] || TYPE_STYLE.info;
         return (
-          <div key={ann.id}
-            className={`flex items-start gap-3 p-4 rounded-2xl border ${style.bg} animate-pulse-once`}>
+          <div key={ann.id} className={`flex items-start gap-3 p-4 rounded-2xl border ${style.bg}`}>
             <span className="text-xl flex-shrink-0">{style.icon}</span>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className={`font-semibold text-sm ${style.text}`}>{ann.title}</p>
-              <p className={`text-sm mt-0.5 ${style.text} opacity-80`}>{ann.message}</p>
-              {ann.showDate && (
-                <p className={`text-xs mt-1 ${style.text} opacity-60`}>
-                  📅 {new Date(ann.startDate).toLocaleDateString('vi-VN')}
-                  {ann.startDate !== ann.endDate && ` — ${new Date(ann.endDate).toLocaleDateString('vi-VN')}`}
-                </p>
-              )}
+              <p className={`text-sm mt-0.5 whitespace-pre-line ${style.text} opacity-80`}>{ann.message}</p>
             </div>
-            {ann.dismissible && (
-              <button onClick={() => handleDismiss(ann.id)}
-                className={`text-lg leading-none ${style.btn} transition-colors flex-shrink-0`}>
-                ✕
-              </button>
-            )}
+            <button onClick={() => handleDismiss(ann.id)}
+              className={`text-lg leading-none ${style.btn} transition-colors flex-shrink-0`}>
+              ✕
+            </button>
           </div>
         );
       })}
