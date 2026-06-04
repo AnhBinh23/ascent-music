@@ -54,15 +54,24 @@ const ClassForm = () => {
   const [saving, setSaving]     = useState(false);
   const [fetching, setFetching] = useState(isEdit);
 
+  // ── Học viên ──
+  const [allStudents, setAllStudents]           = useState([]);
+  const [selectedStudents, setSelectedStudents] = useState([]); // [{id, name, instrument}]
+  const [originalStudentIds, setOriginalStudentIds] = useState([]); // để sync khi edit
+  const [studentSearch, setStudentSearch]       = useState('');
+  const [showDropdown, setShowDropdown]         = useState(false);
+
   useEffect(() => {
     teacherService.getAll().then(setTeachers).catch(() => {});
     api.get('/rooms').then(d => setRooms(d.rows || [])).catch(() => {});
+    api.get('/students').then(d => setAllStudents(d.rows || [])).catch(() => {});
 
     if (isEdit) {
       Promise.all([
         api.get(`/classes/${id}`),
         api.get('/schedules'),
-      ]).then(([cls, sched]) => {
+        api.get(`/classes/${id}/students`),
+      ]).then(([cls, sched, stu]) => {
         const c = cls.row || cls.rows?.[0] || {};
         setForm({
           name:                   c.name              || '',
@@ -92,6 +101,10 @@ const ClassForm = () => {
             room_id:     s.room_id || '',
           })));
         }
+        // Học viên hiện có
+        const curStudents = stu.rows || [];
+        setSelectedStudents(curStudents.map(s => ({ id: s.id, name: s.name, instrument: s.instrument })));
+        setOriginalStudentIds(curStudents.map(s => s.id));
       }).catch(() => toast.error('Không tải được dữ liệu'))
         .finally(() => setFetching(false));
     }
@@ -122,6 +135,22 @@ const ClassForm = () => {
     sl.map(s => `${DAY_LABEL[s.day_of_week]} ${s.time_start}-${s.time_end}`).join(', ');
 
   const spw = Number(form.sessions_per_week) || 1;
+
+  // ── Học viên handlers ──
+  const addStudent = (s) => {
+    setSelectedStudents(prev => [...prev, { id: s.id, name: s.name, instrument: s.instrument }]);
+    setStudentSearch('');
+    setShowDropdown(false);
+  };
+  const removeStudent = (sid) => {
+    setSelectedStudents(prev => prev.filter(s => s.id !== sid));
+  };
+  const studentResults = allStudents.filter(s =>
+    !selectedStudents.find(ss => ss.id === s.id) &&
+    s.name?.toLowerCase().includes(studentSearch.toLowerCase())
+  );
+  const maxStu = form.type === '1v1' ? 1 : Number(form.max_students) || 99;
+  const isFull = selectedStudents.length >= maxStu;
 
   const handleSubmit = async () => {
     if (!form.name || !form.teacher_id) {
@@ -163,6 +192,7 @@ const ClassForm = () => {
       }
 
       if (classId) {
+        // Lịch học
         if (isEdit) {
           const cur      = await api.get('/schedules');
           const existing = (cur.rows || []).filter(s => s.class_id === id);
@@ -180,6 +210,22 @@ const ClassForm = () => {
             note:        '',
           }).catch(() => {})
         ));
+
+        // ── Sync học viên ──
+        const selectedIds = selectedStudents.map(s => s.id);
+        // Thêm mới (có trong selected, chưa có trong original)
+        const toAdd = selectedIds.filter(sid => !originalStudentIds.includes(sid));
+        // Xóa (có trong original, không còn trong selected) — chỉ khi edit
+        const toRemove = isEdit ? originalStudentIds.filter(sid => !selectedIds.includes(sid)) : [];
+
+        await Promise.all([
+          ...toAdd.map(sid =>
+            api.post(`/classes/${classId}/students`, { student_id: sid, course_number: 1 }).catch(() => {})
+          ),
+          ...toRemove.map(sid =>
+            api.delete(`/classes/${classId}/students/${sid}`).catch(() => {})
+          ),
+        ]);
       }
 
       navigate('/admin/classes');
@@ -238,6 +284,72 @@ const ClassForm = () => {
               <select name="level" value={form.level} onChange={handleChange} className="input-field">
                 {LEVELS.map(l => <option key={l}>{l}</option>)}
               </select>
+            </div>
+
+            {/* ✅ ── CHỌN HỌC VIÊN (ngay dưới Giáo viên) ── */}
+            <div className="sm:col-span-2 flex flex-col gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                👨‍🎓 Học viên ({selectedStudents.length}{form.type === 'group' ? `/${maxStu}` : ''})
+              </label>
+
+              {/* Search box */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder={isFull ? '✅ Đã đủ học viên' : '🔍 Tìm và thêm học viên...'}
+                  value={studentSearch}
+                  disabled={isFull}
+                  onChange={e => { setStudentSearch(e.target.value); setShowDropdown(true); }}
+                  onFocus={() => setShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                  className="input-field disabled:bg-gray-50 disabled:text-gray-400"
+                />
+                {showDropdown && studentSearch && !isFull && (
+                  <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-52 overflow-y-auto">
+                    {studentResults.length === 0 ? (
+                      <p className="text-sm text-gray-400 p-3 text-center">Không tìm thấy học viên</p>
+                    ) : (
+                      studentResults.slice(0, 20).map(s => (
+                        <div
+                          key={s.id}
+                          onMouseDown={() => addStudent(s)}
+                          className="flex items-center gap-2.5 p-2.5 hover:bg-primary-50 cursor-pointer border-b border-gray-50 last:border-0"
+                        >
+                          <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-xs font-bold text-primary-600 flex-shrink-0">
+                            {s.name?.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
+                            {s.instrument && <p className="text-xs text-gray-400">{s.instrument}</p>}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Chips học viên đã chọn */}
+              {selectedStudents.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedStudents.map(s => (
+                    <div key={s.id}
+                      className="flex items-center gap-1.5 pl-3 pr-2 py-1.5 bg-primary-50 border border-primary-200 rounded-xl">
+                      <span className="text-sm text-primary-700 font-medium">{s.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeStudent(s.id)}
+                        className="w-5 h-5 flex items-center justify-center rounded-full text-primary-400 hover:bg-red-100 hover:text-red-500 text-base leading-none"
+                        title="Xóa khỏi lớp"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic">Chưa chọn học viên nào (có thể thêm sau)</p>
+              )}
             </div>
 
             {/* ✅ Gói khóa học */}
