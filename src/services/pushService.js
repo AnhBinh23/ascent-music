@@ -11,33 +11,38 @@ const urlBase64ToUint8Array = (base64String) => {
 
 const pushService = {
   // Đăng ký nhận push notification
+  // apiPost: hàm POST API (truyền api.post từ AuthContext)
   subscribe: async (apiPost) => {
     try {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('Push không được hỗ trợ');
+        console.log('Trình duyệt không hỗ trợ push notification');
         return false;
       }
 
-      // Đăng ký service worker
+      // 1. Đăng ký service worker
       const reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
 
-      // Xin quyền thông báo
+      // 2. Xin quyền thông báo
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        console.log('Người dùng từ chối thông báo');
+        console.log('Người dùng từ chối quyền thông báo');
         return false;
       }
 
-      // Tạo subscription
-      const subscription = await reg.pushManager.subscribe({
-        userVisibleOnly:      true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
+      // 3. Lấy subscription hiện có, nếu chưa có thì tạo mới
+      let subscription = await reg.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
 
-      // Gửi subscription lên server
+      // 4. Gửi subscription lên server để lưu vào push_subscriptions
       await apiPost('/push/subscribe', { subscription });
-      console.log('✅ Đăng ký push thành công!');
+
+      console.log('✅ Đăng ký push notification thành công!');
       return true;
     } catch (err) {
       console.error('Push subscribe error:', err);
@@ -53,6 +58,19 @@ const pushService = {
       if (!reg) return false;
       const sub = await reg.pushManager.getSubscription();
       return !!sub;
+    } catch {
+      return false;
+    }
+  },
+
+  // Hủy đăng ký
+  unsubscribe: async () => {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) return false;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+      return true;
     } catch {
       return false;
     }
