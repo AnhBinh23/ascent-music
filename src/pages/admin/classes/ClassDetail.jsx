@@ -332,7 +332,7 @@ const ClassDetail = () => {
       </div>
 
       <div className="mt-4">
-        <Button variant="secondary" onClick={() => navigate(`${basePath}/classes`)}>← Quay lại</Button>
+        <Button variant="secondary" onClick={() => navigate(-1)}>← Quay lại</Button>
       </div>
     </MainLayout>
   );
