@@ -20,7 +20,6 @@ const menus = {
     { path: '/admin/reports',       icon: '📊', label: 'Báo cáo'         },
     { path: '/admin/checkin',       icon: '📋', label: 'Chấm công GV'    },
     { path: '/admin/notifications', icon: '📨', label: 'Gửi thông báo'   },
-    { path: '/admin/announcements', icon: '📣', label: 'Thông báo App'   },
     { path: '/admin/chat',          icon: '💬', label: 'Tin nhắn'        },
     { path: '/admin/ai',            icon: '🤖', label: 'Trợ lý AI'       },
     { path: '/admin/settings',      icon: '⚙️', label: 'Tài khoản'       },

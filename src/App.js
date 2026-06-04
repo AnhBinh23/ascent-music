@@ -48,7 +48,7 @@ import AccountManage      from './pages/admin/settings/AccountManage';
 import CheckInManage      from './pages/admin/CheckInManage';
 import AttendanceManage   from './pages/admin/AttendanceManage';
 import NotificationPage   from './pages/admin/notifications/NotificationPage';
-import AnnouncementManage from './pages/admin/announcements/AnnouncementManage';
+
 
 // Staff
 import StaffDashboard      from './pages/staff/Dashboard';
@@ -122,7 +122,7 @@ function App() {
               <Route path="checkin"           element={<CheckInManage />} />
               <Route path="attendance"        element={<AttendanceManage />} />
               <Route path="notifications"     element={<NotificationPage />} />
-              <Route path="announcements"     element={<AnnouncementManage />} />
+              
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai"               element={<AIAssistant />} />
               <Route path="profile"           element={<ProfilePage />} />
