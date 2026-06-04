@@ -1,31 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import MainLayout from '../../../components/layout/MainLayout';
-import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
 import { toast } from 'react-toastify';
 import api from '../../../services/api';
+import teacherService from '../../../services/teacherService';
 
 const NOTIF_TYPES = [
-  { value: 'tuition',  label: '💰 Học phí sắp đến hạn', color: 'orange' },
-  { value: 'dayoff',   label: '📅 Nghỉ học / Đổi lịch', color: 'red'    },
-  { value: 'material', label: '📁 Có tài liệu mới',      color: 'blue'   },
-  { value: 'general',  label: '📢 Thông báo chung',       color: 'gray'   },
+  { value: 'tuition',  label: '💰 Học phí sắp đến hạn', icon: '💰' },
+  { value: 'dayoff',   label: '📅 Nghỉ học / Đổi lịch', icon: '📅' },
+  { value: 'material', label: '📁 Có tài liệu mới',      icon: '📁' },
+  { value: 'general',  label: '📢 Thông báo chung',       icon: '📢' },
 ];
 
 const RECIPIENTS = [
-  { value: 'all',      label: '👥 Tất cả mọi người' },
-  { value: 'students', label: '🎓 Tất cả học viên'  },
-  { value: 'teachers', label: '👨‍🏫 Tất cả giáo viên' },
-  { value: 'specific', label: '👤 Chọn từng người'  },
-];
-
-const SAMPLE_USERS = [
-  { id: 'HV001', name: 'Nguyễn Văn An',  role: 'student', phone: '0901234567' },
-  { id: 'HV002', name: 'Trần Thị Bình',  role: 'student', phone: '0912345678' },
-  { id: 'HV003', name: 'Lê Minh Châu',   role: 'student', phone: '0923456789' },
-  { id: 'GV001', name: 'Nguyễn Thị Mai', role: 'teacher', phone: '0901111111' },
-  { id: 'GV002', name: 'Trần Văn Hùng',  role: 'teacher', phone: '0902222222' },
+  { value: 'all',      icon: '👥', label: 'Tất cả mọi người' },
+  { value: 'students', icon: '🎓', label: 'Tất cả học viên'  },
+  { value: 'teachers', icon: '👨‍🏫', label: 'Tất cả giáo viên' },
+  { value: 'specific', icon: '👤', label: 'Chọn từng người'  },
 ];
 
 const TEMPLATES = {
@@ -39,7 +31,7 @@ const TEMPLATES = {
   },
   material: {
     title: '📁 Tài liệu học tập mới',
-    message: 'Kính gửi Học viên,\n\nGiáo viên vừa cập nhật tài liệu mới trên hệ thống. Vui lòng đăng nhập app để xem và tải về.\n\nLink: ascent-music.netlify.app\n\nTrân trọng,\nAscent Music Center',
+    message: 'Kính gửi Học viên,\n\nGiáo viên vừa cập nhật tài liệu mới trên hệ thống. Vui lòng đăng nhập app để xem và tải về.\n\nTrân trọng,\nAscent Music Center',
   },
   general: { title: '', message: '' },
 };
@@ -53,24 +45,37 @@ const NotificationPage = () => {
   const [message, setMessage]             = useState('');
   const [sending, setSending]             = useState(false);
   const [history, setHistory]             = useState([]);
+  const [userSearch, setUserSearch]       = useState('');
 
-  // Load lịch sử từ API
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const data = await api.get('/notifications/history');
-        setHistory(data.rows || []);
-      } catch {
-        setHistory([]);
-      }
-    };
-    loadHistory();
+  // ── Data thật ──
+  const [students, setStudents] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const data = await api.get('/notifications/history');
+      setHistory(data.rows || []);
+    } catch {
+      setHistory([]);
+    }
   }, []);
 
+  useEffect(() => {
+    api.get('/students').then(d => setStudents(d.rows || [])).catch(() => {});
+    teacherService.getAll().then(setTeachers).catch(() => {});
+    loadHistory();
+  }, [loadHistory]);
+
+  // Gộp tất cả user cho "chọn từng người"
+  const allUsers = [
+    ...students.map(s => ({ id: s.id, name: s.name, phone: s.phone, role: 'student' })),
+    ...teachers.map(t => ({ id: t.id, name: t.name, phone: t.phone, role: 'teacher' })),
+  ];
+
   const getRecipientCount = () => {
-    if (recipient === 'all')      return SAMPLE_USERS.length;
-    if (recipient === 'students') return SAMPLE_USERS.filter(u => u.role === 'student').length;
-    if (recipient === 'teachers') return SAMPLE_USERS.filter(u => u.role === 'teacher').length;
+    if (recipient === 'all')      return students.length + teachers.length;
+    if (recipient === 'students') return students.length;
+    if (recipient === 'teachers') return teachers.length;
     if (recipient === 'specific') return selectedUsers.length;
     return 0;
   };
@@ -79,7 +84,6 @@ const NotificationPage = () => {
     setType(t);
     setTitle(TEMPLATES[t].title);
     setMessage(TEMPLATES[t].message);
-    setTab('compose');
   };
 
   const toggleUser = (id) => {
@@ -88,26 +92,34 @@ const NotificationPage = () => {
     );
   };
 
-  // Gửi lưu vào DB (không cần Zalo)
-  const handleSaveDB = async () => {
-    if (!title)   { toast.error('Vui lòng nhập tiêu đề!'); return; }
-    if (!message) { toast.error('Vui lòng nhập nội dung!'); return; }
+  const filteredUsers = allUsers.filter(u =>
+    u.name?.toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  const validate = () => {
+    if (!title.trim())   { toast.error('Vui lòng nhập tiêu đề!'); return false; }
+    if (!message.trim()) { toast.error('Vui lòng nhập nội dung!'); return false; }
     if (recipient === 'specific' && selectedUsers.length === 0) {
-      toast.error('Vui lòng chọn người nhận!'); return;
+      toast.error('Vui lòng chọn người nhận!'); return false;
     }
+    return true;
+  };
+
+  const doSend = async (channel) => {
+    if (!validate()) return;
     setSending(true);
     try {
       await api.post('/notifications', {
-        title,
-        message,
-        recipient,
+        title, message, recipient, type,
         specific_ids: recipient === 'specific' ? selectedUsers : [],
       });
-      toast.success(`✅ Đã gửi thông báo cho ${getRecipientCount()} người!`);
-      // Reload lịch sử
-      const data = await api.get('/notifications/history');
-      setHistory(data.rows || []);
+      toast.success(
+        channel === 'zalo'
+          ? `✅ Đã gửi qua Zalo cho ${getRecipientCount()} người!`
+          : `✅ Đã gửi thông báo cho ${getRecipientCount()} người!`
+      );
       setTitle(''); setMessage(''); setSelectedUsers([]);
+      await loadHistory();
       setTab('history');
     } catch {
       toast.error('Gửi thất bại! Vui lòng thử lại.');
@@ -116,132 +128,140 @@ const NotificationPage = () => {
     }
   };
 
-  // Gửi qua Zalo (giữ nguyên)
-  const handleSendZalo = async () => {
-    if (!title)   { toast.error('Vui lòng nhập tiêu đề!'); return; }
-    if (!message) { toast.error('Vui lòng nhập nội dung!'); return; }
-    setSending(true);
-    try {
-      await api.post('/notifications', {
-        title,
-        message,
-        recipient,
-        specific_ids: recipient === 'specific' ? selectedUsers : [],
-      });
-      toast.success(`✅ Đã gửi qua Zalo cho ${getRecipientCount()} người!`);
-      const data = await api.get('/notifications/history');
-      setHistory(data.rows || []);
-      setTitle(''); setMessage(''); setSelectedUsers([]);
-      setTab('history');
-    } catch {
-      toast.error('Gửi thất bại!');
-    } finally {
-      setSending(false);
-    }
-  };
-
   const TABS = [
-    { key: 'custom',  label: '✍️ Soạn tự do'                    },
-    { key: 'compose', label: '📋 Dùng mẫu'                      },
-    { key: 'history', label: `🕐 Lịch sử (${history.length})`   },
+    { key: 'custom',  label: '✍️ Soạn tự do' },
+    { key: 'compose', label: '📋 Dùng mẫu' },
+    { key: 'history', label: `🕐 Lịch sử (${history.length})` },
   ];
 
+  // ── Panel người nhận + gửi ──
   const SendPanel = () => (
     <div className="flex flex-col gap-4">
       {/* Người nhận */}
-      <Card title="Người nhận">
-        <div className="flex flex-col gap-2 mt-2">
-          {RECIPIENTS.map(r => (
-            <button key={r.value} onClick={() => setRecipient(r.value)}
-              className={`p-3 rounded-xl text-sm text-left border transition-all
-                ${recipient === r.value ? 'border-primary-500 bg-primary-50 font-medium' : 'border-gray-100 hover:bg-gray-50'}`}>
-              {r.label}
-            </button>
-          ))}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <p className="text-sm font-bold text-gray-700 mb-3">👥 Người nhận</p>
+        <div className="grid grid-cols-2 gap-2">
+          {RECIPIENTS.map(r => {
+            const active = recipient === r.value;
+            const cnt = r.value === 'all' ? students.length + teachers.length
+              : r.value === 'students' ? students.length
+              : r.value === 'teachers' ? teachers.length
+              : selectedUsers.length;
+            return (
+              <button key={r.value} onClick={() => setRecipient(r.value)}
+                className={`p-3 rounded-xl border text-left transition-all
+                  ${active ? 'border-primary-500 bg-primary-50' : 'border-gray-100 hover:bg-gray-50'}`}>
+                <div className="text-xl mb-1">{r.icon}</div>
+                <p className={`text-xs font-medium ${active ? 'text-primary-700' : 'text-gray-600'}`}>
+                  {r.label}
+                </p>
+                {r.value !== 'specific' && (
+                  <p className="text-xs text-gray-400 mt-0.5">{cnt} người</p>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {/* Chọn từng người */}
         {recipient === 'specific' && (
-          <div className="mt-3 flex flex-col gap-2 max-h-48 overflow-y-auto">
-            {SAMPLE_USERS.map(u => (
-              <label key={u.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer">
-                <input type="checkbox" checked={selectedUsers.includes(u.id)}
-                  onChange={() => toggleUser(u.id)} className="w-4 h-4 accent-orange-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-800">{u.name}</p>
-                  <p className="text-xs text-gray-400">{u.phone}</p>
-                </div>
-                <Badge label={u.role === 'student' ? 'HV' : 'GV'}
-                  variant={u.role === 'student' ? 'green' : 'blue'} />
-              </label>
-            ))}
+          <div className="mt-3">
+            <input
+              type="text"
+              placeholder="🔍 Tìm người nhận..."
+              value={userSearch}
+              onChange={e => setUserSearch(e.target.value)}
+              className="input-field text-sm mb-2"
+            />
+            <div className="flex flex-col gap-1 max-h-52 overflow-y-auto">
+              {filteredUsers.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">Không tìm thấy</p>
+              ) : (
+                filteredUsers.map(u => (
+                  <label key={u.id}
+                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" checked={selectedUsers.includes(u.id)}
+                      onChange={() => toggleUser(u.id)}
+                      className="w-4 h-4 accent-orange-500" />
+                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-xs font-bold text-primary-600 flex-shrink-0">
+                      {u.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{u.name}</p>
+                      {u.phone && <p className="text-xs text-gray-400">{u.phone}</p>}
+                    </div>
+                    <Badge label={u.role === 'student' ? 'HV' : 'GV'}
+                      variant={u.role === 'student' ? 'green' : 'blue'} />
+                  </label>
+                ))
+              )}
+            </div>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Xem trước & Gửi */}
-      <Card title="Xem trước & Gửi">
-        <div className="flex flex-col gap-3 mt-2">
-          <div className="p-3 bg-blue-50 rounded-xl flex items-center gap-2">
-            <span className="text-lg">👥</span>
+      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <p className="text-sm font-bold text-gray-700 mb-3">📤 Xem trước & Gửi</p>
+        <div className="flex flex-col gap-3">
+          <div className="p-3 bg-blue-50 rounded-xl flex items-center gap-3">
+            <span className="text-xl">👥</span>
             <div>
-              <p className="text-xs text-blue-600 font-medium">Số người nhận</p>
-              <p className="text-sm text-blue-700 font-semibold">{getRecipientCount()} người</p>
+              <p className="text-xs text-blue-500">Số người nhận</p>
+              <p className="text-base font-bold text-blue-700">{getRecipientCount()} người</p>
             </div>
           </div>
-          {title && (
-            <div className="p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 mb-1">Tiêu đề</p>
-              <p className="text-sm font-medium text-gray-800">{title}</p>
-            </div>
-          )}
-          {message && (
-            <div className="p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-500 mb-1">Nội dung</p>
-              <p className="text-sm text-gray-700 line-clamp-3">{message}</p>
+
+          {(title || message) && (
+            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+              {title && <p className="text-sm font-semibold text-gray-800 mb-1">{title}</p>}
+              {message && <p className="text-xs text-gray-600 whitespace-pre-line line-clamp-4">{message}</p>}
             </div>
           )}
 
-          {/* Nút gửi lưu DB */}
-          <Button fullWidth loading={sending} icon="💾" onClick={handleSaveDB}
-            variant="primary">
+          <Button fullWidth loading={sending} icon="💾"
+            onClick={() => doSend('app')} variant="primary">
             Lưu & Gửi thông báo
           </Button>
 
-          {/* Nút gửi Zalo */}
-          <Button fullWidth loading={sending} icon="📨" onClick={handleSendZalo}
-            variant="outline">
+          <Button fullWidth loading={sending} icon="📨"
+            onClick={() => doSend('zalo')} variant="outline">
             Gửi ngay qua Zalo
           </Button>
           <p className="text-xs text-gray-400 text-center">
             ⚠️ Zalo cần cấu hình OA Token
           </p>
         </div>
-      </Card>
+      </div>
     </div>
   );
 
   return (
     <MainLayout title="Gửi thông báo">
-      <div className="flex gap-2 mb-5 border-b border-gray-100">
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-2xl w-fit">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`pb-3 px-4 text-sm font-medium border-b-2 transition-all
-              ${tab === t.key ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            className={`px-4 py-2 text-sm font-medium rounded-xl transition-all
+              ${tab === t.key ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             {t.label}
           </button>
         ))}
       </div>
 
+      {/* Tab: Soạn tự do */}
       {tab === 'custom' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
-            <Card title="✍️ Soạn thông báo theo ý bạn">
-              <div className="flex flex-col gap-4 mt-2">
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <p className="text-sm font-bold text-gray-700 mb-4">✍️ Soạn thông báo theo ý bạn</p>
+              <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
                     Tiêu đề <span className="text-red-500">*</span>
                   </label>
                   <input value={title} onChange={e => setTitle(e.target.value)}
-                    className="input-field" placeholder="Nhập tiêu đề bất kỳ..." />
+                    className="input-field" placeholder="Nhập tiêu đề..." />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">
@@ -259,28 +279,31 @@ const NotificationPage = () => {
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           </div>
           <SendPanel />
         </div>
       )}
 
+      {/* Tab: Dùng mẫu */}
       {tab === 'compose' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 flex flex-col gap-4">
-            <Card title="Chọn mẫu thông báo">
-              <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <p className="text-sm font-bold text-gray-700 mb-3">📋 Chọn mẫu thông báo</p>
+              <div className="grid grid-cols-2 gap-2">
                 {NOTIF_TYPES.map(t => (
                   <button key={t.value} onClick={() => applyTemplate(t.value)}
                     className={`p-3 rounded-xl text-sm font-medium border text-left transition-all
-                      ${type === t.value ? 'border-primary-500 bg-primary-50' : 'border-gray-100 hover:bg-gray-50'}`}>
+                      ${type === t.value ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-100 hover:bg-gray-50 text-gray-600'}`}>
                     {t.label}
                   </button>
                 ))}
               </div>
-            </Card>
-            <Card title="Nội dung (có thể chỉnh sửa)">
-              <div className="flex flex-col gap-4 mt-2">
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <p className="text-sm font-bold text-gray-700 mb-3">📝 Nội dung (có thể chỉnh sửa)</p>
+              <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Tiêu đề</label>
                   <input value={title} onChange={e => setTitle(e.target.value)}
@@ -293,36 +316,41 @@ const NotificationPage = () => {
                   <p className="text-xs text-gray-400 text-right">{message.length} ký tự</p>
                 </div>
               </div>
-            </Card>
+            </div>
           </div>
           <SendPanel />
         </div>
       )}
 
+      {/* Tab: Lịch sử */}
       {tab === 'history' && (
         <div className="flex flex-col gap-3">
           {history.length === 0 ? (
-            <Card>
-              <p className="text-center text-gray-400 py-10">Chưa có thông báo nào được gửi</p>
-            </Card>
+            <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+              <p className="text-4xl mb-2">📭</p>
+              <p className="text-gray-400 text-sm">Chưa có thông báo nào được gửi</p>
+            </div>
           ) : (
             history.map((h, i) => (
-              <Card key={h.id || i}>
+              <div key={h.id || i} className="bg-white rounded-2xl border border-gray-100 p-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
                     <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
                       {h.type === 'tuition' ? '💰' : h.type === 'dayoff' ? '📅' : h.type === 'material' ? '📁' : '📢'}
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-800">{h.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        👥 {h.recipient} · 🕐 {new Date(h.created_at).toLocaleString('vi-VN')}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-800 truncate">{h.title}</p>
+                      {h.message && (
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{h.message}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        👥 {h.recipient} · 🕐 {h.created_at ? new Date(h.created_at).toLocaleString('vi-VN') : '—'}
                       </p>
                     </div>
                   </div>
                   <Badge label="Đã gửi" variant="green" dot />
                 </div>
-              </Card>
+              </div>
             ))
           )}
         </div>

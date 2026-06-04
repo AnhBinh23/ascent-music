@@ -18,7 +18,6 @@ const menus = {
     { path: '/admin/rooms',         icon: '🚪', label: 'Phòng học'       },
     { path: '/admin/instruments',   icon: '🎸', label: 'Nhạc cụ'         },
     { path: '/admin/reports',       icon: '📊', label: 'Báo cáo'         },
-    { path: '/admin/pending',       icon: '🔔', label: 'Duyệt tài khoản' },
     { path: '/admin/checkin',       icon: '📋', label: 'Chấm công GV'    },
     { path: '/admin/notifications', icon: '📨', label: 'Gửi thông báo'   },
     { path: '/admin/announcements', icon: '📣', label: 'Thông báo App'   },

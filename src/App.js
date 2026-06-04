@@ -45,7 +45,6 @@ import RoomList           from './pages/admin/rooms/RoomList';
 import InstrumentList     from './pages/admin/rooms/InstrumentList';
 import ReportPage         from './pages/admin/reports/ReportPage';
 import AccountManage      from './pages/admin/settings/AccountManage';
-import PendingApprovals   from './pages/admin/settings/PendingApprovals';
 import CheckInManage      from './pages/admin/CheckInManage';
 import AttendanceManage   from './pages/admin/AttendanceManage';
 import NotificationPage   from './pages/admin/notifications/NotificationPage';
@@ -120,7 +119,6 @@ function App() {
               <Route path="instruments"       element={<InstrumentList />} />
               <Route path="reports"           element={<ReportPage />} />
               <Route path="settings"          element={<AccountManage />} />
-              <Route path="pending"           element={<PendingApprovals />} />
               <Route path="checkin"           element={<CheckInManage />} />
               <Route path="attendance"        element={<AttendanceManage />} />
               <Route path="notifications"     element={<NotificationPage />} />
