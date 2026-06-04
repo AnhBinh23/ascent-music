@@ -13,12 +13,12 @@ const ROLE_HOME = {
 };
 
 const LoginPage = () => {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const { login, isAuthenticated, user } = useAuth();
-  const [form, setForm]               = useState({ email: '', password: '' });
-  const [loading, setLoading]         = useState(false);
+  const [form, setForm]                 = useState({ email: '', password: '' });
+  const [loading, setLoading]           = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors]           = useState({});
+  const [errors, setErrors]             = useState({});
 
   React.useEffect(() => {
     if (isAuthenticated && user) {
@@ -39,7 +39,6 @@ const LoginPage = () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      // Chỉ gọi login 1 lần duy nhất từ AuthContext
       const userData = await login(form.email, form.password);
       toast.success(`Chào mừng ${userData.name}!`);
       navigate(ROLE_HOME[userData.role] || '/login', { replace: true });
@@ -87,12 +86,12 @@ const LoginPage = () => {
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   placeholder="••••••••"
-                  className={`input-field pl-10 pr-12 ${errors.password ? 'border-red-400' : ''}`}
+                  className={`input-field pl-10 pr-16 ${errors.password ? 'border-red-400' : ''}`}
                 />
                 <button type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">
-                  {showPassword ? '🙈 Ẩn' : '👁️ Hiện'}
+                  {showPassword ? 'Ẩn' : 'Hiện'}
                 </button>
               </div>
               {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
@@ -110,14 +109,11 @@ const LoginPage = () => {
           </form>
         </div>
 
-        {/* Đăng ký */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mt-3 text-center">
-          <p className="text-sm text-gray-600 mb-3">Bạn chưa có tài khoản?</p>
-          <Link to="/register">
-            <Button variant="secondary" fullWidth icon="📝">
-              Đăng ký tài khoản
-            </Button>
-          </Link>
+        {/* Liên hệ admin nếu chưa có tài khoản */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mt-3 text-center">
+          <p className="text-xs text-gray-500">
+            Chưa có tài khoản? Liên hệ trung tâm để được cấp tài khoản.
+          </p>
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">© 2025 Ascent Music Center</p>
