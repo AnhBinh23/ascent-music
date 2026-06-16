@@ -114,10 +114,11 @@ const SessionModal = ({ student, classId, className, onClose }) => {
   );
 };
 
-// ── Attendance Table ───────────────────────────────────────────────────────────
+// ── Attendance Table (có dải nút chọn KHÓA) ────────────────────────────────────
 const AttendanceTable = ({ classId, filterMonth }) => {
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading]     = useState(false);
+  const [filterCourse, setFilterCourse] = useState('all');
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -131,100 +132,129 @@ const AttendanceTable = ({ classId, filterMonth }) => {
       .finally(() => setLoading(false));
   }, [classId]);
 
-  if (loading)         return <p className="text-center text-gray-400 py-8">Đang tải bảng...</p>;
+  if (loading)           return <p className="text-center text-gray-400 py-8">Đang tải bảng...</p>;
   if (!tableData.length) return <p className="text-center text-gray-400 py-8">Chưa có dữ liệu</p>;
 
-  // Lọc sessions theo tháng
-  const displayData = tableData.map(student => ({
-    ...student,
-    sessions: (!filterMonth || filterMonth === 'all')
-      ? student.sessions
-      : student.sessions.filter(s => s.date?.slice(0,7) === filterMonth),
-  }));
+  // Danh sách khóa có trong dữ liệu (động, tự thêm khóa mới)
+  const courseList = [...new Set(
+    tableData.flatMap(s => (s.sessions || []).map(x => x.course_number)).filter(Boolean)
+  )].sort((a, b) => a - b);
+
+  // Lọc theo khóa + tháng
+  let displayData = tableData.map(student => {
+    let sess = student.sessions || [];
+    if (filterCourse !== 'all') sess = sess.filter(s => Number(s.course_number) === Number(filterCourse));
+    if (filterMonth && filterMonth !== 'all') sess = sess.filter(s => s.date?.slice(0,7) === filterMonth);
+    return { ...student, sessions: sess };
+  });
+  // Khi chọn 1 khóa cụ thể → chỉ hiện HV có buổi thuộc khóa đó
+  if (filterCourse !== 'all') displayData = displayData.filter(s => s.sessions.length > 0);
 
   const maxSess = Math.max(
     ...displayData.map(r => Math.max(
       r.sessions.length,
-      (!filterMonth || filterMonth === 'all') ? (r.total_sessions || 0) : 0
+      (filterCourse === 'all' && (!filterMonth || filterMonth === 'all')) ? (r.total_sessions || 0) : 0
     )), 0
   );
   const sessionNums = Array.from({ length: Math.max(maxSess, 1) }, (_, i) => i + 1);
 
   return (
-    <div ref={scrollRef} className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-      <table className="border-collapse text-xs" style={{ minWidth: Math.max(500, sessionNums.length * 52 + 360) }}>
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="sticky left-0 z-20 bg-gray-100 border border-gray-200 px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap" style={{ minWidth: 130 }}>Học viên</th>
-            <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 130, minWidth: 90, zIndex: 20 }}>Lớp học</th>
-            <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 220, minWidth: 60, zIndex: 20 }}>H.thức</th>
-            <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 280, minWidth: 60, zIndex: 20 }}>Gói học</th>
-            {sessionNums.map(n => (
-              <th key={n} className="border border-gray-200 px-1 py-2 font-semibold text-gray-500 text-center" style={{ minWidth: 48, width: 48 }}>{n}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {displayData.map((student, si) => {
-            const attended = student.sessions.filter(s => ['present','late'].includes(s.status)).length;
-            const total    = student.total_sessions || 0;
-            const warning  = getWarning(attended, total);
-            const rowBg    = si % 2 === 0 ? '#fff' : '#f9fafb';
+    <>
+      {/* Dải nút chọn khóa */}
+      {courseList.length > 0 && (
+        <div className="flex gap-1.5 mb-3 flex-wrap">
+          <button onClick={() => setFilterCourse('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${filterCourse === 'all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+            Tất cả khóa
+          </button>
+          {courseList.map(k => (
+            <button key={k} onClick={() => setFilterCourse(k)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${Number(filterCourse) === Number(k) ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+              Khóa {k}
+            </button>
+          ))}
+        </div>
+      )}
 
-            return (
-              <tr key={si}>
-                <td className="sticky left-0 z-10 border border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800" style={{ backgroundColor: rowBg, minWidth: 130 }}>
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate max-w-[110px]">{student.name}</span>
-                    {warning && <span title={warning.label} className="flex-shrink-0">{warning.icon}</span>}
-                  </div>
-                </td>
-                <td className="sticky border border-gray-200 px-2 py-1.5 text-xs text-gray-600 whitespace-nowrap" style={{ left: 130, backgroundColor: rowBg, zIndex: 10, minWidth: 90 }}>
-                  <span className="truncate max-w-[80px] block">{student.class_name || '—'}</span>
-                </td>
-                <td className="sticky border border-gray-200 px-2 py-1.5 text-center text-gray-600 whitespace-nowrap" style={{ left: 220, backgroundColor: rowBg, zIndex: 10 }}>
-                  {student.class_type === '1v1' ? '1-1' : 'Nhóm'}
-                </td>
-                <td className="sticky border border-gray-200 px-2 py-1.5 text-center font-medium whitespace-nowrap" style={{ left: 280, backgroundColor: rowBg, zIndex: 10, color: warning ? '#ea580c' : '#374151' }}>
-                  {total > 0 ? total : '—'}
-                </td>
-                {sessionNums.map(n => {
-                  const session  = student.sessions[n - 1];
-                  const isFuture = !session && n > student.sessions.length && n <= total && (!filterMonth || filterMonth === 'all');
-                  const cfg      = session ? STATUS_CONFIG[session.status] : null;
-                  return (
-                    <td key={n} className="border border-gray-200 text-center p-0"
-                      style={{ backgroundColor: session ? cfg?.bg : isFuture ? '#f8fafc' : 'transparent', minWidth: 48, width: 48 }}
-                      title={session ? `${new Date(session.date).toLocaleDateString('vi-VN')} — ${cfg?.label}${session.note ? ` — ${session.note}` : ''}` : ''}>
-                      {session ? (
-                        <div className="py-1 px-0.5">
-                          <p className="font-semibold leading-tight" style={{ color: cfg?.text || '#374151', fontSize: 11 }}>{fmtDate(session.date)}</p>
-                          <p style={{ fontSize: 9, color: cfg?.text, opacity: 0.7 }}>{cfg?.icon}</p>
-                        </div>
-                      ) : isFuture ? (
-                        <span className="text-gray-200 text-lg">·</span>
-                      ) : null}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="flex flex-wrap gap-3 p-3 bg-gray-50 border-t border-gray-200">
-        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <div className="w-4 h-4 rounded border border-gray-200" style={{ backgroundColor: cfg.bg }} />
-            <span className="text-xs text-gray-600">{cfg.label}</span>
+      {displayData.length === 0 ? (
+        <p className="text-center text-gray-400 py-8">Không có học viên ở khóa này</p>
+      ) : (
+      <div ref={scrollRef} className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+        <table className="border-collapse text-xs" style={{ minWidth: Math.max(500, sessionNums.length * 52 + 360) }}>
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="sticky left-0 z-20 bg-gray-100 border border-gray-200 px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap" style={{ minWidth: 130 }}>Học viên</th>
+              <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 130, minWidth: 90, zIndex: 20 }}>Lớp học</th>
+              <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 220, minWidth: 60, zIndex: 20 }}>H.thức</th>
+              <th className="sticky bg-gray-100 border border-gray-200 px-2 py-2 font-semibold text-gray-600 whitespace-nowrap" style={{ left: 280, minWidth: 60, zIndex: 20 }}>Gói học</th>
+              {sessionNums.map(n => (
+                <th key={n} className="border border-gray-200 px-1 py-2 font-semibold text-gray-500 text-center" style={{ minWidth: 48, width: 48 }}>{n}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {displayData.map((student, si) => {
+              const attended = student.sessions.filter(s => ['present','late'].includes(s.status)).length;
+              const total    = student.total_sessions || 0;
+              const warning  = filterCourse === 'all' ? getWarning(attended, total) : null;
+              const rowBg    = si % 2 === 0 ? '#fff' : '#f9fafb';
+
+              return (
+                <tr key={si}>
+                  <td className="sticky left-0 z-10 border border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800" style={{ backgroundColor: rowBg, minWidth: 130 }}>
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate max-w-[110px]">{student.name}</span>
+                      {warning && <span title={warning.label} className="flex-shrink-0">{warning.icon}</span>}
+                    </div>
+                  </td>
+                  <td className="sticky border border-gray-200 px-2 py-1.5 text-xs text-gray-600 whitespace-nowrap" style={{ left: 130, backgroundColor: rowBg, zIndex: 10, minWidth: 90 }}>
+                    <span className="truncate max-w-[80px] block">{student.class_name || '—'}</span>
+                  </td>
+                  <td className="sticky border border-gray-200 px-2 py-1.5 text-center text-gray-600 whitespace-nowrap" style={{ left: 220, backgroundColor: rowBg, zIndex: 10 }}>
+                    {student.class_type === '1v1' ? '1-1' : 'Nhóm'}
+                  </td>
+                  <td className="sticky border border-gray-200 px-2 py-1.5 text-center font-medium whitespace-nowrap" style={{ left: 280, backgroundColor: rowBg, zIndex: 10, color: warning ? '#ea580c' : '#374151' }}>
+                    {total > 0 ? total : '—'}
+                  </td>
+                  {sessionNums.map(n => {
+                    const session  = student.sessions[n - 1];
+                    const isFuture = !session && n > student.sessions.length && n <= total && filterCourse === 'all' && (!filterMonth || filterMonth === 'all');
+                    const cfg      = session ? STATUS_CONFIG[session.status] : null;
+                    return (
+                      <td key={n} className="border border-gray-200 text-center p-0"
+                        style={{ backgroundColor: session ? cfg?.bg : isFuture ? '#f8fafc' : 'transparent', minWidth: 48, width: 48 }}
+                        title={session ? `${new Date(session.date).toLocaleDateString('vi-VN')} — ${cfg?.label}${session.note ? ` — ${session.note}` : ''}` : ''}>
+                        {session ? (
+                          <div className="py-1 px-0.5">
+                            <p className="font-semibold leading-tight" style={{ color: cfg?.text || '#374151', fontSize: 11 }}>{fmtDate(session.date)}</p>
+                            <p style={{ fontSize: 9, color: cfg?.text, opacity: 0.7 }}>{cfg?.icon}</p>
+                          </div>
+                        ) : isFuture ? (
+                          <span className="text-gray-200 text-lg">·</span>
+                        ) : null}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div className="flex flex-wrap gap-3 p-3 bg-gray-50 border-t border-gray-200">
+          {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded border border-gray-200" style={{ backgroundColor: cfg.bg }} />
+              <span className="text-xs text-gray-600">{cfg.label}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded border border-gray-200 bg-slate-50" />
+            <span className="text-xs text-gray-600">Chưa học</span>
           </div>
-        ))}
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded border border-gray-200 bg-slate-50" />
-          <span className="text-xs text-gray-600">Chưa học</span>
         </div>
       </div>
-    </div>
+      )}
+    </>
   );
 };
 
