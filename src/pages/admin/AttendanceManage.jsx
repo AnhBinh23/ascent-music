@@ -136,9 +136,10 @@ const AttendanceTable = ({ classId, filterMonth }) => {
   if (!tableData.length) return <p className="text-center text-gray-400 py-8">Chưa có dữ liệu</p>;
 
   // Danh sách khóa có trong dữ liệu (động, tự thêm khóa mới)
-  const courseList = [...new Set(
-    tableData.flatMap(s => (s.sessions || []).map(x => x.course_number)).filter(Boolean)
-  )].sort((a, b) => a - b);
+  const courseList = [...new Set([
+    ...tableData.map(s => s.student_course),
+    ...tableData.flatMap(s => (s.sessions || []).map(x => x.course_number)),
+  ].filter(Boolean))].sort((a, b) => a - b);
 
   // Lọc theo khóa + tháng
   let displayData = tableData.map(student => {
@@ -147,8 +148,10 @@ const AttendanceTable = ({ classId, filterMonth }) => {
     if (filterMonth && filterMonth !== 'all') sess = sess.filter(s => s.date?.slice(0,7) === filterMonth);
     return { ...student, sessions: sess };
   });
-  // Khi chọn 1 khóa cụ thể → chỉ hiện HV có buổi thuộc khóa đó
-  if (filterCourse !== 'all') displayData = displayData.filter(s => s.sessions.length > 0);
+  // Khi chọn 1 khóa cụ thể → hiện HV được gán khóa đó HOẶC có buổi khóa đó
+  if (filterCourse !== 'all') displayData = displayData.filter(s =>
+    Number(s.student_course) === Number(filterCourse) || s.sessions.length > 0
+  );
 
   const maxSess = Math.max(
     ...displayData.map(r => Math.max(
