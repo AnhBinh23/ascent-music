@@ -220,8 +220,8 @@ const ClassForm = () => {
 
         await Promise.all([
           ...toAdd.map(sid =>
-            api.post(`/classes/${classId}/students`, { student_id: sid, course_number: 1 }).catch(() => {})
-          ),
+  api.post(`/classes/${classId}/students`, { student_id: sid, course_number: 1, total_sessions: Number(form.total_sessions) || 16 }).catch(() => {})
+),
           ...toRemove.map(sid =>
             api.delete(`/classes/${classId}/students/${sid}`).catch(() => {})
           ),
