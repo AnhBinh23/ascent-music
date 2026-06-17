@@ -398,7 +398,7 @@ const ClassForm = () => {
               <label className="text-sm font-medium text-gray-700">Trạng thái</label>
               <select name="status" value={form.status} onChange={handleChange} className="input-field">
                 <option value="Đang học">Đang học</option>
-                <option value="Đang tuyển sinh">Đang tuyển sinh</option>
+                <option value="Tạm nghỉ">Tạm nghỉ</option>
                 <option value="Đã kết thúc">Đã kết thúc</option>
               </select>
             </div>
