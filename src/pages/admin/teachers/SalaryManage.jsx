@@ -48,6 +48,7 @@ const SalaryManage = () => {
             teacher_salary:         Number(row.teacher_salary || 0),
             teacher_salary_partial: Number(row.teacher_salary_partial || 0),
             sessions:               Number(row.sessions_this_month || 0),
+            sessions_partial:       Number(row.sessions_partial || 0),  // ← THÊM DÒNG NÀY
             class_salary:           Number(row.class_salary || 0),
           });
         }
@@ -293,9 +294,9 @@ const SalaryManage = () => {
                                   </td>
                                   <td className="py-1.5 px-2 text-right text-gray-600">
                                     {fmt(c.teacher_salary)}
-                                    {c.class_type === 'group' && c.teacher_salary_partial > 0 && (
+                                    {c.class_type === 'group' && c.teacher_salary_partial > 0 && c.sessions_partial > 0 && (
                                       <span className="block text-xs text-orange-500">
-                                        vắng: {fmt(c.teacher_salary_partial)}
+                                        vắng {c.sessions_partial} buổi: {fmt(c.teacher_salary_partial)}
                                       </span>
                                     )}
                                   </td>
