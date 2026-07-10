@@ -22,6 +22,7 @@ import ChatPage from './pages/chat/ChatPage';
 
 // AI
 import AIAssistant from './pages/admin/AIAssistant';
+import TeacherAIChat from './pages/teacher/TeacherAIChat';
 import AIChat      from './pages/student/AIChat';
 
 // Admin
@@ -124,7 +125,7 @@ function App() {
               <Route path="notifications"     element={<NotificationPage />} />
               
               <Route path="chat"              element={<ChatPage />} />
-              <Route path="ai"               element={<AIAssistant />} />
+              <Route path="ai" element={<TeacherAIChat />} />
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 

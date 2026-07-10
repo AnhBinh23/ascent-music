@@ -6,6 +6,11 @@ const aiService = {
     const res = await api.post('/ai/assistant', { question });
     return res.answer;
   },
+  // ② Trợ lý Giáo viên  ← THÊM MỚI
+teacherChat: async (question) => {
+  const res = await api.post('/ai/teacher-chat', { question });
+  return res.answer;
+},
 
   // ② Chatbot phụ huynh
   parentChat: async (question) => {
