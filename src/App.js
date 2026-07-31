@@ -125,7 +125,7 @@ function App() {
               <Route path="notifications"     element={<NotificationPage />} />
               
               <Route path="chat"              element={<ChatPage />} />
-              <Route path="ai" element={<TeacherAIChat />} />
+              <Route path="ai" element={<AIAssistant />} />
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
@@ -161,7 +161,7 @@ function App() {
               <Route path="checkin"           element={<CheckIn />} />
               <Route path="notifications"     element={<SendNotification />} />
               <Route path="chat"              element={<ChatPage />} />
-              <Route path="ai"               element={<AIAssistant />} />
+              <Route path="ai" element={<TeacherAIChat />} />
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
