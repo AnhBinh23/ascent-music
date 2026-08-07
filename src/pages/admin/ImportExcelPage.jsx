@@ -10,6 +10,7 @@ const ImportExcelPage = () => {
   const [notFound, setNotFound]     = useState([]);
   const [result, setResult]         = useState(null);
   const [loading, setLoading]       = useState(false);
+  const [checkResult, setCheckResult] = useState(null);
   const [creating, setCreating]     = useState(false);
   const [step, setStep]             = useState('upload');
   const fileRef                     = useRef();
@@ -29,6 +30,7 @@ const ImportExcelPage = () => {
       const fd = new FormData();
       fd.append('file', file);
       const endpoint = activeTab === 'tuition' ? '/import/tuition-preview' : activeTab === 'checkin' ? '/import/checkin-preview' : '/import/preview';
+      if (activeTab === 'check') { await handleCheck(); setLoading(false); return; }
       const res = await api.postForm(endpoint, fd);
       setPreview(res.preview || []);
       setNotFound(res.notFound || []);
@@ -48,6 +50,19 @@ const ImportExcelPage = () => {
       setResult(res); setStep('done');
       toast.success(`✅ Import thành công ${res.imported} bản ghi!`);
     } catch (err) { toast.error(err.message || 'Lỗi import!'); }
+    finally { setLoading(false); }
+  };
+
+  const handleCheck = async () => {
+    if (!file) return;
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.postForm('/import/check-students', fd);
+      setCheckResult(res);
+      setStep('check-result');
+    } catch (err) { toast.error(err.message || 'Lỗi kiểm tra!'); }
     finally { setLoading(false); }
   };
 
@@ -97,6 +112,10 @@ const ImportExcelPage = () => {
             className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab==='checkin'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
             📋 Chấm công GV
           </button>
+          <button onClick={() => switchTab('check')}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab==='check'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
+            🔍 Kiểm tra
+          </button>
         </div>
 
         {/* Header info */}
@@ -112,7 +131,12 @@ const ImportExcelPage = () => {
               <p className="text-xs text-gray-500">Xuất Google Sheet ra .xlsx rồi tải lên</p>
             </div>
           </div>
-          {activeTab === 'checkin' ? (
+          {activeTab === 'check' ? (
+            <div className="bg-indigo-50 rounded-xl p-3 text-xs text-indigo-700 flex flex-col gap-1">
+              <p>📌 Tải file Excel lên để so sánh danh sách HV trong Excel với hệ thống</p>
+              <p>✅ HV khớp — ⚠️ Chỉ trong Excel (chưa có trong app) — 📌 Chỉ trong app (không có trong Excel)</p>
+            </div>
+          ) : activeTab === 'checkin' ? (
             <div className="bg-purple-50 rounded-xl p-3 text-xs text-purple-700 flex flex-col gap-1">
               <p>📌 Sheet cần có tên: <strong>Dương</strong>, <strong>Tiến</strong>... (tên GV)</p>
               <p>📌 Mỗi tháng 1 bảng: dòng "Tháng X" rồi danh sách HV + ngày dạy</p>
@@ -318,6 +342,71 @@ const ImportExcelPage = () => {
                 {loading ? '⏳ Đang import...' : `✅ Xác nhận import ${foundCount} bản ghi`}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Kết quả kiểm tra */}
+        {step === 'check-result' && checkResult && (
+          <div className="flex flex-col gap-4">
+            {/* Tóm tắt */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="card text-center">
+                <p className="text-2xl font-bold text-blue-600">{checkResult.summary.excel_total}</p>
+                <p className="text-xs text-gray-500 mt-1">HV trong Excel</p>
+              </div>
+              <div className="card text-center">
+                <p className="text-2xl font-bold text-green-600">{checkResult.summary.matched}</p>
+                <p className="text-xs text-gray-500 mt-1">✅ Khớp</p>
+              </div>
+              <div className="card text-center">
+                <p className="text-2xl font-bold text-gray-500">{checkResult.summary.db_total}</p>
+                <p className="text-xs text-gray-500 mt-1">HV trong app</p>
+              </div>
+            </div>
+
+            {/* Chỉ trong Excel */}
+            {checkResult.only_excel.length > 0 && (
+              <div className="card">
+                <p className="text-sm font-bold text-orange-600 mb-3">⚠️ {checkResult.only_excel.length} HV trong Excel chưa có trong app:</p>
+                <div className="flex flex-wrap gap-2">
+                  {checkResult.only_excel.map((s,i) => (
+                    <div key={i} className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+                      <p className="text-xs font-semibold text-orange-800">{s.name}</p>
+                      <p className="text-xs text-orange-500">{s.instrument} · {s.teacher} · {s.hinhThuc||'1-1'}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Chỉ trong DB */}
+            {checkResult.only_db.length > 0 && (
+              <div className="card">
+                <p className="text-sm font-bold text-gray-600 mb-3">📌 {checkResult.only_db.length} HV trong app không có trong Excel:</p>
+                <div className="flex flex-wrap gap-2">
+                  {checkResult.only_db.map((s,i) => (
+                    <div key={i} className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+                      <p className="text-xs font-semibold text-gray-700">{s.name}</p>
+                      <p className="text-xs text-gray-400">{s.instrument} · {s.status}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Khớp */}
+            <div className="card">
+              <p className="text-sm font-bold text-green-600 mb-3">✅ {checkResult.matched.length} HV khớp:</p>
+              <div className="flex flex-wrap gap-2">
+                {checkResult.matched.map((s,i) => (
+                  <span key={i} className="text-xs bg-green-50 border border-green-200 text-green-700 px-2 py-1 rounded-full">{s.name}</span>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={reset} className="w-full py-3 border border-gray-200 rounded-2xl text-gray-600 font-semibold hover:bg-gray-50">
+              🔄 Kiểm tra lại
+            </button>
           </div>
         )}
 
