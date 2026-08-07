@@ -49,7 +49,7 @@ import AccountManage      from './pages/admin/settings/AccountManage';
 import CheckInManage      from './pages/admin/CheckInManage';
 import AttendanceManage   from './pages/admin/AttendanceManage';
 import NotificationPage   from './pages/admin/notifications/NotificationPage';
-
+import ImportExcelPage from './pages/admin/ImportExcelPage';
 
 // Staff
 import StaffDashboard      from './pages/staff/Dashboard';
@@ -127,6 +127,7 @@ function App() {
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai" element={<AIAssistant />} />
               <Route path="profile"           element={<ProfilePage />} />
+              <Route path="import-excel" element={<ImportExcelPage />} />
             </Route>
 
             {/* Staff Routes — dùng chung ScheduleCalendar với admin */}

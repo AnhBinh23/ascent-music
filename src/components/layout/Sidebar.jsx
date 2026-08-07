@@ -18,6 +18,7 @@ const menus = {
     { path: '/admin/rooms',         icon: '🚪', label: 'Phòng học'       },
     { path: '/admin/instruments',   icon: '🎸', label: 'Nhạc cụ'         },
     { path: '/admin/reports',       icon: '📊', label: 'Báo cáo'         },
+    { path: '/admin/import-excel',  icon: '📥', label: 'Import Excel'    },
     { path: '/admin/checkin',       icon: '📋', label: 'Chấm công GV'    },
     { path: '/admin/notifications', icon: '📨', label: 'Gửi thông báo'   },
     { path: '/admin/chat',          icon: '💬', label: 'Tin nhắn'        },
