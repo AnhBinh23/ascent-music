@@ -38,17 +38,7 @@ const api = {
     if (!res.ok) throw new Error(data.message);
     return data;
   },
-  postForm: async (url, formData) => {
-  const token = localStorage.getItem('ascent_token');
-  const res = await fetch(`${API_BASE}${url}`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
-    body: formData,
-  });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.message);
-  return data;
-},
+ 
 };
 
 export default api;
