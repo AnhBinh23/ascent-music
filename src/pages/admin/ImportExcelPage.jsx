@@ -63,7 +63,7 @@ const ImportExcelPage = () => {
     : {};
 
   const foundCount   = preview ? preview.filter(p => p.found).length : 0;
-  const totalSessions = preview && activeTab === 'attendance' ? preview.reduce((s,p) => s+p.sessions, 0) : 0;
+
 
   return (
     <MainLayout title="Import Excel">
