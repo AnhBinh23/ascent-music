@@ -53,6 +53,18 @@ const ImportExcelPage = () => {
     finally { setLoading(false); }
   };
 
+  const handleUpdateNicknames = async () => {
+    if (!file) return;
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.postForm('/import/update-nicknames', fd);
+      toast.success(`✅ Đã cập nhật biệt danh cho ${res.updated} học viên!`);
+    } catch (err) { toast.error(err.message || 'Lỗi!'); }
+    finally { setLoading(false); }
+  };
+
   const handleCheck = async () => {
     if (!file) return;
     setLoading(true);
@@ -444,6 +456,12 @@ const ImportExcelPage = () => {
                 <p className="text-xs font-semibold text-orange-700 mb-1">⚠️ Bỏ qua {result.notFound.length} HV chưa có trong hệ thống:</p>
                 <p className="text-xs text-orange-600">{result.notFound.join(', ')}</p>
               </div>
+            )}
+            {activeTab === 'attendance' && (
+              <button onClick={handleUpdateNicknames} disabled={loading}
+                className="w-full py-3 bg-indigo-500 text-white rounded-2xl font-semibold hover:bg-indigo-600 disabled:opacity-50 transition-all">
+                {loading ? '⏳ Đang cập nhật...' : '🏷️ Cập nhật biệt danh từ file này'}
+              </button>
             )}
             <button onClick={reset} className="w-full py-3 border border-gray-200 rounded-2xl text-gray-600 font-semibold hover:bg-gray-50">
               📁 Import file khác
