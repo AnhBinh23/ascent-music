@@ -191,7 +191,7 @@ const ImportExcelPage = () => {
                   {notFound.map((n,i) => <span key={i} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">{n}</span>)}
                 </div>
                 <p className="text-xs text-red-500 mb-2">Các HV này sẽ bị bỏ qua khi import.</p>
-                {activeTab === 'attendance' && (
+                {(activeTab === 'attendance' || activeTab === 'tuition' || activeTab === 'checkin') && (
                   <button onClick={handleCreateStudents} disabled={creating}
                     className="w-full py-2 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition-all">
                     {creating ? '⏳ Đang tạo...' : `➕ Tự động tạo ${notFound.length} học viên mới rồi import lại`}
