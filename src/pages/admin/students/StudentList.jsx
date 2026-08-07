@@ -49,13 +49,20 @@ const StudentList = () => {
 
   const columns = [
     { key: 'name', label: 'Họ tên',
-      render: (val, row) => (
-        <div>
-          <p className="font-medium text-gray-800">{val}</p>
-          <p className="text-xs text-gray-400">{row.phone}</p>
-        </div>
-      )
-    },
+  render: (val, row) => (
+    <div>
+      <div className="flex items-center gap-1.5">
+        <p className="font-medium text-gray-800">{val}</p>
+        {row.nickname && (
+          <span className="text-xs bg-primary-50 text-primary-600 px-1.5 py-0.5 rounded-full border border-primary-100">
+            {row.nickname}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-gray-400">{row.phone}</p>
+    </div>
+  )
+},
     { key: 'instrument', label: 'Nhạc cụ' },
     { key: 'level', label: 'Trình độ',
       render: (val) => <Badge label={val} variant={levelVariant[val] || 'gray'} />
