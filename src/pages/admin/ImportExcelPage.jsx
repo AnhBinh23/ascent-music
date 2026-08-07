@@ -10,6 +10,8 @@ const ImportExcelPage = () => {
   const [notFound, setNotFound]     = useState([]);
   const [result, setResult]         = useState(null);
   const [loading, setLoading]       = useState(false);
+  const [creating, setCreating]     = useState(false);
+  const [createResult, setCreateResult] = useState(null);
   const [step, setStep]             = useState('upload');
   const fileRef                     = useRef();
 
@@ -50,6 +52,21 @@ const ImportExcelPage = () => {
     finally { setLoading(false); }
   };
 
+  const handleCreateStudents = async () => {
+    if (!file) return;
+    setCreating(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.postForm('/import/create-students', fd);
+      setCreateResult(res);
+      toast.success(`✅ Đã tạo ${res.created?.length || 0} học viên mới!`);
+      // Tự preview lại sau khi tạo
+      await handlePreview();
+    } catch (err) { toast.error(err.message || 'Lỗi tạo học viên!'); }
+    finally { setCreating(false); }
+  };
+
   const reset = () => {
     setFile(null); setPreview(null); setNotFound([]); setResult(null); setStep('upload');
     if (fileRef.current) fileRef.current.value = '';
@@ -63,7 +80,7 @@ const ImportExcelPage = () => {
     : {};
 
   const foundCount   = preview ? preview.filter(p => p.found).length : 0;
-
+  const totalSessions = preview && activeTab === 'attendance' ? preview.reduce((s,p) => s+p.sessions, 0) : 0;
 
   return (
     <MainLayout title="Import Excel">
@@ -166,7 +183,13 @@ const ImportExcelPage = () => {
                 <div className="flex flex-wrap gap-2 mb-2">
                   {notFound.map((n,i) => <span key={i} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">{n}</span>)}
                 </div>
-                <p className="text-xs text-red-500">Các HV này sẽ bị bỏ qua khi import. Hãy thêm HV vào hệ thống trước rồi import lại.</p>
+                <p className="text-xs text-red-500 mb-2">Các HV này sẽ bị bỏ qua khi import.</p>
+                {activeTab === 'attendance' && (
+                  <button onClick={handleCreateStudents} disabled={creating}
+                    className="w-full py-2 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition-all">
+                    {creating ? '⏳ Đang tạo...' : `➕ Tự động tạo ${notFound.length} học viên mới rồi import lại`}
+                  </button>
+                )}
               </div>
             )}
 
