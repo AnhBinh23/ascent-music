@@ -29,7 +29,7 @@ const ImportExcelPage = () => {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const endpoint = activeTab === 'tuition' ? '/import/tuition-preview' : '/import/preview';
+      const endpoint = activeTab === 'tuition' ? '/import/tuition-preview' : activeTab === 'checkin' ? '/import/checkin-preview' : '/import/preview';
       const res = await api.postForm(endpoint, fd);
       setPreview(res.preview || []);
       setNotFound(res.notFound || []);
@@ -44,7 +44,7 @@ const ImportExcelPage = () => {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const endpoint = activeTab === 'tuition' ? '/import/tuition' : '/import/attendance';
+      const endpoint = activeTab === 'tuition' ? '/import/tuition' : activeTab === 'checkin' ? '/import/checkin' : '/import/attendance';
       const res = await api.postForm(endpoint, fd);
       setResult(res); setStep('done');
       toast.success(`✅ Import thành công ${res.imported} bản ghi!`);
@@ -96,6 +96,10 @@ const ImportExcelPage = () => {
             className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab==='tuition'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
             💰 Học phí
           </button>
+          <button onClick={() => switchTab('checkin')}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab==='checkin'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
+            📋 Chấm công GV
+          </button>
         </div>
 
         {/* Header info */}
@@ -111,19 +115,25 @@ const ImportExcelPage = () => {
               <p className="text-xs text-gray-500">Xuất Google Sheet ra .xlsx rồi tải lên</p>
             </div>
           </div>
-          {activeTab === 'attendance' ? (
+          {activeTab === 'checkin' ? (
+            <div className="bg-purple-50 rounded-xl p-3 text-xs text-purple-700 flex flex-col gap-1">
+              <p>📌 Sheet cần có tên: <strong>Dương</strong>, <strong>Tiến</strong>... (tên GV)</p>
+              <p>📌 Mỗi tháng 1 bảng: dòng "Tháng X" rồi danh sách HV + ngày dạy</p>
+              <p>⚠️ Lương/buổi lấy từ cấu hình lớp học đã có trong hệ thống.</p>
+            </div>
+          ) : activeTab === 'attendance' ? (
             <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 flex flex-col gap-1">
               <p>📌 Sheet cần có tên: <strong>Điểm Danh Khóa 1</strong>, <strong>Điểm Danh Khóa 2</strong>...</p>
               <p>📌 Cột: STT · Họ tên · Tên gọi · Năm sinh · Bộ môn · Phụ trách · Hình thức · Gói học · Buổi 1, 2, 3...</p>
               <p>⚠️ Chỉ xóa dữ liệu Excel cũ — điểm danh từ app giữ nguyên.</p>
             </div>
-          ) : (
+          ) : activeTab === 'tuition' ? (
             <div className="bg-orange-50 rounded-xl p-3 text-xs text-orange-700 flex flex-col gap-1">
               <p>📌 Sheet cần có tên: <strong>Học Phí</strong></p>
               <p>📌 Cột: STT · Tên HV · Môn · Khóa · Buổi · Hình thức · Học phí phải thu · Đã thu · Còn nợ · Tình trạng</p>
               <p>⚠️ Nếu HV đã có học phí trong hệ thống, sẽ được cập nhật (không tạo trùng).</p>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Bước 1: Upload */}
@@ -190,6 +200,46 @@ const ImportExcelPage = () => {
                     {creating ? '⏳ Đang tạo...' : `➕ Tự động tạo ${notFound.length} học viên mới rồi import lại`}
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* Preview chấm công GV */}
+            {activeTab === 'checkin' && (
+              <div className="card">
+                <p className="text-sm font-bold text-gray-700 mb-1">📋 Chấm công giáo viên</p>
+                <p className="text-xs text-gray-400 mb-3">Tổng: {preview.reduce((s,p)=>s+p.sessions,0)} buổi từ {[...new Set(preview.map(p=>p.teacher_name))].join(', ')}</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left py-2 px-2 text-gray-500">Giáo viên</th>
+                        <th className="text-left py-2 px-2 text-gray-500">Học viên</th>
+                        <th className="text-left py-2 px-2 text-gray-500">Lớp</th>
+                        <th className="text-center py-2 px-2 text-gray-500">Tháng</th>
+                        <th className="text-center py-2 px-2 text-gray-500">Buổi</th>
+                        <th className="text-right py-2 px-2 text-gray-500">Lương/buổi</th>
+                        <th className="text-center py-2 px-2 text-gray-500">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.map((p,i) => (
+                        <tr key={i} className={`border-b border-gray-50 ${(!p.found_student||!p.found_class)?'bg-red-50':''}`}>
+                          <td className="py-1.5 px-2 text-gray-600">{p.teacher_name}</td>
+                          <td className="py-1.5 px-2 font-medium text-gray-800">{p.student_name}</td>
+                          <td className="py-1.5 px-2 text-gray-600">{p.class_name}</td>
+                          <td className="py-1.5 px-2 text-center text-gray-500">{p.month}</td>
+                          <td className="py-1.5 px-2 text-center font-bold text-primary-600">{p.sessions}</td>
+                          <td className="py-1.5 px-2 text-right text-gray-600">{p.salary_per_session?.toLocaleString('vi-VN')}đ</td>
+                          <td className="py-1.5 px-2 text-center">
+                            {p.found_student && p.found_class
+                              ? <span className="text-green-600">✅ OK</span>
+                              : <span className="text-red-500">❌ {!p.found_student?'Chưa có HV':'Không có lớp'}</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
