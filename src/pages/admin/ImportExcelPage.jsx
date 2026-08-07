@@ -11,7 +11,6 @@ const ImportExcelPage = () => {
   const [result, setResult]         = useState(null);
   const [loading, setLoading]       = useState(false);
   const [creating, setCreating]     = useState(false);
-  const [createResult, setCreateResult] = useState(null);
   const [step, setStep]             = useState('upload');
   const fileRef                     = useRef();
 
@@ -80,7 +79,6 @@ const ImportExcelPage = () => {
     : {};
 
   const foundCount   = preview ? preview.filter(p => p.found).length : 0;
-  const totalSessions = preview && activeTab === 'attendance' ? preview.reduce((s,p) => s+p.sessions, 0) : 0;
 
   return (
     <MainLayout title="Import Excel">
