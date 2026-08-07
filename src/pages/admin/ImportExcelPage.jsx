@@ -58,7 +58,6 @@ const ImportExcelPage = () => {
       const fd = new FormData();
       fd.append('file', file);
       const res = await api.postForm('/import/create-students', fd);
-      setCreateResult(res);
       toast.success(`✅ Đã tạo ${res.created?.length || 0} học viên mới!`);
       // Tự preview lại sau khi tạo
       await handlePreview();
