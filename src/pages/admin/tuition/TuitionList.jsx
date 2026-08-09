@@ -114,19 +114,28 @@ const TuitionList = () => {
     finally { setSavingNote(prev => ({ ...prev, [studentId]: false })); }
   };
 
-  const toggleConfirm = (id) => {
-    setRenewNotes(prev => ({ ...prev, [id]: { ...prev[id], confirmed: !prev[id]?.confirmed } }));
+  const toggleConfirm = async (id) => {
+    const newConfirmed = !renewNotes[id]?.confirmed;
+    const note = renewNotes[id]?.note || '';
+    // Cập nhật local state ngay
+    setRenewNotes(prev => ({ ...prev, [id]: { ...prev[id], confirmed: newConfirmed } }));
     setSelectedStudents(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (newConfirmed) next.add(id); else next.delete(id);
       return next;
     });
+    // Tự lưu lên server
+    try {
+      await api.post('/tuition/renewal-note', { student_id: id, confirmed: newConfirmed, note });
+      toast.success(newConfirmed ? '✅ Đã xác nhận tái khóa!' : '↩️ Đã bỏ xác nhận');
+    } catch (e) { toast.error(e.message); }
   };
 
   const filteredPredictions = predictions.filter(p => {
     if (renewFilter === 'all') return true;
     if (renewFilter === 'near_end') return p.remaining <= 5;
-    if (renewFilter === 'confirmed') return renewNotes[p.id]?.confirmed;
+    if (renewFilter === 'confirmed') return renewNotes[p.id]?.confirmed || p.confirmed;
+    if (renewFilter === 'has_debt') return p.debt > 0;
     return p.level === renewFilter;
   });
 
@@ -262,9 +271,15 @@ const TuitionList = () => {
                   </div>
                 </div>
                 <div className="mt-3 bg-primary-50 rounded-xl p-3 text-center border border-primary-100">
-                  <p className="text-xs text-primary-600">✅ Đã xác nhận tái ({summary.confirmed||0} HV) — tick bên dưới để điều chỉnh</p>
+                  <p className="text-xs text-primary-600">✅ Đã xác nhận tái ({selectedStudents.size} HV) — tick/bỏ tick bên dưới để điều chỉnh</p>
                   <p className="text-xl font-bold text-primary-700">{fmt(customRevenue)}</p>
                 </div>
+                {predictions.some(p => p.debt > 0) && (
+                  <div className="mt-3 bg-red-50 rounded-xl p-3 text-center border border-red-100">
+                    <p className="text-xs text-red-600">💸 Tổng nợ học phí chưa thu: {predictions.filter(p=>p.debt>0).length} HV</p>
+                    <p className="text-xl font-bold text-red-700">{fmt(predictions.reduce((s,p) => s+p.debt, 0))}</p>
+                  </div>
+                )}
               </div>
 
               {/* Filter tabs */}
@@ -275,6 +290,7 @@ const TuitionList = () => {
                   { key:'high', label:'🟢 Cao', cnt: predictions.filter(p=>p.level==='high').length },
                   { key:'medium', label:'🟡 TB', cnt: predictions.filter(p=>p.level==='medium').length },
                   { key:'low', label:'🔴 Thấp', cnt: predictions.filter(p=>p.level==='low').length },
+                  { key:'has_debt', label:'💸 Còn nợ', cnt: predictions.filter(p=>p.debt>0).length },
                   { key:'confirmed', label:'✅ Đã xác nhận', cnt: Object.values(renewNotes).filter(n=>n.confirmed).length },
                 ].map(f => (
                   <button key={f.key} onClick={() => setRenewFilter(f.key)}
@@ -292,12 +308,13 @@ const TuitionList = () => {
                   return (
                     <div key={p.id} className={`rounded-2xl border p-4 ${n.confirmed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'}`}>
                       <div className="flex items-start gap-3">
-                        {/* Checkbox */}
-                        <div className="flex-shrink-0 pt-1">
+                        {/* Checkbox xác nhận tái khóa */}
+                        <div className="flex-shrink-0 pt-1 flex flex-col items-center gap-1">
                           <button onClick={() => toggleConfirm(p.id)}
-                            className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${n.confirmed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-primary-400'}`}>
-                            {n.confirmed && '✓'}
+                            className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all text-sm ${n.confirmed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-primary-400'}`}>
+                            {n.confirmed ? '✓' : ''}
                           </button>
+                          <span className="text-xs text-gray-400">{n.confirmed ? 'Đã XN' : 'Tick'}</span>
                         </div>
 
                         {/* Info */}
@@ -312,6 +329,9 @@ const TuitionList = () => {
                             {p.class_name} · {p.teacher_name} · Khóa {p.current_course}
                             {p.has_renewed && <span className="text-green-600 ml-1">🔄 Đã từng tái khóa</span>}
                           </p>
+                          {p.debt > 0 && (
+                            <p className="text-xs text-red-500 mt-0.5">💸 Còn nợ học phí: <strong>{fmt(p.debt)}</strong></p>
+                          )}
 
                           {/* Tỉ lệ */}
                           <div className="flex gap-3 mt-2 flex-wrap text-xs">
