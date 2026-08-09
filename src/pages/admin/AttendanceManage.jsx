@@ -372,9 +372,13 @@ const AttendanceManage = () => {
                   className="flex items-center gap-3 p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer active:bg-gray-100 transition-colors">
                   <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-700 font-bold flex-shrink-0">{p.student_name?.charAt(0)}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-1.5">
                       <p className="text-sm font-semibold text-gray-800">{p.student_name}</p>
-                      {warning && <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${warning.color}`}>{warning.icon} {warning.label}</span>}
+                      {p.current_course && (
+                        <span className="text-xs bg-primary-50 text-primary-600 px-1.5 py-0.5 rounded-full border border-primary-100 font-medium">
+                          K{p.current_course}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-500 truncate">{p.class_name} · {p.teacher_name}</p>
                     <div className="mt-1.5 flex items-center gap-2">
