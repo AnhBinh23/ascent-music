@@ -4,7 +4,6 @@ import MainLayout from '../../components/layout/MainLayout';
 import api from '../../services/api';
 
 const fmt = n => Number(n || 0).toLocaleString('vi-VN') + 'đ';
-const DAY_NAMES = { 1:'CN', 2:'T2', 3:'T3', 4:'T4', 5:'T5', 6:'T6', 7:'T7' };
 
 const Dashboard = () => {
   const navigate = useNavigate();
