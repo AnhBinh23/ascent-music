@@ -364,6 +364,7 @@ const AttendanceManage = () => {
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             {filteredProgress.length === 0 ? <p className="text-center text-gray-400 py-10">Không có dữ liệu</p>
               : filteredProgress.map((p, i) => {
+                // eslint-disable-next-line no-unused-vars
               const warning  = getWarning(p.attended, p.total_sessions);
               const pct      = p.total_sessions > 0 ? Math.round(p.attended/p.total_sessions*100) : 0;
               const barColor = pct>=100?'#dc2626':pct>=80?'#ea580c':'#16a34a';
