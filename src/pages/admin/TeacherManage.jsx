@@ -7,7 +7,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import SearchBar from '../../components/shared/SearchBar';
 import Loading from '../../components/ui/Loading';
-import SalaryManage from './teachers/Salarymanage';
+import SalaryManage from './teachers/SalaryManage';
 import teacherService from '../../services/teacherService';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
