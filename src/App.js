@@ -34,7 +34,7 @@ import TrialManage        from './pages/admin/students/TrialManage';
 import TeacherList        from './pages/admin/teachers/TeacherList';
 import TeacherDetail      from './pages/admin/teachers/TeacherDetail';
 import TeacherForm        from './pages/admin/teachers/TeacherForm';
-import SalaryManage       from './pages/admin/teachers/Salarymanage';
+import SalaryManage       from './pages/admin/teachers/SalaryManage';
 import ClassList          from './pages/admin/classes/ClassList';
 import ClassDetail        from './pages/admin/classes/ClassDetail';
 import ClassForm          from './pages/admin/classes/ClassForm';
