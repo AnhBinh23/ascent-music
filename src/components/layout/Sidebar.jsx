@@ -8,18 +8,18 @@ const menus = {
   admin: [
     { path: '/admin',               icon: '🏠', label: 'Tổng quan'       },
     { path: '/admin/students',      icon: '🎓', label: 'Học viên'        },
-    { path: '/admin/trials',        icon: '📝', label: 'Đăng ký học thử' },
+    
     { path: '/admin/teachers',      icon: '👨‍🏫', label: 'Giáo viên'       },
-    { path: '/admin/salary',        icon: '💵', label: 'Lương giáo viên' },
-    { path: '/admin/classes',       icon: '🎵', label: 'Lớp học'         },
+
+  
     { path: '/admin/schedule',      icon: '📅', label: 'Lịch học'        },
     { path: '/admin/tuition',       icon: '💰', label: 'Học phí'         },
     { path: '/admin/attendance',    icon: '✅', label: 'Điểm danh HV'    },
-    { path: '/admin/rooms',         icon: '🚪', label: 'Phòng học'       },
-    { path: '/admin/instruments',   icon: '🎸', label: 'Nhạc cụ'         },
+    
+    
     { path: '/admin/reports',       icon: '📊', label: 'Báo cáo'         },
     { path: '/admin/import-excel',  icon: '📥', label: 'Import Excel'    },
-    { path: '/admin/checkin',       icon: '📋', label: 'Chấm công GV'    },
+ 
     { path: '/admin/notifications', icon: '📨', label: 'Gửi thông báo'   },
     { path: '/admin/chat',          icon: '💬', label: 'Tin nhắn'        },
     { path: '/admin/ai',            icon: '🤖', label: 'Trợ lý AI'       },

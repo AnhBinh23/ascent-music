@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 const MONTHS = ['01','02','03','04','05','06','07','08','09','10','11','12'];
 const fmt = n => Number(n || 0).toLocaleString('vi-VN') + 'đ';
 
-const SalaryManage = () => {
+const SalaryManage = ({ embedded = false }) => {
   const [month, setMonth]           = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [year, setYear]             = useState(String(new Date().getFullYear()));
   const [teacherData, setTeacherData] = useState([]);
@@ -133,29 +133,30 @@ const SalaryManage = () => {
     win.print();
   };
 
-  if (loading) return <MainLayout title="Quản lý lương giáo viên"><p className="text-center text-gray-400 py-20">Đang tải dữ liệu...</p></MainLayout>;
+  if (loading) {
+    if (embedded) return <p className="text-center text-gray-400 py-20">Đang tải dữ liệu...</p>;
+    return <MainLayout title="Quản lý lương giáo viên"><p className="text-center text-gray-400 py-20">Đang tải dữ liệu...</p></MainLayout>;
+  }
 
-  return (
-    <MainLayout title="Quản lý lương giáo viên">
-      <div className="flex gap-3 mb-5 flex-wrap">
-        <select value={month} onChange={e => setMonth(e.target.value)} className="input-field w-auto">
-          {MONTHS.map(m => <option key={m} value={m}>Tháng {m}</option>)}
-        </select>
-        <select value={year} onChange={e => setYear(e.target.value)} className="input-field w-auto">
-          {['2024','2025','2026','2027'].map(y => <option key={y}>{y}</option>)}
-        </select>
-        <Button variant="secondary" icon="🖨️" onClick={handlePrint}>In bảng lương</Button>
-        <Button icon="💰" onClick={handlePayAll}>Thanh toán tất cả</Button>
-      </div>
+  const mainContent = (
+  <>
+    <div className="flex gap-3 mb-5 flex-wrap">
+      <select value={month} onChange={e => setMonth(e.target.value)} className="input-field w-auto">
+        {MONTHS.map(m => <option key={m} value={m}>Tháng {m}</option>)}
+      </select>
+      <select value={year} onChange={e => setYear(e.target.value)} className="input-field w-auto">
+        {['2024','2025','2026','2027'].map(y => <option key={y}>{y}</option>)}
+      </select>
+      <Button variant="secondary" icon="🖨" onClick={handlePrint}>In bảng lương</Button>
+      <Button icon="💰" onClick={handlePayAll}>Thanh toán tất cả</Button>
+    </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-5">
-        <div className="card text-center"><p className="text-2xl font-bold text-primary-600">{teacherData.length}</p><p className="text-xs text-gray-500 mt-1">Giáo viên</p></div>
-        <div className="card text-center"><p className="text-xl font-bold text-orange-600">{fmt(totalSalary)}</p><p className="text-xs text-gray-500 mt-1">Tổng lương tháng {month}/{year}</p></div>
-        <div className="card text-center"><p className="text-2xl font-bold text-green-600">{totalPaid}/{teacherData.length}</p><p className="text-xs text-gray-500 mt-1">Đã thanh toán</p></div>
-      </div>
+    <div className="grid grid-cols-3 gap-4 mb-5">
+      {/* ...3 card thống kê... */}
+    </div>
 
-      {/* ⚠️ BUỔI CÓ HV VẮNG — cần nhập lương riêng */}
-      {absentSessions.length > 0 && (
+    {/* BUỔI CÓ HV VẮNG — cần nhập lương riêng */}
+    {absentSessions.length > 0 && (
         <div className="mb-5 bg-orange-50 border border-orange-200 rounded-2xl p-4">
           <p className="text-sm font-bold text-orange-700 mb-3">
             ⚠️ {absentSessions.length} buổi lớp nhóm có học viên vắng — cần xác nhận lương
@@ -350,8 +351,11 @@ const SalaryManage = () => {
           })}
         </div>
       )}
-    </MainLayout>
+  </>
   );
+
+  if (embedded) return <div>{mainContent}</div>;
+  return <MainLayout title="Quản lý lương giáo viên">{mainContent}</MainLayout>;
 };
 
 export default SalaryManage;

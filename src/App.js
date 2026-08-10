@@ -34,7 +34,7 @@ import TrialManage        from './pages/admin/students/TrialManage';
 import TeacherList        from './pages/admin/teachers/TeacherList';
 import TeacherDetail      from './pages/admin/teachers/TeacherDetail';
 import TeacherForm        from './pages/admin/teachers/TeacherForm';
-import SalaryManage       from './pages/admin/teachers/SalaryManage';
+import SalaryManage       from './pages/admin/teachers/Salarymanage';
 import ClassList          from './pages/admin/classes/ClassList';
 import ClassDetail        from './pages/admin/classes/ClassDetail';
 import ClassForm          from './pages/admin/classes/ClassForm';
@@ -50,7 +50,8 @@ import CheckInManage      from './pages/admin/CheckInManage';
 import AttendanceManage   from './pages/admin/AttendanceManage';
 import NotificationPage   from './pages/admin/notifications/NotificationPage';
 import ImportExcelPage from './pages/admin/ImportExcelPage';
-
+import StudentManage from './pages/admin/StudentManage';
+import TeacherManage from './pages/admin/TeacherManage';
 // Staff
 import StaffDashboard      from './pages/staff/Dashboard';
 import StaffTuitionCollect from './pages/staff/TuitionCollect';
@@ -100,7 +101,7 @@ function App() {
               <Route path="students/:id"      element={<StudentDetail />} />
               <Route path="students/edit/:id" element={<StudentForm />} />
               <Route path="trials"            element={<TrialManage />} />
-              <Route path="teachers"          element={<TeacherList />} />
+              <Route path="teachers"          element={<TeacherManage />} />
               <Route path="teachers/new"      element={<TeacherForm />} />
               <Route path="teachers/:id"      element={<TeacherDetail />} />
               <Route path="teachers/edit/:id" element={<TeacherForm />} />
@@ -133,7 +134,7 @@ function App() {
             {/* Staff Routes — dùng chung ScheduleCalendar với admin */}
             <Route path="/staff" element={<PrivateRoute roles={['staff']} />}>
               <Route index                    element={<StaffDashboard />} />
-              <Route path="students"          element={<StudentList />} />
+              <Route path="students"          element={<StudentManage />} />
               <Route path="students/new"      element={<StudentForm />} />
               <Route path="students/:id"      element={<StudentDetail />} />
               <Route path="students/edit/:id" element={<StudentForm />} />
