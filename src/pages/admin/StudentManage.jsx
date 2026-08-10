@@ -108,8 +108,9 @@ const StudentManage = () => {
       )
     },
     { key: 'teacher_name', label: 'Giáo viên' },
-    { key: 'schedule', label: 'Lịch học' },
-    { key: 'tuition_fee', label: 'Học phí', render: (val) => <span>{Number(val||0).toLocaleString('vi-VN')}đ</span> },
+    { key: 'room_name',    label: 'Phòng' },
+    { key: 'schedule',     label: 'Lịch học' },
+    { key: 'tuition_fee',  label: 'Học phí', render: (val) => <span>{Number(val || 0).toLocaleString('vi-VN')}đ</span> },
     { key: 'status', label: 'Trạng thái', render: (val) => <Badge label={val} variant={STATUS_VARIANT[val] || 'gray'} dot /> },
     { key: 'id', label: '',
       render: (val) => (
@@ -126,11 +127,11 @@ const StudentManage = () => {
       {/* Tabs */}
       <div className="flex gap-1.5 mb-5 bg-gray-100 p-1 rounded-2xl">
         <button onClick={() => setSearchParams({ tab: 'students' })}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab==='students'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === 'students' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
           👨‍🎓 Học viên ({students.length})
         </button>
         <button onClick={() => setSearchParams({ tab: 'classes' })}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab==='classes'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === 'classes' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
           🎵 Lớp học ({classes.length})
         </button>
       </div>
