@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -21,16 +21,18 @@ import ProfilePage from './pages/profile/ProfilePage';
 import ChatPage from './pages/chat/ChatPage';
 
 // AI
-import AIAssistant from './pages/admin/AIAssistant';
+import AIAssistant   from './pages/admin/AIAssistant';
 import TeacherAIChat from './pages/teacher/TeacherAIChat';
-import AIChat      from './pages/student/AIChat';
+import AIChat        from './pages/student/AIChat';
 
 // Admin
 import AdminDashboard     from './pages/admin/Dashboard';
+import StudentManage      from './pages/admin/StudentManage';
 import StudentList        from './pages/admin/students/StudentList';
 import StudentDetail      from './pages/admin/students/StudentDetail';
 import StudentForm        from './pages/admin/students/StudentForm';
 import TrialManage        from './pages/admin/students/TrialManage';
+import TeacherManage      from './pages/admin/TeacherManage';
 import TeacherList        from './pages/admin/teachers/TeacherList';
 import TeacherDetail      from './pages/admin/teachers/TeacherDetail';
 import TeacherForm        from './pages/admin/teachers/TeacherForm';
@@ -49,9 +51,8 @@ import AccountManage      from './pages/admin/settings/AccountManage';
 import CheckInManage      from './pages/admin/CheckInManage';
 import AttendanceManage   from './pages/admin/AttendanceManage';
 import NotificationPage   from './pages/admin/notifications/NotificationPage';
-import ImportExcelPage from './pages/admin/ImportExcelPage';
-import StudentManage from './pages/admin/StudentManage';
-import TeacherManage from './pages/admin/TeacherManage';
+import ImportExcelPage    from './pages/admin/ImportExcelPage';
+
 // Staff
 import StaffDashboard      from './pages/staff/Dashboard';
 import StaffTuitionCollect from './pages/staff/TuitionCollect';
@@ -96,7 +97,7 @@ function App() {
             {/* Admin Routes */}
             <Route path="/admin" element={<PrivateRoute roles={['admin']} />}>
               <Route index                    element={<AdminDashboard />} />
-              <Route path="students"          element={<StudentList />} />
+              <Route path="students"          element={<StudentManage />} />
               <Route path="students/new"      element={<StudentForm />} />
               <Route path="students/:id"      element={<StudentDetail />} />
               <Route path="students/edit/:id" element={<StudentForm />} />
@@ -124,17 +125,16 @@ function App() {
               <Route path="checkin"           element={<CheckInManage />} />
               <Route path="attendance"        element={<AttendanceManage />} />
               <Route path="notifications"     element={<NotificationPage />} />
-              
               <Route path="chat"              element={<ChatPage />} />
-              <Route path="ai" element={<AIAssistant />} />
+              <Route path="ai"               element={<AIAssistant />} />
               <Route path="profile"           element={<ProfilePage />} />
-              <Route path="import-excel" element={<ImportExcelPage />} />
+              <Route path="import-excel"      element={<ImportExcelPage />} />
             </Route>
 
-            {/* Staff Routes — dùng chung ScheduleCalendar với admin */}
+            {/* Staff Routes */}
             <Route path="/staff" element={<PrivateRoute roles={['staff']} />}>
               <Route index                    element={<StaffDashboard />} />
-              <Route path="students"          element={<StudentManage />} />
+              <Route path="students"          element={<StudentList />} />
               <Route path="students/new"      element={<StudentForm />} />
               <Route path="students/:id"      element={<StudentDetail />} />
               <Route path="students/edit/:id" element={<StudentForm />} />
@@ -163,7 +163,7 @@ function App() {
               <Route path="checkin"           element={<CheckIn />} />
               <Route path="notifications"     element={<SendNotification />} />
               <Route path="chat"              element={<ChatPage />} />
-              <Route path="ai" element={<TeacherAIChat />} />
+              <Route path="ai"               element={<TeacherAIChat />} />
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
