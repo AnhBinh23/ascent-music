@@ -192,14 +192,17 @@ const StudentDetail = () => {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!window.confirm('Bạn có chắc muốn xóa học viên này?')) return;
+    if (!window.confirm('Xác nhận xóa học viên này?')) return;
     try {
-      await studentService.delete(id);
+      const res = await api.delete(`/students/${id}`);
+      if (res.warning) {
+        const ok = window.confirm(`⚠️ ${res.message}\n\nBấm OK để xóa hoàn toàn, hoặc Hủy rồi đổi trạng thái "Nghỉ học".`);
+        if (!ok) return;
+        await api.delete(`/students/${id}?confirm=true`);
+      }
       toast.success('Đã xóa học viên!');
-      navigate(`${basePath}/students`);
-    } catch {
-      toast.error('Không thể xóa!');
-    }
+      navigate('/admin/students');
+    } catch (err) { toast.error('Không thể xóa!'); }
   };
 
   // Cập nhật state sau khi tạo tài khoản
