@@ -27,8 +27,6 @@ const TeacherManage = () => {
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(true);
-  const [classData, setClassData] = useState([]);
-  const [schedData, setSchedData] = useState([]);
 
   // ── Chấm công ──
   const [checkins, setCheckins]       = useState([]);
@@ -46,8 +44,6 @@ const TeacherManage = () => {
         ]);
         const classes = cData.rows || [];
         const scheds = sData.rows || [];
-        setClassData(classes);
-        setSchedData(scheds);
 
         // Gộp thông tin vào teacher
         const merged = tData.map(t => {
