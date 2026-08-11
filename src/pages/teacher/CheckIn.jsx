@@ -55,6 +55,7 @@ const CheckIn = () => {
         await loadHistory(tid);
         await loadSalaryPayments();
 
+        // Kiểm tra đã chấm công hôm nay chưa
         const histRes  = await api.get(`/checkin/teacher/${tid}`);
         const hist     = histRes.rows || [];
         const todayStr = new Date().toISOString().split('T')[0];
@@ -67,21 +68,27 @@ const CheckIn = () => {
   }, [user, loadHistory, loadSalaryPayments]);
 
   const handleCheckIn = async (cls) => {
-    setLoadingBtn(prev => ({ ...prev, [cls.id]: true }));
+    const classId = cls.class_id || cls.id;
+    // Kiểm tra đã chấm công chưa
+    if (checkedIn[classId]) {
+      toast.info('Lớp này đã chấm công hôm nay rồi!');
+      return;
+    }
+    setLoadingBtn(prev => ({ ...prev, [classId]: true }));
     try {
       const timeNow = now.toTimeString().slice(0, 5);
       const dateNow = new Date().toISOString().split('T')[0];
 
       const res = await api.post('/checkin', {
-        class_id: cls.class_id || cls.id,
+        class_id: classId,
         date:     dateNow,
         time:     timeNow,
-        note:     notes[cls.id] || '',
+        note:     notes[classId] || '',
       });
 
       setCheckedIn(prev => ({
         ...prev,
-        [cls.id]: {
+        [classId]: {
           time: timeNow,
           salary_earned: res.salary_earned || 0,
           class_type: res.class_type || cls.class_type,
@@ -91,7 +98,7 @@ const CheckIn = () => {
       toast.success(res.message || '✅ Chấm công thành công!');
       if (teacherId) await loadHistory(teacherId);
     } catch (err) { toast.error(err.message); }
-    finally { setLoadingBtn(prev => ({ ...prev, [cls.id]: false })); }
+    finally { setLoadingBtn(prev => ({ ...prev, [classId]: false })); }
   };
 
   // ── Tính toán ──
@@ -109,6 +116,10 @@ const CheckIn = () => {
   }, {});
   const sortedDates     = Object.keys(groupedHistory).sort((a, b) => b.localeCompare(a));
   const availableMonths = [...new Set(history.map(h => h.date?.slice(0, 7)).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+
+  // Thêm tháng hiện tại nếu chưa có
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  if (!availableMonths.includes(currentMonth)) availableMonths.unshift(currentMonth);
 
   const salaryPayment   = salaryPayments.find(p => p.teacher_id === teacherId && p.month === filterMonth);
   const isPaidThisMonth = !!salaryPayment;
@@ -129,7 +140,7 @@ const CheckIn = () => {
           <p className="text-xs text-gray-500 mt-1">Buổi hôm nay</p>
         </div>
         <div className="card text-center">
-          <p className="text-2xl font-bold text-green-600">{totalDone}</p>
+          <p className="text-2xl font-bold text-green-600">{totalDone}/{todayClasses.length}</p>
           <p className="text-xs text-gray-500 mt-1">Đã chấm công</p>
         </div>
         <div className="card text-center col-span-2">
@@ -157,7 +168,7 @@ const CheckIn = () => {
           <div className="flex items-center gap-3 mb-5 p-4 bg-primary-50 rounded-2xl border border-primary-100">
             <span className="text-2xl">🕐</span>
             <div>
-              <p className="text-lg font-bold text-primary-700">{now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</p>
+              <p className="text-lg font-bold text-primary-700">{now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
               <p className="text-xs text-primary-500">{now.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
             </div>
           </div>
@@ -167,31 +178,32 @@ const CheckIn = () => {
           ) : (
             <div className="flex flex-col gap-4">
               {todayClasses.map(cls => {
-                const isDone  = !!checkedIn[cls.id];
-                const checkin = checkedIn[cls.id];
+                const classId = cls.class_id || cls.id;
+                const isDone  = !!checkedIn[classId];
+                const checkin = checkedIn[classId];
                 const isGroup = cls.class_type === 'group' || checkin?.class_type === 'group';
                 return (
-                  <Card key={cls.id}>
+                  <Card key={classId}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <p className="font-bold text-gray-800">{cls.time_start?.slice(0, 5)} – {cls.time_end?.slice(0, 5)}</p>
+                          <p className="font-bold text-gray-800">{String(cls.time_start||'').slice(0,5)} – {String(cls.time_end||'').slice(0,5)}</p>
                           <p className="text-sm font-semibold text-gray-700">{cls.class_name}</p>
                           <Badge label={cls.class_type === '1v1' ? '1 kèm 1' : 'Nhóm'} variant={cls.class_type === '1v1' ? 'blue' : 'green'} />
                           {isDone && <Badge label="✅ Đã chấm công" variant="green" />}
                         </div>
-                        <p className="text-sm text-gray-500">🚪 {cls.room_name}</p>
+                        <p className="text-sm text-gray-500">🚪 {cls.room_name || 'Chưa xếp phòng'}</p>
                         {isDone ? (
-                          <div className={`mt-3 p-3 rounded-xl border ${isGroup && !checkin.salary_earned ? 'bg-orange-50 border-orange-100' : 'bg-green-50 border-green-100'}`}>
+                          <div className={`mt-3 p-3 rounded-xl border ${isGroup && !Number(checkin?.salary_earned) ? 'bg-orange-50 border-orange-100' : 'bg-green-50 border-green-100'}`}>
                             <div className="flex justify-between items-center">
-                              <p className={`text-sm font-medium ${isGroup && !checkin.salary_earned ? 'text-orange-700' : 'text-green-700'}`}>
-                                ✅ Chấm công lúc {checkin?.time}
+                              <p className={`text-sm font-medium ${isGroup && !Number(checkin?.salary_earned) ? 'text-orange-700' : 'text-green-700'}`}>
+                                ✅ Đã chấm công lúc {checkin?.time}
                               </p>
                               <div className="text-right">
                                 {isGroup && !Number(checkin?.salary_earned) ? (
                                   <>
                                     <p className="text-xs text-orange-600">⚠️ Lớp nhóm</p>
-                                    <p className="text-sm font-semibold text-orange-600">Chờ admin xác nhận lương</p>
+                                    <p className="text-sm font-semibold text-orange-600">Chờ admin xác nhận</p>
                                   </>
                                 ) : (
                                   <>
@@ -205,16 +217,21 @@ const CheckIn = () => {
                         ) : (
                           <div className="mt-3">
                             <input type="text" placeholder="Ghi chú (không bắt buộc)..."
-                              value={notes[cls.id] || ''}
-                              onChange={e => setNotes(prev => ({ ...prev, [cls.id]: e.target.value }))}
+                              value={notes[classId] || ''}
+                              onChange={e => setNotes(prev => ({ ...prev, [classId]: e.target.value }))}
                               className="input-field text-sm" />
                           </div>
                         )}
                       </div>
-                      {!isDone && (
-                        <Button loading={loadingBtn[cls.id]} onClick={() => handleCheckIn(cls)} icon="✅" className="flex-shrink-0">
+                      {!isDone ? (
+                        <Button loading={loadingBtn[classId]} onClick={() => handleCheckIn(cls)} icon="✅" className="flex-shrink-0">
                           Chấm công
                         </Button>
+                      ) : (
+                        <div className="flex-shrink-0 text-center">
+                          <span className="text-3xl">✅</span>
+                          <p className="text-xs text-green-600 mt-1">Xong</p>
+                        </div>
                       )}
                     </div>
                   </Card>
@@ -231,9 +248,6 @@ const CheckIn = () => {
           <div className="mb-4">
             <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
               className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 outline-none">
-              {availableMonths.length === 0 && (
-                <option value={filterMonth}>{new Date(filterMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</option>
-              )}
               {availableMonths.map(m => (
                 <option key={m} value={m}>{new Date(m + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</option>
               ))}
@@ -251,16 +265,17 @@ const CheckIn = () => {
             </div>
           </div>
 
+          {/* Trạng thái thanh toán */}
           <div className={`p-3 rounded-2xl border mb-4 flex items-center justify-between
             ${isPaidThisMonth ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
             <div>
               <p className={`text-sm font-semibold ${isPaidThisMonth ? 'text-green-700' : 'text-yellow-700'}`}>
-                {isPaidThisMonth ? '✅ Lương tháng này đã được trả' : '⏳ Lương tháng này chưa được trả'}
+                {isPaidThisMonth ? '✅ Lương tháng này đã được thanh toán' : '⏳ Lương tháng này chưa được thanh toán'}
               </p>
               {isPaidThisMonth && salaryPayment?.paid_at && (
                 <p className="text-xs text-green-600 mt-0.5">
-                  Trả lúc: {new Date(salaryPayment.paid_at).toLocaleDateString('vi-VN')}
-                  {salaryPayment.amount && ` · ${fmt(salaryPayment.amount)}`}
+                  Thanh toán: {new Date(salaryPayment.paid_at).toLocaleDateString('vi-VN')}
+                  {salaryPayment.amount ? ` · ${fmt(salaryPayment.amount)}` : ''}
                 </p>
               )}
             </div>
@@ -295,7 +310,7 @@ const CheckIn = () => {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-800 truncate">{h.class_name || 'Buổi học'}</p>
                               <p className="text-xs text-gray-400">
-                                Chấm công lúc {h.time?.slice(0, 5)}{h.note ? ` · ${h.note}` : ''}
+                                Chấm công lúc {String(h.time||'').slice(0, 5)}{h.note ? ` · ${h.note}` : ''}
                               </p>
                               {hasAbsent && (
                                 <p className="text-xs text-orange-600 mt-0.5">
@@ -325,30 +340,24 @@ const CheckIn = () => {
       {/* ── Tab: Lương tháng ── */}
       {tab === 'salary' && (
         <>
-          <p className="text-xs text-gray-400 mb-4">Lương được tính theo số buổi chấm công thực tế · Thanh toán cuối tháng</p>
+          <p className="text-xs text-gray-400 mb-4">Lương được tính theo số buổi chấm công thực tế · Admin thanh toán cuối tháng</p>
           {monthlySummary.length === 0 ? (
             <Card><p className="text-center text-gray-400 py-10">Chưa có dữ liệu chấm công</p></Card>
           ) : (
             <div className="flex flex-col gap-3">
               {monthlySummary.map(({ month, salary, sessions, payment }) => {
                 const isPaid = !!payment;
-                // Đếm buổi nhóm chờ xác nhận
-                const pendingGroup = history.filter(h =>
-                  h.date?.slice(0, 7) === month && h.class_type === 'group' && Number(h.absent_count) > 0 && !Number(h.salary_earned)
-                ).length;
                 return (
-                  <div key={month} className={`p-4 rounded-2xl border ${isPaid ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'} shadow-sm`}>
+                  <div key={month} className={`p-4 rounded-2xl border ${isPaid ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'} shadow-sm`}
+                    onClick={() => { setFilterMonth(month); setTab('history'); }}>
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <p className="font-bold text-gray-800 capitalize">
                           {new Date(month + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
                         </p>
                         <p className="text-xs text-gray-500 mt-0.5">{sessions} buổi dạy</p>
-                        {pendingGroup > 0 && (
-                          <p className="text-xs text-orange-500 mt-0.5">⚠️ {pendingGroup} buổi nhóm chờ xác nhận lương</p>
-                        )}
                       </div>
-                      {isPaid ? <Badge label="✅ Đã nhận lương" variant="green" />
+                      {isPaid ? <Badge label="✅ Đã thanh toán" variant="green" />
                         : <Badge label="⏳ Chưa thanh toán" variant="orange" />}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -357,7 +366,7 @@ const CheckIn = () => {
                         <p className="font-bold text-gray-800">{fmt(salary)}</p>
                       </div>
                       <div className={`p-2 rounded-xl text-center border ${isPaid ? 'bg-green-100 border-green-200' : 'bg-orange-50 border-orange-100'}`}>
-                        <p className={`text-xs ${isPaid ? 'text-green-600' : 'text-orange-600'}`}>{isPaid ? 'Đã nhận' : 'Dự kiến nhận'}</p>
+                        <p className={`text-xs ${isPaid ? 'text-green-600' : 'text-orange-600'}`}>{isPaid ? 'Đã nhận' : 'Dự kiến'}</p>
                         <p className={`font-bold ${isPaid ? 'text-green-700' : 'text-orange-700'}`}>
                           {isPaid ? fmt(payment.amount) : fmt(salary)}
                         </p>
@@ -369,6 +378,7 @@ const CheckIn = () => {
                         {payment.note ? ` · ${payment.note}` : ''}
                       </p>
                     )}
+                    <p className="text-xs text-gray-400 text-center mt-2">Bấm để xem chi tiết →</p>
                   </div>
                 );
               })}
