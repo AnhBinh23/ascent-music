@@ -27,6 +27,8 @@ const TeacherManage = () => {
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(true);
+  const [classData, setClassData] = useState([]);
+  const [schedData, setSchedData] = useState([]);
 
   // ── Chấm công ──
   const [checkins, setCheckins]       = useState([]);
@@ -34,15 +36,38 @@ const TeacherManage = () => {
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchAll = async () => {
       try {
         setLoading(true);
-        const data = await teacherService.getAll();
-        setTeachers(data); setFiltered(data);
+        const [tData, cData, sData] = await Promise.all([
+          teacherService.getAll(),
+          api.get('/classes'),
+          api.get('/schedules'),
+        ]);
+        const classes = cData.rows || [];
+        const scheds = sData.rows || [];
+        setClassData(classes);
+        setSchedData(scheds);
+
+        // Gộp thông tin vào teacher
+        const merged = tData.map(t => {
+          const myClasses = classes.filter(c => c.teacher_id === t.id && c.status === 'Đang học');
+          const myScheds = scheds.filter(s => s.teacher_id === t.id);
+          const DAY = { 1:'CN', 2:'T2', 3:'T3', 4:'T4', 5:'T5', 6:'T6', 7:'T7' };
+          const schedText = myScheds.map(s => `${DAY[s.day_of_week]} ${String(s.time_start||'').slice(0,5)}`).join(', ');
+          return {
+            ...t,
+            class_count: myClasses.length,
+            student_count: myClasses.reduce((s, c) => s + Number(c.student_count || 0), 0),
+            schedule_text: schedText || '—',
+          };
+        });
+        setTeachers(merged);
+        setFiltered(merged);
       } catch (err) { toast.error(err.message); }
       finally { setLoading(false); }
     };
-    fetch();
+    fetchAll();
   }, []);
 
   useEffect(() => {
@@ -78,6 +103,7 @@ const TeacherManage = () => {
       )
     },
     { key: 'instrument', label: 'Chuyên môn', render: (val) => <Badge label={val} variant={INSTRUMENT_VARIANT[val]||'gray'} /> },
+    { key: 'salary_amount', label: 'Lương/buổi', render: (val) => <span className="font-medium">{fmt(val)}</span> },
     { key: 'status', label: 'Trạng thái',
       render: (val) => <Badge label={val==='active'?'Đang dạy':'Nghỉ'} variant={val==='active'?'green':'gray'} dot />
     },
