@@ -17,7 +17,6 @@ const jsDayToDb = d => d === 0 ? 1 : d + 1;
 
 const Attendance = () => {
   const { user } = useAuth();
-  const [teacherId, setTeacherId]       = useState(null);
   const [todayClasses, setTodayClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [students, setStudents]         = useState([]);
@@ -27,7 +26,6 @@ const Attendance = () => {
   const [loading, setLoading]           = useState(true);
   const [saving, setSaving]             = useState(false);
   const [date, setDate]                 = useState(new Date().toISOString().split('T')[0]);
-  const [tab, setTab]                   = useState('today'); // today | history
 
   // Load dữ liệu
   useEffect(() => {
@@ -36,7 +34,6 @@ const Attendance = () => {
         const tRes = await api.get(`/teachers/by-user/${user?.id}`);
         const tid = tRes?.row?.id;
         if (!tid) { toast.error('Không tìm thấy giáo viên'); return; }
-        setTeacherId(tid);
 
         // Lịch dạy hôm nay
         const schedRes = await api.get(`/schedules?teacher_id=${tid}`);
