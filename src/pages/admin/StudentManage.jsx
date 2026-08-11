@@ -37,8 +37,23 @@ const StudentManage = () => {
     const fetchStudents = async () => {
       try {
         setLoadingStu(true);
-        const data = await studentService.getAll();
-        setStudents(data); setFilteredStu(data);
+        const [stuData, progressData] = await Promise.all([
+          studentService.getAll(),
+          api.get('/attendance/course-progress'),
+        ]);
+        // Gộp thông tin lớp + GV + khóa vào student
+        const progressMap = {};
+        (progressData.rows || []).forEach(p => {
+          progressMap[p.student_id] = {
+            class_name: p.class_name,
+            teacher_name: p.teacher_name,
+            current_course: p.current_course,
+            attended: p.attended,
+            total_sessions: p.total_sessions,
+          };
+        });
+        const merged = stuData.map(s => ({ ...s, ...(progressMap[s.id] || {}) }));
+        setStudents(merged); setFilteredStu(merged);
       } catch (err) { toast.error('Lỗi tải HV: ' + err.message); }
       finally { setLoadingStu(false); }
     };
@@ -60,7 +75,7 @@ const StudentManage = () => {
   useEffect(() => {
     const q = searchStu.toLowerCase();
     setFilteredStu(students.filter(s =>
-      s.name?.toLowerCase().includes(q) || s.phone?.includes(q) || s.instrument?.toLowerCase().includes(q)
+      s.name?.toLowerCase().includes(q) || s.phone?.includes(q) || s.instrument?.toLowerCase().includes(q) || s.class_name?.toLowerCase().includes(q) || s.teacher_name?.toLowerCase().includes(q)
     ));
   }, [searchStu, students]);
 
@@ -85,6 +100,16 @@ const StudentManage = () => {
     },
     { key: 'instrument', label: 'Nhạc cụ' },
     { key: 'level', label: 'Trình độ', render: (val) => <Badge label={val} variant={levelVariant[val] || 'gray'} /> },
+    { key: 'class_name', label: 'Lớp',
+      render: (val) => <span className="text-xs text-gray-600">{val || '—'}</span>
+    },
+    { key: 'teacher_name', label: 'Giáo viên',
+      render: (val) => <span className="text-xs text-gray-600">{val || '—'}</span>
+    },
+    { key: 'current_course', label: 'Khóa',
+      render: (val) => val ? <Badge label={`K${val}`} variant="blue" /> : <span className="text-xs text-gray-400">—</span>
+    },
+    { key: 'gender', label: 'Giới tính' },
     { key: 'status', label: 'Trạng thái',
       render: (val) => <Badge label={val === 'active' ? 'Đang học' : val === 'paused' ? 'Tạm nghỉ' : 'Nghỉ học'} variant={val === 'active' ? 'green' : val === 'paused' ? 'orange' : 'gray'} dot />
     },
@@ -108,9 +133,8 @@ const StudentManage = () => {
       )
     },
     { key: 'teacher_name', label: 'Giáo viên' },
-    { key: 'room_name',    label: 'Phòng' },
-    { key: 'schedule',     label: 'Lịch học' },
-    { key: 'tuition_fee',  label: 'Học phí', render: (val) => <span>{Number(val || 0).toLocaleString('vi-VN')}đ</span> },
+    { key: 'schedule', label: 'Lịch học' },
+    { key: 'tuition_fee', label: 'Học phí', render: (val) => <span>{Number(val||0).toLocaleString('vi-VN')}đ</span> },
     { key: 'status', label: 'Trạng thái', render: (val) => <Badge label={val} variant={STATUS_VARIANT[val] || 'gray'} dot /> },
     { key: 'id', label: '',
       render: (val) => (
@@ -127,11 +151,11 @@ const StudentManage = () => {
       {/* Tabs */}
       <div className="flex gap-1.5 mb-5 bg-gray-100 p-1 rounded-2xl">
         <button onClick={() => setSearchParams({ tab: 'students' })}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === 'students' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab==='students'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
           👨‍🎓 Học viên ({students.length})
         </button>
         <button onClick={() => setSearchParams({ tab: 'classes' })}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === 'classes' ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab==='classes'?'bg-white shadow text-primary-600':'text-gray-500'}`}>
           🎵 Lớp học ({classes.length})
         </button>
       </div>
