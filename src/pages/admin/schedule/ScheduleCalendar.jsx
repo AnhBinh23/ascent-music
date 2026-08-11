@@ -514,7 +514,7 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
                         {hours.map(h=>(
                           <div key={h} className="absolute w-full flex items-start justify-end pr-1"
                             style={{top:(h-START_HOUR)*SH,height:SH}}>
-                            <span className="text-xs text-gray-400 -mt-2">{h}:00</span>
+                            <span className="text-xs text-gray-400 -mt-2">{String(h).padStart(2,'0')}:00</span>
                           </div>
                         ))}
                       </div>
