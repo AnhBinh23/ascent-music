@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -26,7 +26,7 @@ const MySchedule = () => {
     class_id: '', day_of_week: 2, time_start: '08:00', time_end: '09:00', room_id: '',
   });
 
-  const loadData = useCallback(async () => {
+  const loadData = async () => {
     try {
       const tRes = await api.get(`/teachers/by-user/${user?.id}`);
       const tid = tRes?.row?.id;
@@ -43,9 +43,9 @@ const MySchedule = () => {
       setRooms(roomRes.rows || []);
     } catch (err) { console.error(err.message); }
     finally { setLoading(false); }
-  }, [user]);
+  };
 
-  useEffect(() => { if (user?.id) loadData(); }, [user, loadData]);
+  useEffect(() => { if (user?.id) loadData(); }, [user]);
 
   const handleAdd = async () => {
     if (!form.class_id || !form.time_start || !form.time_end) {
@@ -129,7 +129,13 @@ const MySchedule = () => {
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ bắt đầu *</label>
-              <input type="time" value={form.time_start} onChange={e => setForm(p => ({ ...p, time_start: e.target.value }))} className="input-field" />
+              <input type="time" value={form.time_start} onChange={e => {
+                const start = e.target.value;
+                const [h, m] = start.split(':').map(Number);
+                const endH = String(Math.min(h + 1, 23)).padStart(2, '0');
+                const endM = String(m).padStart(2, '0');
+                setForm(p => ({ ...p, time_start: start, time_end: `${endH}:${endM}` }));
+              }} className="input-field" />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ kết thúc *</label>
