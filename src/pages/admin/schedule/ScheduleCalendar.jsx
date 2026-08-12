@@ -5,7 +5,7 @@ import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import { toast } from 'react-toastify';
 
-const DAYS       = ['Thá»© 2','Thá»© 3','Thá»© 4','Thá»© 5','Thá»© 6','Thá»© 7','Chá»§ nháº­t'];
+const DAYS       = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
 const DAY_MAP    = [2,3,4,5,6,7,1];
 const START_HOUR = 7;
 const END_HOUR   = 21;
@@ -25,8 +25,8 @@ const CARD_COLORS = [
   'bg-purple-50 border-purple-200','bg-orange-50 border-orange-200','bg-pink-50 border-pink-200',
 ];
 const DAYS_OPT = [
-  {value:2,label:'Thá»© 2'},{value:3,label:'Thá»© 3'},{value:4,label:'Thá»© 4'},
-  {value:5,label:'Thá»© 5'},{value:6,label:'Thá»© 6'},{value:7,label:'Thá»© 7'},{value:1,label:'Chá»§ nháº­t'},
+  {value:2,label:'Thứ 2'},{value:3,label:'Thứ 3'},{value:4,label:'Thứ 4'},
+  {value:5,label:'Thứ 5'},{value:6,label:'Thứ 6'},{value:7,label:'Thứ 7'},{value:1,label:'Chủ nhật'},
 ];
 
 const t2m = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
@@ -42,8 +42,8 @@ const snapY = (cy,grid) => {
 };
 const getLabel = s => {
   if(s.class_type==='1v1'&&s.student_name) return `${s.student_name}: ${s.instrument||s.class_name}`;
-  if(s.class_type==='group') return `NhÃ³m (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
-  return s.class_name||'Lá»›p há»c';
+  if(s.class_type==='group') return `Nhóm (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
+  return s.class_name||'Lớp học';
 };
 const getDIM = ym => {
   const[y,mo]=ym.split('-').map(Number); const d=[]; const dt=new Date(y,mo-1,1);
@@ -61,10 +61,8 @@ const getWeekStart = (offsetWeeks=0) => {
 const getWeekDates = weekStart =>
   Array.from({length:7},(_,i)=>{ const d=new Date(weekStart); d.setDate(weekStart.getDate()+i); return d; });
 
-// dow(2=T2..7=T7,1=CN) â†’ weekDates index (0=Mon..6=Sun)
 const dowToWeekIdx = dow => dow===1 ? 6 : dow-2;
 
-// Merge base schedules + overrides cho tuáº§n cá»¥ thá»ƒ
 const mergeWithOverrides = (baseSchedules, overrides, weekDates) => {
   const result = [];
   for (const sched of baseSchedules) {
@@ -120,10 +118,10 @@ const layoutEvs = evs => {
   return s.map(ev=>({...ev,...map[ev.id]}));
 };
 
-// â”€â”€ Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Edit Modal ────────────────────────────────────────────────────────────────
 const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
   const [f, setF]       = useState(null);
-  const [applyTo, setApplyTo] = useState('permanent'); // 'week' | 'permanent'
+  const [applyTo, setApplyTo] = useState('permanent');
   const [saving, setSaving]   = useState(false);
 
   useEffect(()=>{
@@ -159,73 +157,73 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
             <h3 className="text-base font-bold text-gray-800">{getLabel(event)}</h3>
             <p className="text-xs text-gray-400">{event.class_name}</p>
             {event.is_override && (
-              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">âš¡ Lá»‹ch ngoáº¡i lá»‡ tuáº§n nÃ y</span>
+              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">⚡ Lịch ngoại lệ tuần này</span>
             )}
           </div>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">âœ•</button>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
         </div>
 
-        {/* Ãp dá»¥ng cho */}
+        {/* Áp dụng cho */}
         <div className="mb-4 p-3 bg-gray-50 rounded-xl">
-          <p className="text-xs font-semibold text-gray-600 mb-2">ðŸ“… Ãp dá»¥ng thay Ä‘á»•i cho:</p>
+          <p className="text-xs font-semibold text-gray-600 mb-2">📅 Áp dụng thay đổi cho:</p>
           <div className="flex gap-2">
             <button onClick={()=>setApplyTo('week')}
               className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all
                 ${applyTo==='week'?'bg-orange-500 text-white border-orange-500':'bg-white text-gray-600 border-gray-200'}`}>
-              ðŸ“† Tuáº§n nÃ y thÃ´i
+              📆 Tuần này thôi
             </button>
             <button onClick={()=>setApplyTo('permanent')}
               className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all
                 ${applyTo==='permanent'?'bg-primary-600 text-white border-primary-600':'bg-white text-gray-600 border-gray-200'}`}>
-              ðŸ” Táº¥t cáº£ cÃ¡c tuáº§n
+              🔁 Tất cả các tuần
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-2">
             {applyTo==='week'
-              ? 'âš¡ Chá»‰ Ä‘á»•i lá»‹ch ngÃ y '+new Date(event.actual_date||'').toLocaleDateString('vi-VN')+', tuáº§n sau trá»Ÿ vá» bÃ¬nh thÆ°á»ng'
-              : 'ðŸ” Thay Ä‘á»•i lá»‹ch cá»‘ Ä‘á»‹nh cho táº¥t cáº£ cÃ¡c tuáº§n'}
+              ? '⚡ Chỉ đổi lịch ngày '+new Date(event.actual_date||'').toLocaleDateString('vi-VN')+', tuần sau trở về bình thường'
+              : '🔁 Thay đổi lịch cố định cho tất cả các tuần'}
           </p>
         </div>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-  <label className="text-xs font-medium text-gray-600">ðŸ“… Thá»©</label>
-  <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
-    {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
-  </select>
-  {applyTo==='week' && (
-    <p className="text-xs text-orange-500">âš¡ Äá»•i ngÃ y/giá» tuáº§n nÃ y thÃ´i, tuáº§n sau vá» lá»‹ch gá»‘c</p>
-  )}
-</div>
-{applyTo === 'week' && (
-  <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
-    ðŸ“… NgÃ y dáº¡y: <span className="font-semibold">{DAYS_OPT.find(d=>d.value===Number(f.day_of_week))?.label}</span>
-    <p className="text-xs text-gray-400 mt-0.5">âš¡ Chá»‰ Ä‘á»•i giá», khÃ´ng Ä‘á»•i ngÃ y</p>
-  </div>
-)}
+            <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
+            <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
+              {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+            {applyTo==='week' && (
+              <p className="text-xs text-orange-500">⚡ Đổi ngày/giờ tuần này thôi, tuần sau về lịch gốc</p>
+            )}
+          </div>
+          {applyTo === 'week' && (
+            <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
+              📅 Ngày dạy: <span className="font-semibold">{DAYS_OPT.find(d=>d.value===Number(f.day_of_week))?.label}</span>
+              <p className="text-xs text-gray-400 mt-0.5">⚡ Chỉ đổi giờ, không đổi ngày</p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">ðŸ• Báº¯t Ä‘áº§u</label>
+              <label className="text-xs font-medium text-gray-600">🕐 Bắt đầu</label>
               <input type="time" name="time_start" value={f.time_start} onChange={hc} className="input-field text-sm"/>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">ðŸ• Káº¿t thÃºc</label>
+              <label className="text-xs font-medium text-gray-600">🕐 Kết thúc</label>
               <input type="time" name="time_end" value={f.time_end} onChange={hc} className="input-field text-sm"/>
             </div>
           </div>
           {applyTo==='permanent'&&(
             <>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">ðŸ‘¨â€ðŸ« GiÃ¡o viÃªn</label>
+                <label className="text-xs font-medium text-gray-600">👨‍🏫 Giáo viên</label>
                 <select name="teacher_id" value={f.teacher_id} onChange={hc} className="input-field text-sm">
-                  <option value="">-- Chá»n --</option>
+                  <option value="">-- Chọn --</option>
                   {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">ðŸšª PhÃ²ng</label>
+                <label className="text-xs font-medium text-gray-600">🚪 Phòng</label>
                 <select name="room_id" value={f.room_id} onChange={hc} className="input-field text-sm">
-                  <option value="">-- Chá»n --</option>
+                  <option value="">-- Chọn --</option>
                   {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </div>
@@ -234,20 +232,19 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
         </div>
 
         <div className="flex gap-2 mt-4">
-          {/* NÃºt hoÃ n tÃ¡c náº¿u Ä‘ang lÃ  override */}
           {event.is_override && (
             <button onClick={()=>{ onDelete(event, 'override'); onClose(); }}
               className="px-3 py-2.5 rounded-xl bg-orange-50 text-orange-500 font-medium text-sm">
-              â†©ï¸ Vá» lá»‹ch gá»‘c
+              ↩️ Về lịch gốc
             </button>
           )}
           {applyTo==='permanent'&&(
             <button onClick={()=>{ onDelete(event, 'permanent'); onClose(); }}
-              className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">ðŸ—‘ï¸ XÃ³a</button>
+              className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">🗑️ Xóa</button>
           )}
           <button onClick={handleSave} disabled={saving}
             className="flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm disabled:opacity-50">
-            {saving?'â³...':'ðŸ’¾ LÆ°u'}
+            {saving?'⏳...':'💾 Lưu'}
           </button>
         </div>
       </div>
@@ -255,7 +252,7 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
   );
 });
 
-// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main ──────────────────────────────────────────────────────────────────────
 const ScheduleCalendar = () => {
   const navigate      = useNavigate();
   const gridRef       = useRef(null);
@@ -284,10 +281,10 @@ const ScheduleCalendar = () => {
   const formatWeekLabel = () => {
     const s=weekStart.toLocaleDateString('vi-VN',{day:'numeric',month:'numeric'});
     const e=weekEnd.toLocaleDateString('vi-VN',{day:'numeric',month:'numeric',year:'numeric'});
-    if(weekOffset===0) return `Tuáº§n nÃ y Â· ${s} â€“ ${e}`;
-    if(weekOffset===-1) return `Tuáº§n trÆ°á»›c Â· ${s} â€“ ${e}`;
-    if(weekOffset===1) return `Tuáº§n sau Â· ${s} â€“ ${e}`;
-    return `${s} â€“ ${e}`;
+    if(weekOffset===0) return `Tuần này · ${s} – ${e}`;
+    if(weekOffset===-1) return `Tuần trước · ${s} – ${e}`;
+    if(weekOffset===1) return `Tuần sau · ${s} – ${e}`;
+    return `${s} – ${e}`;
   };
 
   const loadBase = useCallback(async()=>{
@@ -300,18 +297,18 @@ const ScheduleCalendar = () => {
   },[]);
 
   const loadOverrides = useCallback(async()=>{
-  const wStart = getWeekStart(weekOffset);
-  const wDates = getWeekDates(wStart);
-  try{
-    const start = wDates[0].toISOString().split('T')[0];
-    const end   = wDates[6].toISOString().split('T')[0];
-    const res   = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}`);
-    setOverrides(res.rows||[]);
-  }catch(e){ console.error(e.message); }
-},[weekOffset]);
+    const wStart = getWeekStart(weekOffset);
+    const wDates = getWeekDates(wStart);
+    try{
+      const start = wDates[0].toISOString().split('T')[0];
+      const end   = wDates[6].toISOString().split('T')[0];
+      const res   = await api.get(`/schedule-overrides?start_date=${start}&end_date=${end}`);
+      setOverrides(res.rows||[]);
+    }catch(e){ console.error(e.message); }
+  },[weekOffset]);
 
-useEffect(()=>{ loadBase(); },[loadBase]);
-useEffect(()=>{ loadOverrides(); },[loadOverrides]);
+  useEffect(()=>{ loadBase(); },[loadBase]);
+  useEffect(()=>{ loadOverrides(); },[loadOverrides]);
 
   const showInd = useCallback((dayIdx,mins,dur)=>{
     Object.values(indicatorRefs.current).forEach(el=>{if(el)el.style.display='none';});
@@ -331,7 +328,7 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
         class_id:sched.class_id,teacher_id:sched.teacher_id,room_id:sched.room_id,
         day_of_week:newDow,time_start:newStart,time_end:newEnd,type:sched.type,note:sched.note,
       });
-      toast.success('Di chuyá»ƒn lá»‹ch thÃ nh cÃ´ng!');
+      toast.success('Di chuyển lịch thành công!');
     }catch(e){ toast.error(e.message); loadBase(); }
   },[loadBase]);
 
@@ -340,7 +337,6 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
     const ne=f.time_end.length===5?f.time_end+':00':f.time_end;
 
     if(applyTo==='week'){
-      // Táº¡o override cho ngÃ y cá»¥ thá»ƒ
       try{
         await api.post('/schedule-overrides',{
           schedule_id:  event.id,
@@ -350,20 +346,19 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
           new_time_end:   ne,
           room_id:        f.room_id||null,
           status:         'rescheduled',
-          note:           `Äá»•i lá»‹ch tuáº§n ${event.actual_date}`,
+          note:           `Đổi lịch tuần ${event.actual_date}`,
         });
-        toast.success('âœ… ÄÃ£ Ä‘á»•i lá»‹ch tuáº§n nÃ y! Tuáº§n sau sáº½ trá»Ÿ vá» bÃ¬nh thÆ°á»ng.');
+        toast.success('✅ Đã đổi lịch tuần này! Tuần sau sẽ trở về bình thường.');
         await loadOverrides();
       }catch(e){ toast.error(e.message); }
     } else {
-      // Cáº­p nháº­t lá»‹ch cá»‘ Ä‘á»‹nh
       setSchedules(p=>p.map(s=>s.id===event.id?{...s,day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,teacher_id:f.teacher_id,room_id:f.room_id}:s));
       try{
         await api.put(`/schedules/${event.id}`,{
           class_id:event.class_id,teacher_id:f.teacher_id,room_id:f.room_id,
           day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,type:event.type,note:event.note,
         });
-        toast.success('âœ… Cáº­p nháº­t lá»‹ch cá»‘ Ä‘á»‹nh thÃ nh cÃ´ng!');
+        toast.success('✅ Cập nhật lịch cố định thành công!');
         loadBase();
       }catch(e){ toast.error(e.message); loadBase(); }
     }
@@ -371,18 +366,17 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
 
   const handleDelete = useCallback(async(event, type)=>{
     if(type==='override'){
-      // HoÃ n tÃ¡c override
       try{
         await api.delete(`/schedule-overrides/${event.id}/${event.actual_date}`);
-        toast.success('â†©ï¸ ÄÃ£ vá» lá»‹ch bÃ¬nh thÆ°á»ng!');
+        toast.success('↩️ Đã về lịch bình thường!');
         await loadOverrides();
       }catch(e){ toast.error(e.message); }
     } else {
-      if(!window.confirm('XÃ³a lá»‹ch há»c nÃ y vÄ©nh viá»…n?')) return;
+      if(!window.confirm('Xóa lịch học này vĩnh viễn?')) return;
       try{
         await api.delete(`/schedules/${event.id}`);
         setSchedules(p=>p.filter(s=>s.id!==event.id));
-        toast.success('ÄÃ£ xÃ³a!');
+        toast.success('Đã xóa!');
       }catch(e){ toast.error(e.message); }
     }
   },[loadOverrides]);
@@ -410,47 +404,41 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
     if(!dragData.current)return;
     const{id,dur,sched}=dragData.current;
     const mins=snapY(e.clientY,gridRef.current);
-    if(mins+dur>END_HOUR*60){toast.error('VÆ°á»£t quÃ¡ giá» káº¿t thÃºc!');return;}
+    if(mins+dur>END_HOUR*60){toast.error('Vượt quá giờ kết thúc!');return;}
     setDraggingId(null); dragData.current=null;
     await applyDrop(id,sched,DAY_MAP[di],m2t(mins),m2t(mins+dur));
   },[hideInd,applyDrop]);
 
-  // â”€â”€ Computed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const filtered = filterTeacher ? schedules.filter(s=>s.teacher_id===filterTeacher) : schedules;
-
-  // Merge base + overrides cho tuáº§n Ä‘ang xem
   const weekSchedules = mergeWithOverrides(filtered, overrides, weekDates);
-
   const hours  = Array.from({length:END_HOUR-START_HOUR},(_,i)=>START_HOUR+i);
   const totalH = hours.length*SH;
   const cmap   = {};
   filtered.forEach(s=>{if(!cmap[s.class_id])cmap[s.class_id]=COLORS[Object.keys(cmap).length%COLORS.length];});
-
-  // byDay dÃ¹ng weekSchedules (Ä‘Ã£ merge override)
   const byDay  = DAY_MAP.map(d=>layoutEvs(weekSchedules.filter(s=>s.day_of_week===d)));
   const byDate = filtered.filter(s=>s.day_of_week===dow(selDate));
 
   return(
-    <MainLayout title="Lá»‹ch há»c">
+    <MainLayout title="Lịch học">
       <EditModal event={editEvent} teachers={teachers} rooms={rooms}
         onClose={()=>setEditEvent(null)} onSave={handleSave} onDelete={handleDelete}/>
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <p className="text-xs text-gray-400 hidden sm:block">âœï¸ Báº¥m Ä‘á»ƒ sá»­a Â· ðŸ–±ï¸ KÃ©o tháº£ = Ä‘á»•i cá»‘ Ä‘á»‹nh</p>
+        <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm để sửa · 🖱️ Kéo thả = đổi cố định</p>
         <div className="flex items-center gap-2">
           <select value={filterTeacher} onChange={e=>setFilterTeacher(e.target.value)}
             className="input-field text-sm w-auto">
-            <option value="">Táº¥t cáº£ giÃ¡o viÃªn</option>
+            <option value="">Tất cả giáo viên</option>
             {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
-          <Button icon="âž•" onClick={()=>navigate('/admin/schedule/new')}>ThÃªm lá»‹ch</Button>
+          <Button icon="➕" onClick={()=>navigate('/admin/schedule/new')}>Thêm lịch</Button>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-2xl">
-        {[{key:'week',label:'ðŸ“… Lá»‹ch tuáº§n'},{key:'date',label:'ðŸ—“ï¸ Theo ngÃ y'},{key:'month',label:'ðŸ“† Theo thÃ¡ng'}].map(t=>(
+        {[{key:'week',label:'📅 Lịch tuần'},{key:'date',label:'🗓️ Theo ngày'},{key:'month',label:'📆 Theo tháng'}].map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
             className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all
               ${tab===t.key?'bg-white shadow text-primary-600':'text-gray-500'}`}>
@@ -459,28 +447,28 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
         ))}
       </div>
 
-      {loading?<div className="text-center py-20 text-gray-400">Äang táº£i...</div>:(
+      {loading?<div className="text-center py-20 text-gray-400">Đang tải...</div>:(
         <>
           {tab==='week'&&(
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              {/* Navigation tuáº§n */}
+              {/* Navigation tuần */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                 <button onClick={()=>setWeekOffset(w=>w-1)}
                   className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                  â† Tuáº§n trÆ°á»›c
+                  ← Tuần trước
                 </button>
                 <div className="text-center">
                   <p className="text-sm font-semibold text-gray-700">{formatWeekLabel()}</p>
                   {weekOffset!==0&&(
                     <button onClick={()=>setWeekOffset(0)}
                       className="text-xs text-primary-500 hover:text-primary-700 mt-0.5">
-                      Vá» tuáº§n nÃ y
+                      Về tuần này
                     </button>
                   )}
                 </div>
                 <button onClick={()=>setWeekOffset(w=>w+1)}
                   className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                  Tuáº§n sau â†’
+                  Tuần sau →
                 </button>
               </div>
 
@@ -490,7 +478,6 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
                     <div className="p-2 bg-gray-50"/>
                     {weekDates.map((date,di)=>{
                       const isToday=date.toDateString()===new Date().toDateString();
-                      // CÃ³ override trong ngÃ y nÃ y khÃ´ng?
                       const dateStr=date.toISOString().split('T')[0];
                       const hasOverride=overrides.some(o=>o.original_date?.slice(0,10)===dateStr);
                       return(
@@ -502,7 +489,7 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
                             {date.getDate()}/{date.getMonth()+1}
                           </p>
                           {isToday&&<div className="w-1.5 h-1.5 bg-primary-500 rounded-full mx-auto mt-0.5"/>}
-                          {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="CÃ³ lá»‹ch ngoáº¡i lá»‡"/>}
+                          {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="Có lịch ngoại lệ"/>}
                         </div>
                       );
                     })}
@@ -560,11 +547,11 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
                                   <div className="px-1.5 py-1 h-full flex flex-col">
                                     <p className="text-xs font-bold leading-tight truncate"
                                       style={{color: s.is_override ? '#c2410c' : c.text}}>
-                                      {s.is_override && 'âš¡'}{getLabel(s)}
+                                      {s.is_override && '⚡'}{getLabel(s)}
                                     </p>
                                     {h0>34&&<p className="text-xs"
                                       style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.8}}>
-                                      {s.time_start?.slice(0,5)}â€“{s.time_end?.slice(0,5)}
+                                      {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}
                                     </p>}
                                     {h0>50&&<p className="text-xs truncate"
                                       style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.7}}>
@@ -591,8 +578,8 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
               </div>
               {!weekSchedules.length&&(
                 <div className="text-center py-16">
-                  <p className="text-4xl mb-3">ðŸ“…</p>
-                  <p className="text-gray-400">ChÆ°a cÃ³ lá»‹ch há»c nÃ o</p>
+                  <p className="text-4xl mb-3">📅</p>
+                  <p className="text-gray-400">Chưa có lịch học nào</p>
                 </div>
               )}
             </div>
@@ -606,15 +593,15 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
                   {new Date(selDate).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
                 </p>
                 {!byDate.length?(
-                  <p className="text-center text-gray-400 py-8">KhÃ´ng cÃ³ lá»‹ch há»c ngÃ y nÃ y</p>
+                  <p className="text-center text-gray-400 py-8">Không có lịch học ngày này</p>
                 ):(
                   <div className="flex flex-col gap-3">
                     {[...byDate].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
                       <div key={s.id} onClick={()=>setEditEvent({...s,actual_date:selDate})}
                         className={`p-4 rounded-2xl border cursor-pointer active:scale-95 transition-transform ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                         <p className="font-bold text-gray-800">{getLabel(s)}</p>
-                        <p className="text-sm text-gray-600 mt-1">ðŸ• {s.time_start?.slice(0,5)} â€“ {s.time_end?.slice(0,5)}</p>
-                        <p className="text-sm text-gray-500">ðŸ‘¨â€ðŸ« {s.teacher_name} Â· ðŸšª {s.room_name}</p>
+                        <p className="text-sm text-gray-600 mt-1">🕐 {s.time_start?.slice(0,5)} – {s.time_end?.slice(0,5)}</p>
+                        <p className="text-sm text-gray-500">👨‍🏫 {s.teacher_name} · 🚪 {s.room_name}</p>
                       </div>
                     ))}
                   </div>
@@ -636,7 +623,7 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
                         <p className="text-sm font-semibold text-gray-700 capitalize">
                           {new Date(d).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric'})}
                         </p>
-                        <p className="text-xs text-gray-400">{ds.length} lá»›p</p>
+                        <p className="text-xs text-gray-400">{ds.length} lớp</p>
                       </div>
                       <div className="p-3 flex flex-col gap-2">
                         {[...ds].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
@@ -644,7 +631,7 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
                             className={`p-3 rounded-xl border cursor-pointer active:scale-95 ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                             <p className="text-sm font-bold text-gray-800">{getLabel(s)}</p>
                             <p className="text-xs text-gray-600">
-                              {s.time_start?.slice(0,5)}â€“{s.time_end?.slice(0,5)} Â· {s.teacher_name} Â· {s.room_name}
+                              {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · {s.teacher_name} · {s.room_name}
                             </p>
                           </div>
                         ))}
@@ -654,8 +641,8 @@ useEffect(()=>{ loadOverrides(); },[loadOverrides]);
                 })}
                 {getDIM(selMonth).every(d=>!filtered.filter(s=>s.day_of_week===dow(d)).length)&&(
                   <div className="text-center py-12 text-gray-400">
-                    <p className="text-3xl mb-2">ðŸ“†</p>
-                    <p className="text-sm">KhÃ´ng cÃ³ lá»‹ch há»c trong thÃ¡ng nÃ y</p>
+                    <p className="text-3xl mb-2">📆</p>
+                    <p className="text-sm">Không có lịch học trong tháng này</p>
                   </div>
                 )}
               </div>
