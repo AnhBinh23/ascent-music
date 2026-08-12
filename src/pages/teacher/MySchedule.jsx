@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -6,13 +6,20 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 
-const DAY_MAP = { 1:'Chủ nhật', 2:'Thứ 2', 3:'Thứ 3', 4:'Thứ 4', 5:'Thứ 5', 6:'Thứ 6', 7:'Thứ 7' };
-const DAY_OPTIONS = [
-  { value: 2, label: 'Thứ 2' }, { value: 3, label: 'Thứ 3' },
-  { value: 4, label: 'Thứ 4' }, { value: 5, label: 'Thứ 5' },
-  { value: 6, label: 'Thứ 6' }, { value: 7, label: 'Thứ 7' },
-  { value: 1, label: 'Chủ nhật' },
+const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN'];
+const DAY_MAP = [2,3,4,5,6,7,1];
+const DAY_LABELS = { 1:'CN', 2:'T2', 3:'T3', 4:'T4', 5:'T5', 6:'T6', 7:'T7' };
+const START_HOUR = 7, END_HOUR = 21, SH = 60;
+const COLORS = [
+  { bg:'#dbeafe', border:'#93c5fd', text:'#1e40af' },
+  { bg:'#dcfce7', border:'#86efac', text:'#166534' },
+  { bg:'#fef3c7', border:'#fcd34d', text:'#92400e' },
+  { bg:'#ede9fe', border:'#c4b5fd', text:'#5b21b6' },
+  { bg:'#ffe4e6', border:'#fda4af', text:'#9f1239' },
+  { bg:'#ffedd5', border:'#fdba74', text:'#9a3412' },
 ];
+
+const t2m = t => { const[h,m]=String(t||'08:00').split(':').map(Number); return h*60+(m||0); };
 
 const MySchedule = () => {
   const { user } = useAuth();
@@ -20,24 +27,24 @@ const MySchedule = () => {
   const [myClasses, setMyClasses] = useState([]);
   const [rooms, setRooms]         = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [view, setView]           = useState('week');
   const [showForm, setShowForm]   = useState(false);
   const [saving, setSaving]       = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm]           = useState({
     class_id: '', day_of_week: 2, time_start: '08:00', time_end: '09:00', room_id: '',
   });
+  const gridRef = useRef(null);
 
   const loadData = async () => {
     try {
       const tRes = await api.get(`/teachers/by-user/${user?.id}`);
       const tid = tRes?.row?.id;
       if (!tid) return;
-
       const [schedRes, classRes, roomRes] = await Promise.all([
         api.get(`/schedules/teacher/${tid}`),
         api.get(`/classes?teacher_id=${tid}`),
         api.get('/rooms'),
       ]);
-
       setSchedules(schedRes.rows || []);
       setMyClasses((classRes.rows || []).filter(c => c.status === 'Đang học'));
       setRooms(roomRes.rows || []);
@@ -46,6 +53,21 @@ const MySchedule = () => {
   };
 
   useEffect(() => { if (user?.id) loadData(); }, [user]);
+
+  // Scroll to 7:00
+  useEffect(() => {
+    if (gridRef.current && view === 'week') {
+      gridRef.current.scrollTop = 0;
+    }
+  }, [view]);
+
+  const handleTimeStartChange = (e) => {
+    const start = e.target.value;
+    const [h, m] = start.split(':').map(Number);
+    const endH = String(Math.min(h + 1, 23)).padStart(2, '0');
+    const endM = String(m).padStart(2, '0');
+    setForm(p => ({ ...p, time_start: start, time_end: `${endH}:${endM}` }));
+  };
 
   const handleAdd = async () => {
     if (!form.class_id || !form.time_start || !form.time_end) {
@@ -71,41 +93,37 @@ const MySchedule = () => {
     } catch (err) { toast.error(err.message); }
   };
 
-  // Nhóm theo thứ
-  const grouped = schedules.reduce((acc, s) => {
-    const day = DAY_MAP[s.day_of_week] || `Thứ ${s.day_of_week}`;
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(s);
-    return acc;
-  }, {});
-  const sortedDays = Object.entries(grouped).sort((a, b) => {
-    const order = Object.values(DAY_MAP);
-    return order.indexOf(a[0]) - order.indexOf(b[0]);
-  });
+  // Color map per class
+  const colorMap = {};
+  let ci = 0;
+  schedules.forEach(s => { if (!colorMap[s.class_id]) colorMap[s.class_id] = COLORS[ci++ % COLORS.length]; });
 
-  const todayDow = new Date().getDay() === 0 ? 1 : new Date().getDay() + 1;
-  const todayName = DAY_MAP[todayDow];
+  // Group by day for week view
+  const byDay = DAY_MAP.map(dow => schedules.filter(s => Number(s.day_of_week) === dow));
+
+  const todayJs = new Date().getDay();
+  const todayIdx = todayJs === 0 ? 6 : todayJs - 1;
+
+  const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
   if (loading) return <MainLayout title="Lịch dạy"><p className="text-center text-gray-400 py-20">Đang tải...</p></MainLayout>;
 
   return (
     <MainLayout title="Lịch dạy">
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="card text-center">
-          <p className="text-2xl font-bold text-primary-600">{schedules.length}</p>
-          <p className="text-xs text-gray-500 mt-1">Buổi / tuần</p>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl">
+          {[
+            { key: 'week', label: '📅 Lịch tuần' },
+            { key: 'list', label: '📋 Danh sách' },
+          ].map(t => (
+            <button key={t.key} onClick={() => setView(t.key)}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${view === t.key ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
+              {t.label}
+            </button>
+          ))}
         </div>
-        <div className="card text-center">
-          <p className="text-2xl font-bold text-green-600">{schedules.filter(s => Number(s.day_of_week) === todayDow).length}</p>
-          <p className="text-xs text-gray-500 mt-1">Buổi hôm nay</p>
-        </div>
-      </div>
-
-      {/* Nút thêm */}
-      <div className="flex justify-end mb-4">
         <Button icon="➕" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Đóng' : 'Thêm lịch dạy'}
+          {showForm ? 'Đóng' : 'Thêm lịch'}
         </Button>
       </div>
 
@@ -124,18 +142,12 @@ const MySchedule = () => {
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1 block">Thứ *</label>
               <select value={form.day_of_week} onChange={e => setForm(p => ({ ...p, day_of_week: Number(e.target.value) }))} className="input-field">
-                {DAY_OPTIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                {DAY_MAP.map((d, i) => <option key={d} value={d}>{DAYS[i]}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ bắt đầu *</label>
-              <input type="time" value={form.time_start} onChange={e => {
-                const start = e.target.value;
-                const [h, m] = start.split(':').map(Number);
-                const endH = String(Math.min(h + 1, 23)).padStart(2, '0');
-                const endM = String(m).padStart(2, '0');
-                setForm(p => ({ ...p, time_start: start, time_end: `${endH}:${endM}` }));
-              }} className="input-field" />
+              <input type="time" value={form.time_start} onChange={handleTimeStartChange} className="input-field" />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ kết thúc *</label>
@@ -156,45 +168,130 @@ const MySchedule = () => {
         </div>
       )}
 
-      {/* Lịch tuần */}
-      {schedules.length === 0 ? (
-        <div className="card text-center py-10">
-          <p className="text-3xl mb-2">📅</p>
-          <p className="text-gray-400">Chưa có lịch dạy</p>
-          <p className="text-xs text-gray-400 mt-1">Bấm "Thêm lịch dạy" để bắt đầu</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {sortedDays.map(([day, items]) => (
-            <div key={day}>
-              <div className="flex items-center gap-2 mb-2">
-                <p className={`text-sm font-bold ${day === todayName ? 'text-primary-600' : 'text-gray-600'}`}>{day}</p>
-                {day === todayName && <Badge label="Hôm nay" variant="green" />}
-                <span className="text-xs text-gray-400">{items.length} buổi</span>
+      {/* ── VIEW: Lịch tuần (giống admin) ── */}
+      {view === 'week' && (
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          {/* Header ngày */}
+          <div className="grid border-b border-gray-200" style={{ gridTemplateColumns: '50px repeat(7, 1fr)' }}>
+            <div className="p-2 bg-gray-50" />
+            {DAYS.map((d, i) => (
+              <div key={i} className={`py-2 text-center border-l border-gray-100 ${i === todayIdx ? 'bg-primary-50' : 'bg-gray-50'}`}>
+                <p className={`text-xs font-semibold ${i === todayIdx ? 'text-primary-600' : 'text-gray-500'}`}>{d}</p>
+                {i === todayIdx && <div className="w-1.5 h-1.5 bg-primary-500 rounded-full mx-auto mt-1" />}
               </div>
-              <div className="flex flex-col gap-2">
-                {items.sort((a,b) => (a.time_start||'').localeCompare(b.time_start||'')).map((s, i) => (
-                  <div key={i} className={`flex items-center justify-between p-3 rounded-2xl border ${day === todayName ? 'bg-primary-50 border-primary-100' : 'bg-white border-gray-100'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center text-xs font-bold ${day === todayName ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'}`}>
-                        <span>{String(s.time_start||'').slice(0,5)}</span>
-                        <span className="text-gray-400 font-normal" style={{fontSize:9}}>{String(s.time_end||'').slice(0,5)}</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800">{s.class_name}</p>
-                        <p className="text-xs text-gray-500">{s.room_name || 'Chưa xếp phòng'} · {s.instrument || ''}</p>
-                      </div>
-                    </div>
-                    <button onClick={() => handleDelete(s.id)}
-                      className="text-gray-300 hover:text-red-500 transition-colors text-sm p-2" title="Xóa lịch">
-                      🗑️
-                    </button>
+            ))}
+          </div>
+
+          {/* Grid giờ */}
+          <div ref={gridRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 350px)' }}>
+            <div className="grid" style={{ gridTemplateColumns: '50px repeat(7, 1fr)' }}>
+              {/* Cột giờ */}
+              <div className="relative" style={{ height: hours.length * SH }}>
+                {hours.map(h => (
+                  <div key={h} className="absolute w-full flex items-start justify-end pr-1"
+                    style={{ top: (h - START_HOUR) * SH, height: SH }}>
+                    <span className="text-xs text-gray-400 -mt-2">{String(h).padStart(2, '0')}:00</span>
                   </div>
                 ))}
               </div>
+
+              {/* 7 cột ngày */}
+              {byDay.map((daySchedules, di) => (
+                <div key={di} className={`relative border-l border-gray-100 ${di === todayIdx ? 'bg-primary-50/30' : ''}`}
+                  style={{ height: hours.length * SH }}>
+                  {/* Đường kẻ giờ */}
+                  {hours.map(h => (
+                    <div key={h} className="absolute w-full border-t border-gray-50"
+                      style={{ top: (h - START_HOUR) * SH }} />
+                  ))}
+
+                  {/* Events */}
+                  {daySchedules.map(s => {
+                    const startMin = t2m(s.time_start);
+                    const endMin   = t2m(s.time_end);
+                    const top  = (startMin / 60 - START_HOUR) * SH;
+                    const h0   = Math.max((endMin - startMin) / 60 * SH, 30);
+                    const color = colorMap[s.class_id] || COLORS[0];
+                    return (
+                      <div key={s.id}
+                        className="absolute left-1 right-1 rounded-lg border overflow-hidden cursor-pointer group"
+                        style={{ top, height: h0, backgroundColor: color.bg, borderColor: color.border }}
+                        title={`${s.class_name}\n${String(s.time_start||'').slice(0,5)}–${String(s.time_end||'').slice(0,5)}\n${s.room_name||''}`}>
+                        <div className="px-1.5 py-1 h-full flex flex-col justify-between">
+                          <div>
+                            <p className="text-xs font-bold truncate" style={{ color: color.text }}>{s.class_name}</p>
+                            {h0 > 35 && <p className="text-xs truncate" style={{ color: color.text, opacity: 0.7 }}>
+                              {String(s.time_start||'').slice(0,5)}–{String(s.time_end||'').slice(0,5)}
+                            </p>}
+                            {h0 > 50 && <p className="text-xs truncate" style={{ color: color.text, opacity: 0.6 }}>
+                              {s.room_name || ''}
+                            </p>}
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-white/80 rounded-full flex items-center justify-center text-xs text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100">
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
+      )}
+
+      {/* ── VIEW: Danh sách ── */}
+      {view === 'list' && (
+        <>
+          {schedules.length === 0 ? (
+            <div className="card text-center py-10">
+              <p className="text-3xl mb-2">📅</p>
+              <p className="text-gray-400">Chưa có lịch dạy</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {DAY_MAP.map((dow, di) => {
+                const items = schedules.filter(s => Number(s.day_of_week) === dow)
+                  .sort((a, b) => (a.time_start || '').localeCompare(b.time_start || ''));
+                if (!items.length) return null;
+                return (
+                  <div key={dow}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className={`text-sm font-bold ${di === todayIdx ? 'text-primary-600' : 'text-gray-600'}`}>{DAYS[di]}</p>
+                      {di === todayIdx && <Badge label="Hôm nay" variant="green" />}
+                      <span className="text-xs text-gray-400">{items.length} buổi</span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {items.map(s => {
+                        const color = colorMap[s.class_id] || COLORS[0];
+                        return (
+                          <div key={s.id} className="flex items-center justify-between p-3 rounded-2xl border"
+                            style={{ backgroundColor: color.bg, borderColor: color.border }}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center text-xs font-bold"
+                                style={{ backgroundColor: 'rgba(255,255,255,0.6)', color: color.text }}>
+                                <span>{String(s.time_start || '').slice(0, 5)}</span>
+                                <span style={{ opacity: 0.6, fontSize: 9 }}>{String(s.time_end || '').slice(0, 5)}</span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold" style={{ color: color.text }}>{s.class_name}</p>
+                                <p className="text-xs" style={{ color: color.text, opacity: 0.7 }}>{s.room_name || 'Chưa xếp phòng'} · {s.instrument || ''}</p>
+                              </div>
+                            </div>
+                            <button onClick={() => handleDelete(s.id)}
+                              className="text-gray-300 hover:text-red-500 transition-colors text-sm p-2" title="Xóa">🗑️</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </MainLayout>
   );
