@@ -34,6 +34,14 @@ const MySchedule = () => {
     class_id: '', day_of_week: 2, time_start: '08:00', time_end: '09:00', room_id: '',
   });
   const gridRef = useRef(null);
+  const [makeups, setMakeups]       = useState([]);
+  const [showMakeup, setShowMakeup] = useState(false);
+  const [students, setStudents]     = useState([]);
+  const [makeupForm, setMakeupForm] = useState({
+    student_id: '', class_id: '', original_date: '', makeup_date: '',
+    makeup_time_start: '08:00', makeup_time_end: '09:00', room_id: '', note: '',
+  });
+  const [savingMakeup, setSavingMakeup] = useState(false);
 
   const loadData = async () => {
     try {
@@ -48,6 +56,10 @@ const MySchedule = () => {
       setSchedules(schedRes.rows || []);
       setMyClasses((classRes.rows || []).filter(c => c.status === 'Đang học'));
       setRooms(roomRes.rows || []);
+
+      // Load lịch bù + HV
+      const [mkRes] = await Promise.all([api.get('/makeup')]);
+      setMakeups(mkRes.rows || []);
     } catch (err) { console.error(err.message); }
     finally { setLoading(false); }
   };
@@ -60,6 +72,45 @@ const MySchedule = () => {
       gridRef.current.scrollTop = 0;
     }
   }, [view]);
+
+  const handleMakeupClassChange = async (classId) => {
+    setMakeupForm(p => ({ ...p, class_id: classId, student_id: '' }));
+    if (classId) {
+      try {
+        const res = await api.get(`/classes/${classId}/students`);
+        setStudents(res.rows || []);
+      } catch { setStudents([]); }
+    } else { setStudents([]); }
+  };
+
+  const handleMakeupTimeStart = (e) => {
+    const start = e.target.value;
+    const [h, m] = start.split(':').map(Number);
+    const endH = String(Math.min(h + 1, 23)).padStart(2, '0');
+    const endM = String(m).padStart(2, '0');
+    setMakeupForm(p => ({ ...p, makeup_time_start: start, makeup_time_end: `${endH}:${endM}` }));
+  };
+
+  const handleCreateMakeup = async () => {
+    if (!makeupForm.student_id || !makeupForm.class_id || !makeupForm.makeup_date) {
+      toast.error('Chọn HV, lớp và ngày bù!'); return;
+    }
+    setSavingMakeup(true);
+    try {
+      await api.post('/makeup', makeupForm);
+      toast.success('✅ Đã tạo lịch bù! Admin sẽ nhận thông báo.');
+      setShowMakeup(false);
+      setMakeupForm({ student_id:'', class_id:'', original_date:'', makeup_date:'', makeup_time_start:'08:00', makeup_time_end:'09:00', room_id:'', note:'' });
+      await loadData();
+    } catch (err) { toast.error(err.message); }
+    finally { setSavingMakeup(false); }
+  };
+
+  const handleDeleteMakeup = async (id) => {
+    if (!window.confirm('Xóa lịch bù này?')) return;
+    try { await api.delete(`/makeup/${id}`); toast.success('Đã xóa!'); await loadData(); }
+    catch (err) { toast.error(err.message); }
+  };
 
   const handleTimeStartChange = (e) => {
     const start = e.target.value;
@@ -115,6 +166,7 @@ const MySchedule = () => {
           {[
             { key: 'week', label: '📅 Lịch tuần' },
             { key: 'list', label: '📋 Danh sách' },
+            { key: 'makeup', label: `🔄 Học bù (${makeups.length})` },
           ].map(t => (
             <button key={t.key} onClick={() => setView(t.key)}
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${view === t.key ? 'bg-white shadow text-primary-600' : 'text-gray-500'}`}>
@@ -122,9 +174,15 @@ const MySchedule = () => {
             </button>
           ))}
         </div>
-        <Button icon="➕" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Đóng' : 'Thêm lịch'}
-        </Button>
+        {view === 'makeup' ? (
+          <Button icon="🔄" onClick={() => setShowMakeup(!showMakeup)}>
+            {showMakeup ? 'Đóng' : 'Tạo lịch bù'}
+          </Button>
+        ) : (
+          <Button icon="➕" onClick={() => setShowForm(!showForm)}>
+            {showForm ? 'Đóng' : 'Thêm lịch'}
+          </Button>
+        )}
       </div>
 
       {/* Form thêm */}
@@ -285,6 +343,106 @@ const MySchedule = () => {
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+      {/* ── VIEW: Học bù ── */}
+      {view === 'makeup' && (
+        <>
+          {/* Form tạo lịch bù */}
+          {showMakeup && (
+            <div className="card mb-5">
+              <p className="text-sm font-bold text-gray-700 mb-3">🔄 Tạo lịch học bù</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Lớp học *</label>
+                  <select value={makeupForm.class_id} onChange={e => handleMakeupClassChange(e.target.value)} className="input-field">
+                    <option value="">Chọn lớp...</option>
+                    {myClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Học viên *</label>
+                  <select value={makeupForm.student_id} onChange={e => setMakeupForm(p => ({...p, student_id: e.target.value}))} className="input-field">
+                    <option value="">Chọn HV...</option>
+                    {students.map(s => <option key={s.id} value={s.id}>{s.name}{s.nickname ? ` (${s.nickname})` : ''}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Ngày vắng</label>
+                  <input type="date" value={makeupForm.original_date} onChange={e => setMakeupForm(p => ({...p, original_date: e.target.value}))} className="input-field" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Ngày bù *</label>
+                  <input type="date" value={makeupForm.makeup_date} onChange={e => setMakeupForm(p => ({...p, makeup_date: e.target.value}))} className="input-field" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ bắt đầu *</label>
+                  <input type="time" value={makeupForm.makeup_time_start} onChange={handleMakeupTimeStart} className="input-field" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ kết thúc</label>
+                  <input type="time" value={makeupForm.makeup_time_end} onChange={e => setMakeupForm(p => ({...p, makeup_time_end: e.target.value}))} className="input-field" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Phòng</label>
+                  <select value={makeupForm.room_id} onChange={e => setMakeupForm(p => ({...p, room_id: e.target.value}))} className="input-field">
+                    <option value="">Chưa xếp</option>
+                    {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Ghi chú</label>
+                  <input type="text" value={makeupForm.note} onChange={e => setMakeupForm(p => ({...p, note: e.target.value}))} className="input-field" placeholder="Lý do..." />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <Button variant="secondary" onClick={() => setShowMakeup(false)}>Hủy</Button>
+                <Button onClick={handleCreateMakeup} loading={savingMakeup}>✅ Gửi yêu cầu bù</Button>
+              </div>
+            </div>
+          )}
+
+          {/* Danh sách lịch bù */}
+          {makeups.length === 0 ? (
+            <div className="card text-center py-10">
+              <p className="text-3xl mb-2">🔄</p>
+              <p className="text-gray-400">Chưa có lịch học bù</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {makeups.map(m => {
+                const statusCfg = {
+                  pending:   { label: '⏳ Chờ duyệt',   color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+                  confirmed: { label: '✅ Đã duyệt',    color: 'bg-green-100 text-green-700 border-green-200' },
+                  completed: { label: '🎉 Hoàn thành',  color: 'bg-blue-100 text-blue-700 border-blue-200' },
+                  cancelled: { label: '❌ Đã từ chối',  color: 'bg-red-100 text-red-700 border-red-200' },
+                };
+                const cfg = statusCfg[m.status] || statusCfg.pending;
+                return (
+                  <div key={m.id} className={`p-4 rounded-2xl border ${cfg.color}`}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-semibold">{m.student_name}</p>
+                          <span className="text-xs px-2 py-0.5 rounded-full border font-medium bg-white/50">{cfg.label}</span>
+                        </div>
+                        <p className="text-xs opacity-70">{m.class_name}</p>
+                        <div className="flex gap-3 mt-2 text-xs">
+                          {m.original_date && <span>📅 Vắng: {new Date(m.original_date).toLocaleDateString('vi-VN')}</span>}
+                          <span>🔄 Bù: {new Date(m.makeup_date).toLocaleDateString('vi-VN')} lúc {String(m.makeup_time_start||'').slice(0,5)}</span>
+                          {m.room_name && <span>🚪 {m.room_name}</span>}
+                        </div>
+                        {m.note && <p className="text-xs italic mt-1 opacity-60">{m.note}</p>}
+                      </div>
+                      {m.status === 'pending' && (
+                        <button onClick={() => handleDeleteMakeup(m.id)} className="text-red-400 hover:text-red-600 text-sm p-1">🗑️</button>
+                      )}
                     </div>
                   </div>
                 );
