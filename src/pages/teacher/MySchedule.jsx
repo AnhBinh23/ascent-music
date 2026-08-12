@@ -8,7 +8,6 @@ import { toast } from 'react-toastify';
 
 const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN'];
 const DAY_MAP = [2,3,4,5,6,7,1];
-const DAY_LABELS = { 1:'CN', 2:'T2', 3:'T3', 4:'T4', 5:'T5', 6:'T6', 7:'T7' };
 const START_HOUR = 7, END_HOUR = 21, SH = 60;
 const COLORS = [
   { bg:'#dbeafe', border:'#93c5fd', text:'#1e40af' },
@@ -64,6 +63,7 @@ const MySchedule = () => {
     finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (user?.id) loadData(); }, [user]);
 
   // Scroll to 7:00
