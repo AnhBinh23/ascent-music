@@ -48,8 +48,12 @@ const ScheduleForm = () => {
   // Khi đổi giờ bắt đầu → tự nhảy giờ kết thúc +1h
   const handleTimeStartChange = (e) => {
     const start = e.target.value;
+    if (!start) {
+      setForm(prev => ({ ...prev, time_start: '' }));
+      return;
+    }
     const [h, m] = start.split(':').map(Number);
-    const endH = String(Math.min(h + 1, 23)).padStart(2, '0');
+    const endH = String((h + 1) % 24).padStart(2, '0');
     const endM = String(m).padStart(2, '0');
     setForm(prev => ({ ...prev, time_start: start, time_end: `${endH}:${endM}` }));
   };
