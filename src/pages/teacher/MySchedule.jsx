@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
-import Badge from '../../components/ui/Badge';
-
+import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
