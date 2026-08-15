@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Badge from '../../components/ui/Badge';
-import Button from '../../components/ui/Button';
+
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
@@ -27,7 +27,7 @@ const CARD_COLORS = [
 ];
 
 const t2m = t => { const[h,m]=String(t||'08:00').split(':').map(Number); return h*60+(m||0); };
-const m2t = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}:00`;
+
 const topPx = t => (t2m(t)-START_HOUR*60)/60*SH;
 const hpx = (s,e) => (t2m(e)-t2m(s))/60*SH;
 const dow = d => { const x=new Date(d).getDay(); return x===0?1:x+1; };
