@@ -5,7 +5,7 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import { toast } from 'react-toastify';
-
+import PendingSalary from '../../../components/ui/PendingSalary';
 const MONTHS = ['01','02','03','04','05','06','07','08','09','10','11','12'];
 const fmt = n => Number(n || 0).toLocaleString('vi-VN') + 'đ';
 
@@ -151,7 +151,7 @@ const SalaryManage = ({ embedded = false }) => {
       <Button variant="secondary" icon="🖨" onClick={handlePrint}>In bảng lương</Button>
       <Button icon="💰" onClick={handlePayAll}>Thanh toán tất cả</Button>
     </div>
-
+    <PendingSalary />
     <div className="grid grid-cols-3 gap-4 mb-5">
       {/* ...3 card thống kê... */}
     </div>

@@ -5,7 +5,7 @@ import MainLayout from '../../../components/layout/MainLayout';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
-
+import GroupSalaryRates from '../../../components/ui/GroupSalaryRates';
 const STATUS_VARIANT = { 'Đang học':'green', 'Tạm nghỉ':'orange', 'Đã kết thúc':'gray' };
 const STATUS_TUITION = {
   'Đã thanh toán':     { label:'Đã thanh toán',     bg:'bg-green-100',  text:'text-green-700' },
@@ -177,7 +177,9 @@ const ClassDetail = () => {
           </div>
         </div>
       )}
-
+      {cls.type === 'group' && (
+        <GroupSalaryRates classId={cls.id} totalStudents={students?.length || 3} />
+      )}
       {/* Danh sách học viên */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
