@@ -5,11 +5,11 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 
-const DAYS = ['Thá»© 2','Thá»© 3','Thá»© 4','Thá»© 5','Thá»© 6','Thá»© 7','Chá»§ nháº­t'];
+const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
 const DAY_MAP = [2,3,4,5,6,7,1];
 const DAYS_OPT = [
-  {value:2,label:'Thá»© 2'},{value:3,label:'Thá»© 3'},{value:4,label:'Thá»© 4'},
-  {value:5,label:'Thá»© 5'},{value:6,label:'Thá»© 6'},{value:7,label:'Thá»© 7'},{value:1,label:'Chá»§ nháº­t'},
+  {value:2,label:'Thứ 2'},{value:3,label:'Thứ 3'},{value:4,label:'Thứ 4'},
+  {value:5,label:'Thứ 5'},{value:6,label:'Thứ 6'},{value:7,label:'Thứ 7'},{value:1,label:'Chủ nhật'},
 ];
 const START_HOUR = 6, END_HOUR = 23, SH = 60;
 const COLORS = [
@@ -49,8 +49,8 @@ const getDIM = ym => {
 
 const getLabel = s => {
   if(s.class_type==='1v1'&&s.student_name) return `${s.student_name}: ${s.instrument||s.class_name}`;
-  if(s.class_type==='group') return `NhÃ³m (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
-  return s.class_name||'Lá»›p há»c';
+  if(s.class_type==='group') return `Nhóm (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
+  return s.class_name||'Lớp học';
 };
 
 const mergeWithOverrides = (baseSchedules, overrides, weekDates) => {
@@ -143,54 +143,54 @@ const EditModal = React.memo(({event,rooms,onClose,onSave,onDelete})=>{
             <h3 className="text-base font-bold text-gray-800">{getLabel(event)}</h3>
             <p className="text-xs text-gray-400">{event.class_name}</p>
             {event.is_override && (
-              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">âš¡ Lá»‹ch ngoáº¡i lá»‡ tuáº§n nÃ y</span>
+              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">⚡ Lịch ngoại lệ tuần này</span>
             )}
           </div>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">âœ•</button>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
         </div>
 
         <div className="mb-4 p-3 bg-gray-50 rounded-xl">
-          <p className="text-xs font-semibold text-gray-600 mb-2">Ãp dá»¥ng thay Ä‘á»•i cho:</p>
+          <p className="text-xs font-semibold text-gray-600 mb-2">Áp dụng thay đổi cho:</p>
           <div className="flex gap-2">
             <button onClick={()=>setApplyTo('week')}
               className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all
                 ${applyTo==='week'?'bg-orange-500 text-white border-orange-500':'bg-white text-gray-600 border-gray-200'}`}>
-              ðŸ“† Tuáº§n nÃ y thÃ´i
+              📆 Tuần này thôi
             </button>
             <button onClick={()=>setApplyTo('permanent')}
               className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all
                 ${applyTo==='permanent'?'bg-primary-600 text-white border-primary-600':'bg-white text-gray-600 border-gray-200'}`}>
-              ðŸ” Táº¥t cáº£ cÃ¡c tuáº§n
+              🔁 Tất cả các tuần
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-2">
             {applyTo==='week'
-              ? `âš¡ Chá»‰ Ä‘á»•i lá»‹ch ngÃ y ${new Date(event.actual_date||'').toLocaleDateString('vi-VN')}, tuáº§n sau trá»Ÿ vá» bÃ¬nh thÆ°á»ng`
-              : 'ðŸ” Thay Ä‘á»•i lá»‹ch cá»‘ Ä‘á»‹nh cho táº¥t cáº£ cÃ¡c tuáº§n'}
+              ? `⚡ Chỉ đổi lịch ngày ${new Date(event.actual_date||'').toLocaleDateString('vi-VN')}, tuần sau trở về bình thường`
+              : '🔁 Thay đổi lịch cố định cho tất cả các tuần'}
           </p>
         </div>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Thá»©</label>
+            <label className="text-xs font-medium text-gray-600">Thứ</label>
             <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
               {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">Báº¯t Ä‘áº§u</label>
+              <label className="text-xs font-medium text-gray-600">Bắt đầu</label>
               <input type="time" name="time_start" value={f.time_start} onChange={hc} className="input-field text-sm"/>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">Káº¿t thÃºc</label>
+              <label className="text-xs font-medium text-gray-600">Kết thúc</label>
               <input type="time" name="time_end" value={f.time_end} onChange={hc} className="input-field text-sm"/>
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">PhÃ²ng</label>
+            <label className="text-xs font-medium text-gray-600">Phòng</label>
             <select name="room_id" value={f.room_id} onChange={hc} className="input-field text-sm">
-              <option value="">-- Chá»n --</option>
+              <option value="">-- Chọn --</option>
               {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
@@ -200,16 +200,16 @@ const EditModal = React.memo(({event,rooms,onClose,onSave,onDelete})=>{
           {event.is_override && (
             <button onClick={()=>{onDelete(event,'override');onClose();}}
               className="px-3 py-2.5 rounded-xl bg-orange-50 text-orange-500 font-medium text-sm">
-              â†©ï¸ Vá» lá»‹ch gá»‘c
+              ↩️ Về lịch gốc
             </button>
           )}
           {applyTo==='permanent'&&(
             <button onClick={()=>{onDelete(event,'permanent');onClose();}}
-              className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">ðŸ—‘ï¸ XÃ³a</button>
+              className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">🗑️ Xóa</button>
           )}
           <button onClick={handleSave} disabled={saving}
             className="flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm disabled:opacity-50">
-            {saving?'â³...':'ðŸ’¾ LÆ°u'}
+            {saving?'⏳...':'💾 Lưu'}
           </button>
         </div>
       </div>
@@ -251,10 +251,10 @@ const MySchedule = () => {
   const formatWeekLabel = () => {
     const s=weekStart.toLocaleDateString('vi-VN',{day:'numeric',month:'numeric'});
     const e=weekEnd.toLocaleDateString('vi-VN',{day:'numeric',month:'numeric',year:'numeric'});
-    if(weekOffset===0) return `Tuáº§n nÃ y Â· ${s} â€“ ${e}`;
-    if(weekOffset===-1) return `Tuáº§n trÆ°á»›c Â· ${s} â€“ ${e}`;
-    if(weekOffset===1) return `Tuáº§n sau Â· ${s} â€“ ${e}`;
-    return `${s} â€“ ${e}`;
+    if(weekOffset===0) return `Tuần này · ${s} – ${e}`;
+    if(weekOffset===-1) return `Tuần trước · ${s} – ${e}`;
+    if(weekOffset===1) return `Tuần sau · ${s} – ${e}`;
+    return `${s} – ${e}`;
   };
 
   const loadData = useCallback(async () => {
@@ -270,7 +270,7 @@ const MySchedule = () => {
   api.get('/makeup').catch(() => ({ rows: [] })),
 ]);
       setSchedules(schedRes.rows||[]);
-      setMyClasses((classRes.rows||[]).filter(c=>c.status==='Äang há»c'));
+      setMyClasses((classRes.rows||[]).filter(c=>c.status==='Đang học'));
       setRooms(roomRes.rows||[]);
       setMakeups(mkRes.rows||[]);
     } catch (err) { console.error(err.message); }
@@ -306,7 +306,7 @@ const MySchedule = () => {
           room_id: f.room_id||null,
           status: 'rescheduled',
         });
-        toast.success('ÄÃ£ Ä‘á»•i lá»‹ch tuáº§n nÃ y!');
+        toast.success('Đã đổi lịch tuần này!');
         await loadOverrides();
       }catch(e){ toast.error(e.message); }
     } else {
@@ -316,7 +316,7 @@ const MySchedule = () => {
           day_of_week:Number(f.day_of_week), time_start:ns, time_end:ne,
           type:event.type, note:event.note,
         });
-        toast.success('Cáº­p nháº­t lá»‹ch thÃ nh cÃ´ng!');
+        toast.success('Cập nhật lịch thành công!');
         await loadData();
       }catch(e){ toast.error(e.message); }
     }
@@ -326,14 +326,14 @@ const MySchedule = () => {
     if(type==='override'){
       try{
         await api.delete(`/schedule-overrides/${event.id}/${event.actual_date}`);
-        toast.success('ÄÃ£ vá» lá»‹ch bÃ¬nh thÆ°á»ng!');
+        toast.success('Đã về lịch bình thường!');
         await loadOverrides();
       }catch(e){ toast.error(e.message); }
     } else {
-      if(!window.confirm('XÃ³a lá»‹ch nÃ y vÄ©nh viá»…n?')) return;
+      if(!window.confirm('Xóa lịch này vĩnh viễn?')) return;
       try{
         await api.delete(`/schedules/${event.id}`);
-        toast.success('ÄÃ£ xÃ³a!');
+        toast.success('Đã xóa!');
         await loadData();
       }catch(e){ toast.error(e.message); }
     }
@@ -346,11 +346,11 @@ const MySchedule = () => {
   };
 
   const handleAdd = async () => {
-    if(!form.class_id||!form.time_start||!form.time_end){toast.error('Chá»n lá»›p vÃ  giá»!');return;}
+    if(!form.class_id||!form.time_start||!form.time_end){toast.error('Chọn lớp và giờ!');return;}
     setSaving(true);
     try{
       await api.post('/schedules',form);
-      toast.success('ÄÃ£ thÃªm lá»‹ch dáº¡y!');
+      toast.success('Đã thêm lịch dạy!');
       setShowForm(false);
       setForm({class_id:'',day_of_week:2,time_start:'08:00',time_end:'09:00',room_id:''});
       await loadData();
@@ -367,11 +367,11 @@ const MySchedule = () => {
   };
 
   const handleCreateMakeup = async () => {
-    if(!makeupForm.student_id||!makeupForm.class_id||!makeupForm.makeup_date){toast.error('Chá»n HV, lá»›p vÃ  ngÃ y bÃ¹!');return;}
+    if(!makeupForm.student_id||!makeupForm.class_id||!makeupForm.makeup_date){toast.error('Chọn HV, lớp và ngày bù!');return;}
     setSavingMakeup(true);
     try{
       await api.post('/makeup',makeupForm);
-      toast.success('ÄÃ£ táº¡o lá»‹ch bÃ¹!');
+      toast.success('Đã tạo lịch bù!');
       setShowMakeup(false);
       setMakeupForm({student_id:'',class_id:'',original_date:'',makeup_date:'',makeup_time_start:'08:00',makeup_time_end:'09:00',room_id:'',note:''});
       await loadData();
@@ -380,8 +380,8 @@ const MySchedule = () => {
   };
 
   const handleDeleteMakeup = async (id) => {
-    if(!window.confirm('XÃ³a lá»‹ch bÃ¹ nÃ y?')) return;
-    try{await api.delete(`/makeup/${id}`);toast.success('ÄÃ£ xÃ³a!');await loadData();}
+    if(!window.confirm('Xóa lịch bù này?')) return;
+    try{await api.delete(`/makeup/${id}`);toast.success('Đã xóa!');await loadData();}
     catch(e){toast.error(e.message);}
   };
 
@@ -393,30 +393,30 @@ const MySchedule = () => {
   const byDay = DAY_MAP.map(d=>layoutEvs(weekSchedules.filter(s=>s.day_of_week===d)));
   const byDate = schedules.filter(s=>s.day_of_week===dow(selDate));
 
-  if(loading) return <MainLayout title="Lá»‹ch dáº¡y"><p className="text-center text-gray-400 py-20">Äang táº£i...</p></MainLayout>;
+  if(loading) return <MainLayout title="Lịch dạy"><p className="text-center text-gray-400 py-20">Đang tải...</p></MainLayout>;
 
   return(
-    <MainLayout title="Lá»‹ch dáº¡y">
+    <MainLayout title="Lịch dạy">
       <EditModal event={editEvent} rooms={rooms}
         onClose={()=>setEditEvent(null)} onSave={handleSave} onDelete={handleDelete}/>
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <p className="text-xs text-gray-400 hidden sm:block">âœï¸ Báº¥m vÃ o lá»‹ch Ä‘á»ƒ sá»­a</p>
+        <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm vào lịch để sửa</p>
         <div className="flex items-center gap-2">
           {tab==='makeup'?(
-            <Button icon="ðŸ”„" onClick={()=>setShowMakeup(!showMakeup)}>{showMakeup?'ÄÃ³ng':'Táº¡o lá»‹ch bÃ¹'}</Button>
+            <Button icon="🔄" onClick={()=>setShowMakeup(!showMakeup)}>{showMakeup?'Đóng':'Tạo lịch bù'}</Button>
           ):(
-            <Button icon="âž•" onClick={()=>setShowForm(!showForm)}>{showForm?'ÄÃ³ng':'ThÃªm lá»‹ch'}</Button>
+            <Button icon="➕" onClick={()=>setShowForm(!showForm)}>{showForm?'Đóng':'Thêm lịch'}</Button>
           )}
         </div>
       </div>
 
       <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-2xl">
         {[
-          {key:'week',label:'ðŸ“… Lá»‹ch tuáº§n'},
-          {key:'date',label:'ðŸ—“ï¸ Theo ngÃ y'},
-          {key:'month',label:'ðŸ“† Theo thÃ¡ng'},
-          {key:'makeup',label:`ðŸ”„ Há»c bÃ¹ (${makeups.length})`},
+          {key:'week',label:'📅 Lịch tuần'},
+          {key:'date',label:'🗓️ Theo ngày'},
+          {key:'month',label:'📆 Theo tháng'},
+          {key:'makeup',label:`🔄 Học bù (${makeups.length})`},
         ].map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
             className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all
@@ -428,40 +428,40 @@ const MySchedule = () => {
 
       {showForm && tab!=='makeup' && (
         <div className="card mb-5">
-          <p className="text-sm font-bold text-gray-700 mb-3">ThÃªm lá»‹ch dáº¡y má»›i</p>
+          <p className="text-sm font-bold text-gray-700 mb-3">Thêm lịch dạy mới</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">Lá»›p há»c *</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Lớp học *</label>
               <select value={form.class_id} onChange={e=>setForm(p=>({...p,class_id:e.target.value}))} className="input-field">
-                <option value="">Chá»n lá»›p...</option>
+                <option value="">Chọn lớp...</option>
                 {myClasses.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">Thá»© *</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Thứ *</label>
               <select value={form.day_of_week} onChange={e=>setForm(p=>({...p,day_of_week:Number(e.target.value)}))} className="input-field">
                 {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">Giá» báº¯t Ä‘áº§u *</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ bắt đầu *</label>
               <input type="time" value={form.time_start} onChange={handleTimeStartChange} className="input-field"/>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">Giá» káº¿t thÃºc *</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ kết thúc *</label>
               <input type="time" value={form.time_end} onChange={e=>setForm(p=>({...p,time_end:e.target.value}))} className="input-field"/>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 mb-1 block">PhÃ²ng</label>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Phòng</label>
               <select value={form.room_id} onChange={e=>setForm(p=>({...p,room_id:e.target.value}))} className="input-field">
-                <option value="">ChÆ°a xáº¿p phÃ²ng</option>
+                <option value="">Chưa xếp phòng</option>
                 {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </div>
           </div>
           <div className="flex gap-3 mt-4">
-            <Button variant="secondary" onClick={()=>setShowForm(false)}>Há»§y</Button>
-            <Button onClick={handleAdd} loading={saving}>LÆ°u lá»‹ch</Button>
+            <Button variant="secondary" onClick={()=>setShowForm(false)}>Hủy</Button>
+            <Button onClick={handleAdd} loading={saving}>Lưu lịch</Button>
           </div>
         </div>
       )}
@@ -471,26 +471,26 @@ const MySchedule = () => {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
             <button onClick={()=>setWeekOffset(w=>w-1)}
               className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
-              â† Tuáº§n trÆ°á»›c
+              ← Tuần trước
             </button>
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-700">{formatWeekLabel()}</p>
               {weekOffset!==0&&(
                 <button onClick={()=>setWeekOffset(0)} className="text-xs text-primary-500 hover:text-primary-700 mt-0.5">
-                  Vá» tuáº§n nÃ y
+                  Về tuần này
                 </button>
               )}
             </div>
             <button onClick={()=>setWeekOffset(w=>w+1)}
               className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
-              Tuáº§n sau â†’
+              Tuần sau →
             </button>
           </div>
 
           <div className="overflow-x-auto">
             <div style={{minWidth:560}}>
               <div className="grid border-b border-gray-100" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
-                <div className="p-2 bg-gray-50"/>
+                <div className="p-2 bg-gray-50 sticky left-0 z-10 md:relative md:left-auto md:z-auto"/>
                 {weekDates.map((date,di)=>{
                   const isToday=date.toDateString()===new Date().toDateString();
                   const dateStr=date.toISOString().split('T')[0];
@@ -502,7 +502,7 @@ const MySchedule = () => {
                         {date.getDate()}/{date.getMonth()+1}
                       </p>
                       {isToday&&<div className="w-1.5 h-1.5 bg-primary-500 rounded-full mx-auto mt-0.5"/>}
-                      {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="CÃ³ lá»‹ch ngoáº¡i lá»‡"/>}
+                      {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="Có lịch ngoại lệ"/>}
                     </div>
                   );
                 })}
@@ -510,7 +510,7 @@ const MySchedule = () => {
 
               <div ref={gridRef} className="overflow-y-auto" style={{maxHeight:'70vh'}}>
                 <div className="grid" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
-                  <div className="relative" style={{height:totalH}}>
+                  <div className="sticky left-0 z-10 bg-white md:relative md:left-auto md:z-auto" style={{height:totalH}}>
                     {hours.map(h=>(
                       <div key={h} className="absolute w-full flex items-start justify-end pr-1"
                         style={{top:(h-START_HOUR)*SH,height:SH}}>
@@ -548,11 +548,11 @@ const MySchedule = () => {
                               <div className="px-1.5 py-0.5 h-full flex flex-col overflow-hidden">
                                 <p className="text-[11px] font-bold leading-tight truncate"
                                   style={{color: s.is_override ? '#c2410c' : c.text}}>
-                                  {s.is_override && 'âš¡'}{getLabel(s)}
+                                  {s.is_override && '⚡'}{getLabel(s)}
                                 </p>
                                 {h0>26&&<p className="text-[10px] truncate"
                                   style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.7}}>
-                                  {s.room_name||'ChÆ°a xáº¿p phÃ²ng'}
+                                  {s.room_name||'Chưa xếp phòng'}
                                 </p>}
                               </div>
                             </div>
@@ -567,8 +567,8 @@ const MySchedule = () => {
           </div>
           {!weekSchedules.length&&(
             <div className="text-center py-16">
-              <p className="text-4xl mb-3">ðŸ“…</p>
-              <p className="text-gray-400">ChÆ°a cÃ³ lá»‹ch dáº¡y nÃ o</p>
+              <p className="text-4xl mb-3">📅</p>
+              <p className="text-gray-400">Chưa có lịch dạy nào</p>
             </div>
           )}
         </div>
@@ -582,15 +582,15 @@ const MySchedule = () => {
               {new Date(selDate).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
             </p>
             {!byDate.length?(
-              <p className="text-center text-gray-400 py-8">KhÃ´ng cÃ³ lá»‹ch dáº¡y ngÃ y nÃ y</p>
+              <p className="text-center text-gray-400 py-8">Không có lịch dạy ngày này</p>
             ):(
               <div className="flex flex-col gap-3">
                 {[...byDate].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
                   <div key={s.id} onClick={()=>setEditEvent({...s,actual_date:selDate})}
                     className={`p-4 rounded-2xl border cursor-pointer active:scale-95 transition-transform ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                     <p className="font-bold text-gray-800">{getLabel(s)}</p>
-                    <p className="text-sm text-gray-600 mt-1">ðŸ• {s.time_start?.slice(0,5)} â€“ {s.time_end?.slice(0,5)}</p>
-                    <p className="text-sm text-gray-500">ðŸšª {s.room_name||'ChÆ°a xáº¿p phÃ²ng'} Â· {s.instrument||''}</p>
+                    <p className="text-sm text-gray-600 mt-1">🕐 {s.time_start?.slice(0,5)} – {s.time_end?.slice(0,5)}</p>
+                    <p className="text-sm text-gray-500">🚪 {s.room_name||'Chưa xếp phòng'} · {s.instrument||''}</p>
                   </div>
                 ))}
               </div>
@@ -612,7 +612,7 @@ const MySchedule = () => {
                     <p className="text-sm font-semibold text-gray-700 capitalize">
                       {new Date(d).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric'})}
                     </p>
-                    <p className="text-xs text-gray-400">{ds.length} lá»›p</p>
+                    <p className="text-xs text-gray-400">{ds.length} lớp</p>
                   </div>
                   <div className="p-3 flex flex-col gap-2">
                     {[...ds].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
@@ -620,7 +620,7 @@ const MySchedule = () => {
                         className={`p-3 rounded-xl border cursor-pointer active:scale-95 ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                         <p className="text-sm font-bold text-gray-800">{getLabel(s)}</p>
                         <p className="text-xs text-gray-600">
-                          {s.time_start?.slice(0,5)}â€“{s.time_end?.slice(0,5)} Â· ðŸšª {s.room_name||'ChÆ°a xáº¿p phÃ²ng'}
+                          {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · 🚪 {s.room_name||'Chưa xếp phòng'}
                         </p>
                       </div>
                     ))}
@@ -636,73 +636,73 @@ const MySchedule = () => {
         <>
           {showMakeup&&(
             <div className="card mb-5">
-              <p className="text-sm font-bold text-gray-700 mb-3">Táº¡o lá»‹ch há»c bÃ¹</p>
+              <p className="text-sm font-bold text-gray-700 mb-3">Tạo lịch học bù</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Lá»›p há»c *</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Lớp học *</label>
                   <select value={makeupForm.class_id} onChange={e=>handleMakeupClassChange(e.target.value)} className="input-field">
-                    <option value="">Chá»n lá»›p...</option>
+                    <option value="">Chọn lớp...</option>
                     {myClasses.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Há»c viÃªn *</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Học viên *</label>
                   <select value={makeupForm.student_id} onChange={e=>setMakeupForm(p=>({...p,student_id:e.target.value}))} className="input-field">
-                    <option value="">Chá»n HV...</option>
+                    <option value="">Chọn HV...</option>
                     {students.map(s=><option key={s.id} value={s.id}>{s.name}{s.nickname?` (${s.nickname})`:''}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">NgÃ y váº¯ng</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Ngày vắng</label>
                   <input type="date" value={makeupForm.original_date} onChange={e=>setMakeupForm(p=>({...p,original_date:e.target.value}))} className="input-field"/>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">NgÃ y bÃ¹ *</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Ngày bù *</label>
                   <input type="date" value={makeupForm.makeup_date} onChange={e=>setMakeupForm(p=>({...p,makeup_date:e.target.value}))} className="input-field"/>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Giá» báº¯t Ä‘áº§u *</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ bắt đầu *</label>
                   <input type="time" value={makeupForm.makeup_time_start} onChange={e=>{
                     const start=e.target.value;const[h,m]=start.split(':').map(Number);
                     setMakeupForm(p=>({...p,makeup_time_start:start,makeup_time_end:`${String(Math.min(h+1,23)).padStart(2,'0')}:${String(m).padStart(2,'0')}`}));
                   }} className="input-field"/>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Giá» káº¿t thÃºc</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Giờ kết thúc</label>
                   <input type="time" value={makeupForm.makeup_time_end} onChange={e=>setMakeupForm(p=>({...p,makeup_time_end:e.target.value}))} className="input-field"/>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">PhÃ²ng</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Phòng</label>
                   <select value={makeupForm.room_id} onChange={e=>setMakeupForm(p=>({...p,room_id:e.target.value}))} className="input-field">
-                    <option value="">ChÆ°a xáº¿p</option>
+                    <option value="">Chưa xếp</option>
                     {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Ghi chÃº</label>
-                  <input type="text" value={makeupForm.note} onChange={e=>setMakeupForm(p=>({...p,note:e.target.value}))} className="input-field" placeholder="LÃ½ do..."/>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Ghi chú</label>
+                  <input type="text" value={makeupForm.note} onChange={e=>setMakeupForm(p=>({...p,note:e.target.value}))} className="input-field" placeholder="Lý do..."/>
                 </div>
               </div>
               <div className="flex gap-3 mt-4">
-                <Button variant="secondary" onClick={()=>setShowMakeup(false)}>Há»§y</Button>
-                <Button onClick={handleCreateMakeup} loading={savingMakeup}>Gá»­i yÃªu cáº§u bÃ¹</Button>
+                <Button variant="secondary" onClick={()=>setShowMakeup(false)}>Hủy</Button>
+                <Button onClick={handleCreateMakeup} loading={savingMakeup}>Gửi yêu cầu bù</Button>
               </div>
             </div>
           )}
           {makeups.length===0?(
             <div className="card text-center py-10">
-              <p className="text-3xl mb-2">ðŸ”„</p>
-              <p className="text-gray-400">ChÆ°a cÃ³ lá»‹ch há»c bÃ¹</p>
+              <p className="text-3xl mb-2">🔄</p>
+              <p className="text-gray-400">Chưa có lịch học bù</p>
             </div>
           ):(
             <div className="flex flex-col gap-3">
               {makeups.map(m=>{
                 const cfg={
-                  pending:{label:'Chá» duyá»‡t',color:'bg-yellow-100 text-yellow-700 border-yellow-200'},
-                  confirmed:{label:'ÄÃ£ duyá»‡t',color:'bg-green-100 text-green-700 border-green-200'},
-                  completed:{label:'HoÃ n thÃ nh',color:'bg-blue-100 text-blue-700 border-blue-200'},
-                  cancelled:{label:'ÄÃ£ tá»« chá»‘i',color:'bg-red-100 text-red-700 border-red-200'},
-                }[m.status]||{label:'Chá» duyá»‡t',color:'bg-yellow-100 text-yellow-700 border-yellow-200'};
+                  pending:{label:'Chờ duyệt',color:'bg-yellow-100 text-yellow-700 border-yellow-200'},
+                  confirmed:{label:'Đã duyệt',color:'bg-green-100 text-green-700 border-green-200'},
+                  completed:{label:'Hoàn thành',color:'bg-blue-100 text-blue-700 border-blue-200'},
+                  cancelled:{label:'Đã từ chối',color:'bg-red-100 text-red-700 border-red-200'},
+                }[m.status]||{label:'Chờ duyệt',color:'bg-yellow-100 text-yellow-700 border-yellow-200'};
                 return(
                   <div key={m.id} className={`p-4 rounded-2xl border ${cfg.color}`}>
                     <div className="flex items-start justify-between">
@@ -713,14 +713,14 @@ const MySchedule = () => {
                         </div>
                         <p className="text-xs opacity-70">{m.class_name}</p>
                         <div className="flex gap-3 mt-2 text-xs">
-                          {m.original_date&&<span>Váº¯ng: {new Date(m.original_date).toLocaleDateString('vi-VN')}</span>}
-                          <span>BÃ¹: {new Date(m.makeup_date).toLocaleDateString('vi-VN')} lÃºc {String(m.makeup_time_start||'').slice(0,5)}</span>
+                          {m.original_date&&<span>Vắng: {new Date(m.original_date).toLocaleDateString('vi-VN')}</span>}
+                          <span>Bù: {new Date(m.makeup_date).toLocaleDateString('vi-VN')} lúc {String(m.makeup_time_start||'').slice(0,5)}</span>
                           {m.room_name&&<span>{m.room_name}</span>}
                         </div>
                         {m.note&&<p className="text-xs italic mt-1 opacity-60">{m.note}</p>}
                       </div>
                       {m.status==='pending'&&(
-                        <button onClick={()=>handleDeleteMakeup(m.id)} className="text-red-400 hover:text-red-600 text-sm p-1">ðŸ—‘ï¸</button>
+                        <button onClick={()=>handleDeleteMakeup(m.id)} className="text-red-400 hover:text-red-600 text-sm p-1">🗑️</button>
                       )}
                     </div>
                   </div>
