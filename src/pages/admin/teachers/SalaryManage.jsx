@@ -332,16 +332,29 @@ const SalaryManage = ({ embedded = false }) => {
                     </div>
 
                     {isPaid && paidInfo && (
-                      <div className="mt-2 p-2 bg-green-50 rounded-xl text-xs text-green-700 flex items-center justify-between">
-                        <span>
-                          ✅ Đã thanh toán {fmt(paidInfo.amount)}
-                          {paidInfo.paid_at && ` · ${new Date(paidInfo.paid_at).toLocaleDateString('vi-VN')}`}
-                        </span>
-                        <button onClick={() => {
-                          if(window.confirm('Hoàn tác thanh toán tháng này?')) {
-                            api.delete(`/salary/${t.id}/${monthKey}`).then(() => { toast.success('Đã hoàn tác!'); loadData(); }).catch(e => toast.error(e.message));
-                          }
-                        }} className="text-red-400 hover:text-red-600 text-xs ml-2">↩️ Hoàn tác</button>
+                      <div className="mt-2 p-2 bg-green-50 rounded-xl text-xs text-green-700">
+                        <div className="flex items-center justify-between">
+                          <span>
+                            ✅ Đã thanh toán {fmt(paidInfo.amount)}
+                            {paidInfo.paid_at && ` · ${new Date(paidInfo.paid_at).toLocaleDateString('vi-VN')}`}
+                          </span>
+                          <div className="flex gap-2">
+                            <button onClick={() => {
+                              const newAmount = prompt('Nhập số tiền mới:', paidInfo.amount);
+                              if (newAmount === null) return;
+                              const note = prompt('Ghi chú (lý do sửa):', paidInfo.note || '');
+                              api.put(`/salary/${paidInfo.id}`, { amount: Number(newAmount), note: note || '' })
+                                .then(() => { toast.success('Đã cập nhật lương!'); loadData(); })
+                                .catch(e => toast.error(e.message));
+                            }} className="text-blue-500 hover:text-blue-700 text-xs">✏️ Sửa</button>
+                            <button onClick={() => {
+                              if(window.confirm('Hoàn tác thanh toán tháng này?')) {
+                                api.delete(`/salary/${t.id}/${monthKey}`).then(() => { toast.success('Đã hoàn tác!'); loadData(); }).catch(e => toast.error(e.message));
+                              }
+                            }} className="text-red-400 hover:text-red-600 text-xs">↩️ Hoàn tác</button>
+                          </div>
+                        </div>
+                        {paidInfo.note && <p className="mt-1 text-gray-500 italic">{paidInfo.note}</p>}
                       </div>
                     )}
                   </div>
