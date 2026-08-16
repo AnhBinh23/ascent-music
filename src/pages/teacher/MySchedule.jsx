@@ -26,7 +26,6 @@ const CARD_COLORS = [
 ];
 
 const t2m = t => { const[h,m]=String(t||'08:00').split(':').map(Number); return h*60+(m||0); };
-
 const topPx = t => (t2m(t)-START_HOUR*60)/60*SH;
 const hpx = (s,e) => (t2m(e)-t2m(s))/60*SH;
 const dow = d => { const x=new Date(d).getDay(); return x===0?1:x+1; };
@@ -220,6 +219,8 @@ const EditModal = React.memo(({event,rooms,onClose,onSave,onDelete})=>{
 const MySchedule = () => {
   const { user } = useAuth();
   const gridRef = useRef(null);
+  const headerScrollRef = useRef(null);
+  const bodyScrollRef = useRef(null);
 
   const [teacherId, setTeacherId] = useState(null);
   const [schedules, setSchedules] = useState([]);
@@ -244,6 +245,14 @@ const MySchedule = () => {
     makeup_time_start:'08:00',makeup_time_end:'09:00',room_id:'',note:'',
   });
 
+  const syncScroll = useCallback((source) => {
+    const header = headerScrollRef.current;
+    const body = bodyScrollRef.current;
+    if (!header || !body) return;
+    if (source === 'body') header.scrollLeft = body.scrollLeft;
+    else body.scrollLeft = header.scrollLeft;
+  }, []);
+
   const weekStart = getWeekStart(weekOffset);
   const weekDates = getWeekDates(weekStart);
   const weekEnd = weekDates[6];
@@ -264,11 +273,11 @@ const MySchedule = () => {
       if (!tid) return;
       setTeacherId(tid);
       const [schedRes, classRes, roomRes, mkRes] = await Promise.all([
-  api.get(`/schedules/teacher/${tid}`),
-  api.get(`/classes?teacher_id=${tid}`),
-  api.get('/rooms'),
-  api.get('/makeup').catch(() => ({ rows: [] })),
-]);
+        api.get(`/schedules/teacher/${tid}`),
+        api.get(`/classes?teacher_id=${tid}`),
+        api.get('/rooms'),
+        api.get('/makeup').catch(() => ({ rows: [] })),
+      ]);
       setSchedules(schedRes.rows||[]);
       setMyClasses((classRes.rows||[]).filter(c=>c.status==='Đang học'));
       setRooms(roomRes.rows||[]);
@@ -295,16 +304,12 @@ const MySchedule = () => {
   const handleSave = useCallback(async (event,f,applyTo) => {
     const ns = f.time_start.length===5?f.time_start+':00':f.time_start;
     const ne = f.time_end.length===5?f.time_end+':00':f.time_end;
-
     if(applyTo==='week'){
       try{
         await api.post('/schedule-overrides',{
-          schedule_id: event.id,
-          original_date: event.actual_date,
-          new_day_of_week: Number(f.day_of_week),
-          new_time_start: ns, new_time_end: ne,
-          room_id: f.room_id||null,
-          status: 'rescheduled',
+          schedule_id: event.id, original_date: event.actual_date,
+          new_day_of_week: Number(f.day_of_week), new_time_start: ns, new_time_end: ne,
+          room_id: f.room_id||null, status: 'rescheduled',
         });
         toast.success('Đã đổi lịch tuần này!');
         await loadOverrides();
@@ -487,10 +492,11 @@ const MySchedule = () => {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <div style={{minWidth:560}}>
-              <div className="grid border-b border-gray-100" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
-                <div className="p-2 bg-gray-50 sticky left-0 z-10 md:relative md:left-auto md:z-auto"/>
+          <div className="flex border-b border-gray-100">
+            <div className="flex-shrink-0 p-2 bg-gray-50" style={{width:48}}/>
+            <div ref={headerScrollRef} className="flex-1 overflow-x-auto" style={{scrollbarWidth:'none',msOverflowStyle:'none',WebkitOverflowScrolling:'touch'}}
+              onScroll={()=>syncScroll('header')}>
+              <div className="grid" style={{gridTemplateColumns:'repeat(7,minmax(70px,1fr))',minWidth:490}}>
                 {weekDates.map((date,di)=>{
                   const isToday=date.toDateString()===new Date().toDateString();
                   const dateStr=date.toISOString().split('T')[0];
@@ -502,22 +508,27 @@ const MySchedule = () => {
                         {date.getDate()}/{date.getMonth()+1}
                       </p>
                       {isToday&&<div className="w-1.5 h-1.5 bg-primary-500 rounded-full mx-auto mt-0.5"/>}
-                      {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="Có lịch ngoại lệ"/>}
+                      {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5"/>}
                     </div>
                   );
                 })}
               </div>
+            </div>
+          </div>
 
-              <div ref={gridRef} className="overflow-y-auto" style={{maxHeight:'70vh'}}>
-                <div className="grid" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
-                  <div className="sticky left-0 z-10 bg-white md:relative md:left-auto md:z-auto" style={{height:totalH}}>
-                    {hours.map(h=>(
-                      <div key={h} className="absolute w-full flex items-start justify-end pr-1"
-                        style={{top:(h-START_HOUR)*SH,height:SH}}>
-                        <span className="text-xs text-gray-400 -mt-2">{String(h).padStart(2,'0')}:00</span>
-                      </div>
-                    ))}
+          <div ref={gridRef} className="overflow-y-auto" style={{maxHeight:'70vh'}}>
+            <div className="flex">
+              <div className="flex-shrink-0 relative bg-white" style={{width:48,height:totalH}}>
+                {hours.map(h=>(
+                  <div key={h} className="absolute w-full flex items-start justify-end pr-1"
+                    style={{top:(h-START_HOUR)*SH,height:SH}}>
+                    <span className="text-xs text-gray-400 -mt-2">{String(h).padStart(2,'0')}:00</span>
                   </div>
+                ))}
+              </div>
+              <div ref={bodyScrollRef} className="flex-1 overflow-x-auto" style={{scrollbarWidth:'none',msOverflowStyle:'none',WebkitOverflowScrolling:'touch'}}
+                onScroll={()=>syncScroll('body')}>
+                <div className="grid" style={{gridTemplateColumns:'repeat(7,minmax(70px,1fr))',minWidth:490,height:totalH}}>
                   {weekDates.map((date,di)=>{
                     const isToday=date.toDateString()===new Date().toDateString();
                     const isPast=date<new Date(new Date().setHours(0,0,0,0));
@@ -536,7 +547,7 @@ const MySchedule = () => {
                           const pct=100/total;
                           return(
                             <div key={s.id} onClick={()=>setEditEvent(s)}
-                              className="absolute rounded-xl border cursor-pointer select-none overflow-hidden hover:brightness-95 transition-all"
+                              className="absolute rounded-lg border-l-[3px] cursor-pointer select-none overflow-hidden hover:brightness-95 transition-all shadow-sm"
                               style={{
                                 top:t0+1, height:h0-4,
                                 left:`calc(${lane*pct}% + 1px)`, width:`calc(${pct}% - 2px)`,
@@ -565,6 +576,7 @@ const MySchedule = () => {
               </div>
             </div>
           </div>
+
           {!weekSchedules.length&&(
             <div className="text-center py-16">
               <p className="text-4xl mb-3">📅</p>
@@ -590,7 +602,7 @@ const MySchedule = () => {
                     className={`p-4 rounded-2xl border cursor-pointer active:scale-95 transition-transform ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                     <p className="font-bold text-gray-800">{getLabel(s)}</p>
                     <p className="text-sm text-gray-600 mt-1">🕐 {s.time_start?.slice(0,5)} – {s.time_end?.slice(0,5)}</p>
-                    <p className="text-sm text-gray-500">🚪 {s.room_name||'Chưa xếp phòng'} · {s.instrument||''}</p>
+                    <p className="text-sm text-gray-500">🚪 {s.room_name||'Chưa xếp phòng'}</p>
                   </div>
                 ))}
               </div>
@@ -620,7 +632,7 @@ const MySchedule = () => {
                         className={`p-3 rounded-xl border cursor-pointer active:scale-95 ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                         <p className="text-sm font-bold text-gray-800">{getLabel(s)}</p>
                         <p className="text-xs text-gray-600">
-                          {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · 🚪 {s.room_name||'Chưa xếp phòng'}
+                          {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · {s.room_name||'Chưa xếp phòng'}
                         </p>
                       </div>
                     ))}
