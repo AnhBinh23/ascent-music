@@ -129,7 +129,7 @@ const ClassForm = () => {
   const addSlot    = () => setSlots([...slots, { ...EMPTY_SLOT }]);
   const removeSlot = (i) => setSlots(slots.filter((_, idx) => idx !== i));
   const updateSlot = (i, field, value) => {
-    const next = [...slots]; next[i] = { ...next[i], [field]: value }; setSlots(next);
+    setSlots(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
   };
   const buildScheduleText = (sl) =>
     sl.map(s => `${DAY_LABEL[s.day_of_week]} ${s.time_start}-${s.time_end}`).join(', ');
@@ -512,7 +512,7 @@ const ClassForm = () => {
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="text-xs font-medium text-gray-500">Giờ bắt đầu</label>
                     <select value={slot.time_start}
-                      onChange={e => { updateSlot(i,'time_start',e.target.value); const[h,m]=e.target.value.split(':').map(Number); updateSlot(i,'time_end',`${String(Math.min(h+1,23)).padStart(2,'0')}:${String(m).padStart(2,'0')}`); }}
+                      onChange={e => { const v=e.target.value; const[h,m]=v.split(':').map(Number); const end=`${String(Math.min(h+1,23)).padStart(2,'0')}:${String(m).padStart(2,'0')}`; setSlots(prev=>prev.map((s,idx)=>idx===i?{...s,time_start:v,time_end:end}:s)); }}
                       className="input-field text-sm py-2">
                       {Array.from({length:34},(_,j)=>{const h=Math.floor(j/2)+6;const m=j%2*30;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;return <option key={v} value={v}>{v}</option>;})}
                     </select>
