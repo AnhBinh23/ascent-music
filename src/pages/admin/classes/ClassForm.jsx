@@ -123,6 +123,17 @@ const ClassForm = () => {
     if (name === 'type') {
       next.max_students = value === '1v1' ? 1 : next.max_students < 2 ? 5 : next.max_students;
     }
+    if (name === 'sessions_per_week') {
+      const count = Number(value) || 1;
+      setSlots(prev => {
+        if (prev.length < count) {
+          const added = Array.from({ length: count - prev.length }, () => ({ ...EMPTY_SLOT }));
+          return [...prev, ...added];
+        }
+        if (prev.length > count) return prev.slice(0, count);
+        return prev;
+      });
+    }
     setForm(next);
   };
 
