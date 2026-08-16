@@ -219,8 +219,6 @@ const EditModal = React.memo(({event,rooms,onClose,onSave,onDelete})=>{
 const MySchedule = () => {
   const { user } = useAuth();
   const gridRef = useRef(null);
-  const headerScrollRef = useRef(null);
-  const bodyScrollRef = useRef(null);
 
   const [teacherId, setTeacherId] = useState(null);
   const [schedules, setSchedules] = useState([]);
@@ -244,14 +242,6 @@ const MySchedule = () => {
     student_id:'',class_id:'',original_date:'',makeup_date:'',
     makeup_time_start:'08:00',makeup_time_end:'09:00',room_id:'',note:'',
   });
-
-  const syncScroll = useCallback((source) => {
-    const header = headerScrollRef.current;
-    const body = bodyScrollRef.current;
-    if (!header || !body) return;
-    if (source === 'body') header.scrollLeft = body.scrollLeft;
-    else body.scrollLeft = header.scrollLeft;
-  }, []);
 
   const weekStart = getWeekStart(weekOffset);
   const weekDates = getWeekDates(weekStart);
@@ -492,11 +482,10 @@ const MySchedule = () => {
             </button>
           </div>
 
-          <div className="flex border-b border-gray-100">
-            <div className="flex-shrink-0 p-2 bg-gray-50" style={{width:48}}/>
-            <div ref={headerScrollRef} className="flex-1 overflow-x-auto" style={{scrollbarWidth:'none',msOverflowStyle:'none',WebkitOverflowScrolling:'touch'}}
-              onScroll={()=>syncScroll('header')}>
-              <div className="grid" style={{gridTemplateColumns:'repeat(7,minmax(70px,1fr))',minWidth:490}}>
+          <div className="overflow-x-auto" style={{WebkitOverflowScrolling:'touch'}}>
+            <div style={{minWidth:538}}>
+              <div className="grid border-b border-gray-100" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
+                <div className="p-2 bg-gray-50" style={{position:'sticky',left:0,zIndex:10}}/>
                 {weekDates.map((date,di)=>{
                   const isToday=date.toDateString()===new Date().toDateString();
                   const dateStr=date.toISOString().split('T')[0];
@@ -513,22 +502,17 @@ const MySchedule = () => {
                   );
                 })}
               </div>
-            </div>
-          </div>
 
-          <div ref={gridRef} className="overflow-y-auto" style={{maxHeight:'70vh'}}>
-            <div className="flex">
-              <div className="flex-shrink-0 relative bg-white" style={{width:48,height:totalH}}>
-                {hours.map(h=>(
-                  <div key={h} className="absolute w-full flex items-start justify-end pr-1"
-                    style={{top:(h-START_HOUR)*SH,height:SH}}>
-                    <span className="text-xs text-gray-400 -mt-2">{String(h).padStart(2,'0')}:00</span>
+              <div ref={gridRef} className="overflow-y-auto" style={{maxHeight:'70vh'}}>
+                <div className="grid" style={{gridTemplateColumns:'48px repeat(7,1fr)'}}>
+                  <div className="relative bg-white" style={{height:totalH,position:'sticky',left:0,zIndex:10}}>
+                    {hours.map(h=>(
+                      <div key={h} className="absolute w-full flex items-start justify-end pr-1"
+                        style={{top:(h-START_HOUR)*SH,height:SH}}>
+                        <span className="text-xs text-gray-400 -mt-2">{String(h).padStart(2,'0')}:00</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div ref={bodyScrollRef} className="flex-1 overflow-x-auto" style={{scrollbarWidth:'none',msOverflowStyle:'none',WebkitOverflowScrolling:'touch'}}
-                onScroll={()=>syncScroll('body')}>
-                <div className="grid" style={{gridTemplateColumns:'repeat(7,minmax(70px,1fr))',minWidth:490,height:totalH}}>
                   {weekDates.map((date,di)=>{
                     const isToday=date.toDateString()===new Date().toDateString();
                     const isPast=date<new Date(new Date().setHours(0,0,0,0));
