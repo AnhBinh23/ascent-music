@@ -15,7 +15,8 @@ const GroupSalaryRates = ({ classId, totalStudents }) => {
       try {
         const res = await api.get(`/group-salary/rates/${classId}`);
         const existing = res.rows || [];
-        if (existing.length) {
+        const total = Number(totalStudents) || 3;
+        if (existing.length && existing[0].total_count === total) {
           setRates(existing.map(r => ({
             present_count: r.present_count,
             total_count: r.total_count,
