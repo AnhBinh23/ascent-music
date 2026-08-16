@@ -113,11 +113,15 @@ const ScheduleForm = () => {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">Giờ bắt đầu *</label>
-            <input type="time" value={form.time_start} onChange={handleTimeStartChange} className="input-field" />
+            <select value={form.time_start} onChange={handleTimeStartChange} className="input-field">
+              {Array.from({length:35},(_,i)=>{const h=Math.floor(i/2)+6;const m=i%2*30;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;return <option key={v} value={v}>{v}</option>;}).filter(o=>o.props.value<'23:30')}
+            </select>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">Giờ kết thúc *</label>
-            <input type="time" value={form.time_end} onChange={handleChange('time_end')} className="input-field" />
+            <select value={form.time_end} onChange={handleChange('time_end')} className="input-field">
+              {Array.from({length:35},(_,i)=>{const h=Math.floor(i/2)+6;const m=i%2*30;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;return <option key={v} value={v}>{v}</option>;}).filter(o=>o.props.value<='23:00')}
+            </select>
           </div>
         </div>
 
