@@ -550,9 +550,9 @@ const MySchedule = () => {
                                   style={{color: s.is_override ? '#c2410c' : c.text}}>
                                   {s.is_override && '⚡'}{getLabel(s)}
                                 </p>
-                                {h0>28&&<p className="text-[10px] truncate"
+                                {h0>26&&<p className="text-[10px] truncate"
                                   style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.7}}>
-                                  🚪 {s.room_name||'Chưa xếp phòng'}
+                                  {s.room_name||'Chưa xếp phòng'}
                                 </p>}
                               </div>
                             </div>

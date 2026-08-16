@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+﻿import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../../components/layout/MainLayout';
 import Button from '../../../components/ui/Button';
@@ -544,22 +544,18 @@ const ScheduleCalendar = () => {
                                     opacity:draggingId===s.id?0.35:1,
                                     zIndex:draggingId===s.id?1:5,
                                   }}>
-                                  <div className="px-1.5 py-1 h-full flex flex-col">
-                                    <p className="text-xs font-bold leading-tight truncate"
+                                  <div className="px-1.5 py-0.5 h-full flex flex-col overflow-hidden">
+                                    <p className="text-[11px] font-bold leading-tight truncate"
                                       style={{color: s.is_override ? '#c2410c' : c.text}}>
                                       {s.is_override && '⚡'}{getLabel(s)}
                                     </p>
-                                    {h0>34&&<p className="text-xs"
+                                    {h0>26&&<p className="text-[10px] truncate"
                                       style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.8}}>
-                                      {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}
-                                    </p>}
-                                    {h0>50&&<p className="text-xs truncate"
-                                      style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.7}}>
                                       {s.teacher_name}
                                     </p>}
-                                    {h0>66&&<p className="text-xs truncate"
-                                      style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.6}}>
-                                      {s.room_name}
+                                    {h0>36&&<p className="text-[10px] truncate"
+                                      style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.7}}>
+                                      {s.room_name||'Chưa xếp phòng'}
                                     </p>}
                                   </div>
                                   {draggingId===s.id&&(
