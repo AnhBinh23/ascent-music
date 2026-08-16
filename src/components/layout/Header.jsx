@@ -13,6 +13,7 @@ const TYPE_ICON = {
   pending:         '🔔',
   general:         '📢',
   manual:          '📨',
+  course_ending:   '🎓',
 };
 
 const roleLabels = {
