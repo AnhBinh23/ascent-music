@@ -6,7 +6,7 @@ import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import api from '../../../services/api';
 import teacherService from '../../../services/teacherService';
-
+import GroupSalaryRates from '../../../components/ui/GroupSalaryRates';
 const INSTRUMENTS = ['Piano', 'Guitar', 'Violin', 'Thanh nhạc'];
 const LEVELS      = ['Sơ cấp', 'Trung cấp', 'Nâng cao'];
 const DAYS        = [
@@ -438,23 +438,11 @@ const ClassForm = () => {
             </div>
 
             {form.type === 'group' && (
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">
-                  💰 Lương/buổi (khi có HV vắng)
-                </label>
-                <input
-                  type="number"
-                  name="teacher_salary_partial"
-                  value={form.teacher_salary_partial}
-                  onChange={handleChange}
-                  placeholder="VD: 150000"
-                  className="input-field"
-                />
-                {form.teacher_salary_partial > 0 && (
-                  <p className="text-xs text-orange-500 mt-0.5">
-                    ⚠️ {fmt(form.teacher_salary_partial)}/buổi khi vắng
-                  </p>
-                )}
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <label className="text-sm font-medium text-gray-700">💰 Lương theo số HV có mặt</label>
+                <p className="text-xs text-gray-400 mb-2">Nhập mức lương cho từng trường hợp số HV đi học</p>
+                {id && <GroupSalaryRates classId={id} totalStudents={form.max_students || 3} />}
+                {!id && <p className="text-xs text-orange-500">Lưu lớp trước, sau đó quay lại thiết lập bảng lương nhóm</p>}
               </div>
             )}
           </div>
@@ -523,15 +511,19 @@ const ClassForm = () => {
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="text-xs font-medium text-gray-500">Giờ bắt đầu</label>
-                    <input type="time" value={slot.time_start}
-                      onChange={e => updateSlot(i, 'time_start', e.target.value)}
-                      className="input-field text-sm py-2" />
+                    <select value={slot.time_start}
+                      onChange={e => { updateSlot(i,'time_start',e.target.value); const[h,m]=e.target.value.split(':').map(Number); updateSlot(i,'time_end',`${String(Math.min(h+1,23)).padStart(2,'0')}:${String(m).padStart(2,'0')}`); }}
+                      className="input-field text-sm py-2">
+                      {Array.from({length:34},(_,j)=>{const h=Math.floor(j/2)+6;const m=j%2*30;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;return <option key={v} value={v}>{v}</option>;})}
+                    </select>
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="text-xs font-medium text-gray-500">Giờ kết thúc</label>
-                    <input type="time" value={slot.time_end}
-                      onChange={e => updateSlot(i, 'time_end', e.target.value)}
-                      className="input-field text-sm py-2" />
+                    <select value={slot.time_end}
+                      onChange={e => updateSlot(i,'time_end',e.target.value)}
+                      className="input-field text-sm py-2">
+                      {Array.from({length:34},(_,j)=>{const h=Math.floor(j/2)+6;const m=j%2*30;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;return <option key={v} value={v}>{v}</option>;})}
+                    </select>
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <label className="text-xs font-medium text-gray-500">Phòng học</label>
