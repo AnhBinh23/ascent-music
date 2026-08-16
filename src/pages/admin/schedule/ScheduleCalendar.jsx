@@ -5,7 +5,7 @@ import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import { toast } from 'react-toastify';
 
-const DAYS       = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
+const DAYS       = ['Thá»© 2','Thá»© 3','Thá»© 4','Thá»© 5','Thá»© 6','Thá»© 7','Chá»§ nháº­t'];
 const DAY_MAP    = [2,3,4,5,6,7,1];
 const START_HOUR = 6;
 const END_HOUR   = 23;
@@ -25,8 +25,8 @@ const CARD_COLORS = [
   'bg-purple-50 border-purple-200','bg-orange-50 border-orange-200','bg-pink-50 border-pink-200',
 ];
 const DAYS_OPT = [
-  {value:2,label:'Thứ 2'},{value:3,label:'Thứ 3'},{value:4,label:'Thứ 4'},
-  {value:5,label:'Thứ 5'},{value:6,label:'Thứ 6'},{value:7,label:'Thứ 7'},{value:1,label:'Chủ nhật'},
+  {value:2,label:'Thá»© 2'},{value:3,label:'Thá»© 3'},{value:4,label:'Thá»© 4'},
+  {value:5,label:'Thá»© 5'},{value:6,label:'Thá»© 6'},{value:7,label:'Thá»© 7'},{value:1,label:'Chá»§ nháº­t'},
 ];
 
 const t2m = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
@@ -42,8 +42,8 @@ const snapY = (cy,grid) => {
 };
 const getLabel = s => {
   if(s.class_type==='1v1'&&s.student_name) return `${s.student_name}: ${s.instrument||s.class_name}`;
-  if(s.class_type==='group') return `Nhóm (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
-  return s.class_name||'Lớp học';
+  if(s.class_type==='group') return `NhÃ³m (${s.student_count||0} HV): ${s.instrument||s.class_name}`;
+  return s.class_name||'Lá»›p há»c';
 };
 const getDIM = ym => {
   const[y,mo]=ym.split('-').map(Number); const d=[]; const dt=new Date(y,mo-1,1);
@@ -118,7 +118,7 @@ const layoutEvs = evs => {
   return s.map(ev=>({...ev,...map[ev.id]}));
 };
 
-// ── Edit Modal ────────────────────────────────────────────────────────────────
+// â”€â”€ Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
   const [f, setF]       = useState(null);
   const [applyTo, setApplyTo] = useState('permanent');
@@ -157,73 +157,73 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
             <h3 className="text-base font-bold text-gray-800">{getLabel(event)}</h3>
             <p className="text-xs text-gray-400">{event.class_name}</p>
             {event.is_override && (
-              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">⚡ Lịch ngoại lệ tuần này</span>
+              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">âš¡ Lá»‹ch ngoáº¡i lá»‡ tuáº§n nÃ y</span>
             )}
           </div>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">âœ•</button>
         </div>
 
-        {/* Áp dụng cho */}
+        {/* Ãp dá»¥ng cho */}
         <div className="mb-4 p-3 bg-gray-50 rounded-xl">
-          <p className="text-xs font-semibold text-gray-600 mb-2">📅 Áp dụng thay đổi cho:</p>
+          <p className="text-xs font-semibold text-gray-600 mb-2">ðŸ“… Ãp dá»¥ng thay Ä‘á»•i cho:</p>
           <div className="flex gap-2">
             <button onClick={()=>setApplyTo('week')}
               className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all
                 ${applyTo==='week'?'bg-orange-500 text-white border-orange-500':'bg-white text-gray-600 border-gray-200'}`}>
-              📆 Tuần này thôi
+              ðŸ“† Tuáº§n nÃ y thÃ´i
             </button>
             <button onClick={()=>setApplyTo('permanent')}
               className={`flex-1 py-2 rounded-xl text-xs font-semibold border-2 transition-all
                 ${applyTo==='permanent'?'bg-primary-600 text-white border-primary-600':'bg-white text-gray-600 border-gray-200'}`}>
-              🔁 Tất cả các tuần
+              ðŸ” Táº¥t cáº£ cÃ¡c tuáº§n
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-2">
             {applyTo==='week'
-              ? '⚡ Chỉ đổi lịch ngày '+new Date(event.actual_date||'').toLocaleDateString('vi-VN')+', tuần sau trở về bình thường'
-              : '🔁 Thay đổi lịch cố định cho tất cả các tuần'}
+              ? 'âš¡ Chá»‰ Ä‘á»•i lá»‹ch ngÃ y '+new Date(event.actual_date||'').toLocaleDateString('vi-VN')+', tuáº§n sau trá»Ÿ vá» bÃ¬nh thÆ°á»ng'
+              : 'ðŸ” Thay Ä‘á»•i lá»‹ch cá»‘ Ä‘á»‹nh cho táº¥t cáº£ cÃ¡c tuáº§n'}
           </p>
         </div>
 
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">📅 Thứ</label>
+            <label className="text-xs font-medium text-gray-600">ðŸ“… Thá»©</label>
             <select name="day_of_week" value={f.day_of_week} onChange={hc} className="input-field text-sm">
               {DAYS_OPT.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
             {applyTo==='week' && (
-              <p className="text-xs text-orange-500">⚡ Đổi ngày/giờ tuần này thôi, tuần sau về lịch gốc</p>
+              <p className="text-xs text-orange-500">âš¡ Äá»•i ngÃ y/giá» tuáº§n nÃ y thÃ´i, tuáº§n sau vá» lá»‹ch gá»‘c</p>
             )}
           </div>
           {applyTo === 'week' && (
             <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
-              📅 Ngày dạy: <span className="font-semibold">{DAYS_OPT.find(d=>d.value===Number(f.day_of_week))?.label}</span>
-              <p className="text-xs text-gray-400 mt-0.5">⚡ Chỉ đổi giờ, không đổi ngày</p>
+              ðŸ“… NgÃ y dáº¡y: <span className="font-semibold">{DAYS_OPT.find(d=>d.value===Number(f.day_of_week))?.label}</span>
+              <p className="text-xs text-gray-400 mt-0.5">âš¡ Chá»‰ Ä‘á»•i giá», khÃ´ng Ä‘á»•i ngÃ y</p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">🕐 Bắt đầu</label>
+              <label className="text-xs font-medium text-gray-600">ðŸ• Báº¯t Ä‘áº§u</label>
               <input type="time" name="time_start" value={f.time_start} onChange={hc} className="input-field text-sm"/>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">🕐 Kết thúc</label>
+              <label className="text-xs font-medium text-gray-600">ðŸ• Káº¿t thÃºc</label>
               <input type="time" name="time_end" value={f.time_end} onChange={hc} className="input-field text-sm"/>
             </div>
           </div>
           {applyTo==='permanent'&&(
             <>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">👨‍🏫 Giáo viên</label>
+                <label className="text-xs font-medium text-gray-600">ðŸ‘¨â€ðŸ« GiÃ¡o viÃªn</label>
                 <select name="teacher_id" value={f.teacher_id} onChange={hc} className="input-field text-sm">
-                  <option value="">-- Chọn --</option>
+                  <option value="">-- Chá»n --</option>
                   {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">🚪 Phòng</label>
+                <label className="text-xs font-medium text-gray-600">ðŸšª PhÃ²ng</label>
                 <select name="room_id" value={f.room_id} onChange={hc} className="input-field text-sm">
-                  <option value="">-- Chọn --</option>
+                  <option value="">-- Chá»n --</option>
                   {rooms.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </div>
@@ -235,16 +235,16 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
           {event.is_override && (
             <button onClick={()=>{ onDelete(event, 'override'); onClose(); }}
               className="px-3 py-2.5 rounded-xl bg-orange-50 text-orange-500 font-medium text-sm">
-              ↩️ Về lịch gốc
+              â†©ï¸ Vá» lá»‹ch gá»‘c
             </button>
           )}
           {applyTo==='permanent'&&(
             <button onClick={()=>{ onDelete(event, 'permanent'); onClose(); }}
-              className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">🗑️ Xóa</button>
+              className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-500 font-medium text-sm">ðŸ—‘ï¸ XÃ³a</button>
           )}
           <button onClick={handleSave} disabled={saving}
             className="flex-grow py-2.5 rounded-xl bg-primary-600 text-white font-medium text-sm disabled:opacity-50">
-            {saving?'⏳...':'💾 Lưu'}
+            {saving?'â³...':'ðŸ’¾ LÆ°u'}
           </button>
         </div>
       </div>
@@ -252,7 +252,7 @@ const EditModal = React.memo(({event,teachers,rooms,onClose,onSave,onDelete})=>{
   );
 });
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ScheduleCalendar = () => {
   const navigate      = useNavigate();
   const gridRef       = useRef(null);
@@ -281,10 +281,10 @@ const ScheduleCalendar = () => {
   const formatWeekLabel = () => {
     const s=weekStart.toLocaleDateString('vi-VN',{day:'numeric',month:'numeric'});
     const e=weekEnd.toLocaleDateString('vi-VN',{day:'numeric',month:'numeric',year:'numeric'});
-    if(weekOffset===0) return `Tuần này · ${s} – ${e}`;
-    if(weekOffset===-1) return `Tuần trước · ${s} – ${e}`;
-    if(weekOffset===1) return `Tuần sau · ${s} – ${e}`;
-    return `${s} – ${e}`;
+    if(weekOffset===0) return `Tuáº§n nÃ y Â· ${s} â€“ ${e}`;
+    if(weekOffset===-1) return `Tuáº§n trÆ°á»›c Â· ${s} â€“ ${e}`;
+    if(weekOffset===1) return `Tuáº§n sau Â· ${s} â€“ ${e}`;
+    return `${s} â€“ ${e}`;
   };
 
   const loadBase = useCallback(async()=>{
@@ -328,7 +328,7 @@ const ScheduleCalendar = () => {
         class_id:sched.class_id,teacher_id:sched.teacher_id,room_id:sched.room_id,
         day_of_week:newDow,time_start:newStart,time_end:newEnd,type:sched.type,note:sched.note,
       });
-      toast.success('Di chuyển lịch thành công!');
+      toast.success('Di chuyá»ƒn lá»‹ch thÃ nh cÃ´ng!');
     }catch(e){ toast.error(e.message); loadBase(); }
   },[loadBase]);
 
@@ -346,9 +346,9 @@ const ScheduleCalendar = () => {
           new_time_end:   ne,
           room_id:        f.room_id||null,
           status:         'rescheduled',
-          note:           `Đổi lịch tuần ${event.actual_date}`,
+          note:           `Äá»•i lá»‹ch tuáº§n ${event.actual_date}`,
         });
-        toast.success('✅ Đã đổi lịch tuần này! Tuần sau sẽ trở về bình thường.');
+        toast.success('âœ… ÄÃ£ Ä‘á»•i lá»‹ch tuáº§n nÃ y! Tuáº§n sau sáº½ trá»Ÿ vá» bÃ¬nh thÆ°á»ng.');
         await loadOverrides();
       }catch(e){ toast.error(e.message); }
     } else {
@@ -358,7 +358,7 @@ const ScheduleCalendar = () => {
           class_id:event.class_id,teacher_id:f.teacher_id,room_id:f.room_id,
           day_of_week:Number(f.day_of_week),time_start:ns,time_end:ne,type:event.type,note:event.note,
         });
-        toast.success('✅ Cập nhật lịch cố định thành công!');
+        toast.success('âœ… Cáº­p nháº­t lá»‹ch cá»‘ Ä‘á»‹nh thÃ nh cÃ´ng!');
         loadBase();
       }catch(e){ toast.error(e.message); loadBase(); }
     }
@@ -368,15 +368,15 @@ const ScheduleCalendar = () => {
     if(type==='override'){
       try{
         await api.delete(`/schedule-overrides/${event.id}/${event.actual_date}`);
-        toast.success('↩️ Đã về lịch bình thường!');
+        toast.success('â†©ï¸ ÄÃ£ vá» lá»‹ch bÃ¬nh thÆ°á»ng!');
         await loadOverrides();
       }catch(e){ toast.error(e.message); }
     } else {
-      if(!window.confirm('Xóa lịch học này vĩnh viễn?')) return;
+      if(!window.confirm('XÃ³a lá»‹ch há»c nÃ y vÄ©nh viá»…n?')) return;
       try{
         await api.delete(`/schedules/${event.id}`);
         setSchedules(p=>p.filter(s=>s.id!==event.id));
-        toast.success('Đã xóa!');
+        toast.success('ÄÃ£ xÃ³a!');
       }catch(e){ toast.error(e.message); }
     }
   },[loadOverrides]);
@@ -404,7 +404,7 @@ const ScheduleCalendar = () => {
     if(!dragData.current)return;
     const{id,dur,sched}=dragData.current;
     const mins=snapY(e.clientY,gridRef.current);
-    if(mins+dur>END_HOUR*60){toast.error('Vượt quá giờ kết thúc!');return;}
+    if(mins+dur>END_HOUR*60){toast.error('VÆ°á»£t quÃ¡ giá» káº¿t thÃºc!');return;}
     setDraggingId(null); dragData.current=null;
     await applyDrop(id,sched,DAY_MAP[di],m2t(mins),m2t(mins+dur));
   },[hideInd,applyDrop]);
@@ -419,26 +419,26 @@ const ScheduleCalendar = () => {
   const byDate = filtered.filter(s=>s.day_of_week===dow(selDate));
 
   return(
-    <MainLayout title="Lịch học">
+    <MainLayout title="Lá»‹ch há»c">
       <EditModal event={editEvent} teachers={teachers} rooms={rooms}
         onClose={()=>setEditEvent(null)} onSave={handleSave} onDelete={handleDelete}/>
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <p className="text-xs text-gray-400 hidden sm:block">✏️ Bấm để sửa · 🖱️ Kéo thả = đổi cố định</p>
+        <p className="text-xs text-gray-400 hidden sm:block">âœï¸ Báº¥m Ä‘á»ƒ sá»­a Â· ðŸ–±ï¸ KÃ©o tháº£ = Ä‘á»•i cá»‘ Ä‘á»‹nh</p>
         <div className="flex items-center gap-2">
           <select value={filterTeacher} onChange={e=>setFilterTeacher(e.target.value)}
             className="input-field text-sm w-auto">
-            <option value="">Tất cả giáo viên</option>
+            <option value="">Táº¥t cáº£ giÃ¡o viÃªn</option>
             {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
-          <Button icon="➕" onClick={()=>navigate('/admin/schedule/new')}>Thêm lịch</Button>
+          <Button icon="âž•" onClick={()=>navigate('/admin/schedule/new')}>ThÃªm lá»‹ch</Button>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-2xl">
-        {[{key:'week',label:'📅 Lịch tuần'},{key:'date',label:'🗓️ Theo ngày'},{key:'month',label:'📆 Theo tháng'}].map(t=>(
+        {[{key:'week',label:'ðŸ“… Lá»‹ch tuáº§n'},{key:'date',label:'ðŸ—“ï¸ Theo ngÃ y'},{key:'month',label:'ðŸ“† Theo thÃ¡ng'}].map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
             className={`flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all
               ${tab===t.key?'bg-white shadow text-primary-600':'text-gray-500'}`}>
@@ -447,28 +447,28 @@ const ScheduleCalendar = () => {
         ))}
       </div>
 
-      {loading?<div className="text-center py-20 text-gray-400">Đang tải...</div>:(
+      {loading?<div className="text-center py-20 text-gray-400">Äang táº£i...</div>:(
         <>
           {tab==='week'&&(
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              {/* Navigation tuần */}
+              {/* Navigation tuáº§n */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                 <button onClick={()=>setWeekOffset(w=>w-1)}
                   className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                  ← Tuần trước
+                  â† Tuáº§n trÆ°á»›c
                 </button>
                 <div className="text-center">
                   <p className="text-sm font-semibold text-gray-700">{formatWeekLabel()}</p>
                   {weekOffset!==0&&(
                     <button onClick={()=>setWeekOffset(0)}
                       className="text-xs text-primary-500 hover:text-primary-700 mt-0.5">
-                      Về tuần này
+                      Vá» tuáº§n nÃ y
                     </button>
                   )}
                 </div>
                 <button onClick={()=>setWeekOffset(w=>w+1)}
                   className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                  Tuần sau →
+                  Tuáº§n sau â†’
                 </button>
               </div>
 
@@ -489,7 +489,7 @@ const ScheduleCalendar = () => {
                             {date.getDate()}/{date.getMonth()+1}
                           </p>
                           {isToday&&<div className="w-1.5 h-1.5 bg-primary-500 rounded-full mx-auto mt-0.5"/>}
-                          {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="Có lịch ngoại lệ"/>}
+                          {hasOverride&&<div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-0.5" title="CÃ³ lá»‹ch ngoáº¡i lá»‡"/>}
                         </div>
                       );
                     })}
@@ -547,7 +547,7 @@ const ScheduleCalendar = () => {
                                   <div className="px-1.5 py-0.5 h-full flex flex-col overflow-hidden">
                                     <p className="text-[11px] font-bold leading-tight truncate"
                                       style={{color: s.is_override ? '#c2410c' : c.text}}>
-                                      {s.is_override && '⚡'}{getLabel(s)}
+                                      {s.is_override && 'âš¡'}{getLabel(s)}
                                     </p>
                                     {h0>26&&<p className="text-[10px] truncate"
                                       style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.8}}>
@@ -555,7 +555,7 @@ const ScheduleCalendar = () => {
                                     </p>}
                                     {h0>36&&<p className="text-[10px] truncate"
                                       style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.7}}>
-                                      {s.room_name||'Chưa xếp phòng'}
+                                      {s.room_name||'ChÆ°a xáº¿p phÃ²ng'}
                                     </p>}
                                   </div>
                                   {draggingId===s.id&&(
@@ -574,8 +574,8 @@ const ScheduleCalendar = () => {
               </div>
               {!weekSchedules.length&&(
                 <div className="text-center py-16">
-                  <p className="text-4xl mb-3">📅</p>
-                  <p className="text-gray-400">Chưa có lịch học nào</p>
+                  <p className="text-4xl mb-3">ðŸ“…</p>
+                  <p className="text-gray-400">ChÆ°a cÃ³ lá»‹ch há»c nÃ o</p>
                 </div>
               )}
             </div>
@@ -589,15 +589,15 @@ const ScheduleCalendar = () => {
                   {new Date(selDate).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
                 </p>
                 {!byDate.length?(
-                  <p className="text-center text-gray-400 py-8">Không có lịch học ngày này</p>
+                  <p className="text-center text-gray-400 py-8">KhÃ´ng cÃ³ lá»‹ch há»c ngÃ y nÃ y</p>
                 ):(
                   <div className="flex flex-col gap-3">
                     {[...byDate].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
                       <div key={s.id} onClick={()=>setEditEvent({...s,actual_date:selDate})}
                         className={`p-4 rounded-2xl border cursor-pointer active:scale-95 transition-transform ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                         <p className="font-bold text-gray-800">{getLabel(s)}</p>
-                        <p className="text-sm text-gray-600 mt-1">🕐 {s.time_start?.slice(0,5)} – {s.time_end?.slice(0,5)}</p>
-                        <p className="text-sm text-gray-500">👨‍🏫 {s.teacher_name} · 🚪 {s.room_name}</p>
+                        <p className="text-sm text-gray-600 mt-1">ðŸ• {s.time_start?.slice(0,5)} â€“ {s.time_end?.slice(0,5)}</p>
+                        <p className="text-sm text-gray-500">ðŸ‘¨â€ðŸ« {s.teacher_name} Â· ðŸšª {s.room_name}</p>
                       </div>
                     ))}
                   </div>
@@ -619,7 +619,7 @@ const ScheduleCalendar = () => {
                         <p className="text-sm font-semibold text-gray-700 capitalize">
                           {new Date(d).toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'numeric'})}
                         </p>
-                        <p className="text-xs text-gray-400">{ds.length} lớp</p>
+                        <p className="text-xs text-gray-400">{ds.length} lá»›p</p>
                       </div>
                       <div className="p-3 flex flex-col gap-2">
                         {[...ds].sort((a,b)=>a.time_start?.localeCompare(b.time_start)).map((s,j)=>(
@@ -627,7 +627,7 @@ const ScheduleCalendar = () => {
                             className={`p-3 rounded-xl border cursor-pointer active:scale-95 ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                             <p className="text-sm font-bold text-gray-800">{getLabel(s)}</p>
                             <p className="text-xs text-gray-600">
-                              {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · {s.teacher_name} · {s.room_name}
+                              {s.time_start?.slice(0,5)}â€“{s.time_end?.slice(0,5)} Â· {s.teacher_name} Â· {s.room_name}
                             </p>
                           </div>
                         ))}
@@ -637,8 +637,8 @@ const ScheduleCalendar = () => {
                 })}
                 {getDIM(selMonth).every(d=>!filtered.filter(s=>s.day_of_week===dow(d)).length)&&(
                   <div className="text-center py-12 text-gray-400">
-                    <p className="text-3xl mb-2">📆</p>
-                    <p className="text-sm">Không có lịch học trong tháng này</p>
+                    <p className="text-3xl mb-2">ðŸ“†</p>
+                    <p className="text-sm">KhÃ´ng cÃ³ lá»‹ch há»c trong thÃ¡ng nÃ y</p>
                   </div>
                 )}
               </div>
