@@ -52,9 +52,10 @@ const Attendance = () => {
     if (!selectedClass) return;
     try {
       const classId = selectedClass.class_id || selectedClass.id;
-      const [stuRes, attRes] = await Promise.all([
+      const [stuRes, attRes, gaRes] = await Promise.all([
         api.get(`/classes/${classId}/students`),
         api.get(`/attendance/class/${classId}`),
+        api.get(`/guest-assignments?class_id=${classId}&date=${date}`).catch(() => ({ rows: [] })),
       ]);
       const stuList = stuRes.rows || [];
       setStudents(stuList);
@@ -62,10 +63,27 @@ const Attendance = () => {
       const todayAtt = (attRes.rows || []).filter(a => a.date === date);
       setExisting(todayAtt);
 
-      const guestAtt = todayAtt.filter(a => a.is_guest === 1);
       const guestList = [];
+      const addedIds = new Set();
+
+      const assignments = gaRes.rows || [];
+      for (const ga of assignments) {
+        if (!stuList.find(s => s.id === ga.student_id) && !addedIds.has(ga.student_id)) {
+          guestList.push({
+            id: ga.student_id,
+            name: ga.student_name || 'HV vãng lai',
+            nickname: ga.nickname,
+            is_guest: true,
+            home_class_id: ga.home_class_id,
+            home_class_name: ga.home_class_name,
+          });
+          addedIds.add(ga.student_id);
+        }
+      }
+
+      const guestAtt = todayAtt.filter(a => a.is_guest === 1);
       for (const g of guestAtt) {
-        if (!stuList.find(s => s.id === g.student_id)) {
+        if (!stuList.find(s => s.id === g.student_id) && !addedIds.has(g.student_id)) {
           guestList.push({
             id: g.student_id,
             name: g.student_name || g.display_name || 'HV vãng lai',
@@ -73,6 +91,7 @@ const Attendance = () => {
             is_guest: true,
             home_class_id: g.home_class_id,
           });
+          addedIds.add(g.student_id);
         }
       }
       setGuestStudents(guestList);

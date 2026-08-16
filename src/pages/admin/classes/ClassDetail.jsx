@@ -6,6 +6,7 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import GroupSalaryRates from '../../../components/ui/GroupSalaryRates';
+import GuestScheduler from '../../../components/ui/GuestScheduler';
 const STATUS_VARIANT = { 'Đang học':'green', 'Tạm nghỉ':'orange', 'Đã kết thúc':'gray' };
 const STATUS_TUITION = {
   'Đã thanh toán':     { label:'Đã thanh toán',     bg:'bg-green-100',  text:'text-green-700' },
@@ -283,6 +284,16 @@ const ClassDetail = () => {
       <div className="mt-4">
         <Button variant="secondary" onClick={() => navigate(-1)}>← Quay lại</Button>
       </div>
+      {cls.type === 'group' && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 mt-4">
+          <p className="text-sm font-bold text-gray-700 mb-3">👥 Xếp lịch vãng lai cho HV</p>
+          <select onChange={e => setGuestTarget(e.target.value)} value={guestTarget || ''} className="input-field mb-3">
+            <option value="">Chọn học viên...</option>
+            {students.map(s => <option key={s.id} value={s.id}>{s.name}{s.nickname ? ` (${s.nickname})` : ''}</option>)}
+          </select>
+          {guestTarget && <GuestScheduler studentId={guestTarget} studentName={students.find(s => s.id === guestTarget)?.name} />}
+        </div>
+      )}
     </MainLayout>
   );
 };
