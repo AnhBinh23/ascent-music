@@ -332,18 +332,25 @@ const SalaryManage = ({ embedded = false }) => {
                     </div>
 
                     {isPaid && paidInfo && (
-                      <div className="mt-2 p-2 bg-green-50 rounded-xl text-xs text-green-700">
-                        ✅ Đã thanh toán {fmt(paidInfo.amount)}
-                        {paidInfo.paid_at && ` · ${new Date(paidInfo.paid_at).toLocaleDateString('vi-VN')}`}
+                      <div className="mt-2 p-2 bg-green-50 rounded-xl text-xs text-green-700 flex items-center justify-between">
+                        <span>
+                          ✅ Đã thanh toán {fmt(paidInfo.amount)}
+                          {paidInfo.paid_at && ` · ${new Date(paidInfo.paid_at).toLocaleDateString('vi-VN')}`}
+                        </span>
+                        <button onClick={() => {
+                          if(window.confirm('Hoàn tác thanh toán tháng này?')) {
+                            api.delete(`/salary/${t.id}/${monthKey}`).then(() => { toast.success('Đã hoàn tác!'); loadData(); }).catch(e => toast.error(e.message));
+                          }
+                        }} className="text-red-400 hover:text-red-600 text-xs ml-2">↩️ Hoàn tác</button>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 flex flex-col gap-2">
                     {!isPaid ? (
                       <Button size="sm" icon="💰" loading={paying[t.id]} onClick={() => handlePay(t)}>Trả lương</Button>
                     ) : (
-                      <Button size="sm" variant="secondary" disabled>✅ Đã trả</Button>
+                      <Button size="sm" icon="💰" loading={paying[t.id]} onClick={() => handlePay(t)}>Trả thêm</Button>
                     )}
                   </div>
                 </div>
