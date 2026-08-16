@@ -264,11 +264,11 @@ const MySchedule = () => {
       if (!tid) return;
       setTeacherId(tid);
       const [schedRes, classRes, roomRes, mkRes] = await Promise.all([
-        api.get(`/schedules/teacher/${tid}`),
-        api.get(`/classes?teacher_id=${tid}`),
-        api.get('/rooms'),
-        api.get('/makeup'),
-      ]);
+  api.get(`/schedules/teacher/${tid}`),
+  api.get(`/classes?teacher_id=${tid}`),
+  api.get('/rooms'),
+  api.get('/makeup').catch(() => ({ rows: [] })),
+]);
       setSchedules(schedRes.rows||[]);
       setMyClasses((classRes.rows||[]).filter(c=>c.status==='Đang học'));
       setRooms(roomRes.rows||[]);
