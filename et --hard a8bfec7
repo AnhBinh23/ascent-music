@@ -1,0 +1,10 @@
+[33m9d973d6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m feat: update logo and name to Ascent Music Studio
+[33ma8bfec7[m fix: sticky time column mobile only
+[33m62ad2ac[m fix: sticky time column mobile only
+[33mc228338[m fix: sticky time column mobile only
+[33ma318e3b[m fix: remove BOM
+[33mb855dfb[m fix: remove time from schedule blocks, show teacher and room
+[33m05ce59b[m fix: remove BOM
+[33m717776a[m feat: google calendar style schedule view
+[33ma5631a8[m fix: add course_ending icon, restore Button import
+[33m76b18b8[m fix: handle makeup API error gracefully
