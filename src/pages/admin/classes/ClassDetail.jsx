@@ -7,6 +7,7 @@ import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import GroupSalaryRates from '../../../components/ui/GroupSalaryRates';
 import GuestScheduler from '../../../components/ui/GuestScheduler';
+
 const STATUS_VARIANT = { 'Đang học':'green', 'Tạm nghỉ':'orange', 'Đã kết thúc':'gray' };
 const STATUS_TUITION = {
   'Đã thanh toán':     { label:'Đã thanh toán',     bg:'bg-green-100',  text:'text-green-700' },
@@ -30,6 +31,7 @@ const ClassDetail = () => {
   const [expandedId, setExpandedId]   = useState(null);
   const [loading, setLoading]         = useState(true);
   const [updating, setUpdating]       = useState(null);
+  const [guestTarget, setGuestTarget] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -72,7 +74,7 @@ const ClassDetail = () => {
       await api.patch(`/classes/${id}/students/${studentId}/course`, { course_number: newCourse });
       setStudents(prev => prev.map(s => s.id === studentId ? { ...s, course_number: newCourse } : s));
       setHistories(prev => { const n = { ...prev }; delete n[studentId]; return n; });
-      toast.success(`✅ Chuyển sang Khóa ${newCourse}!`);
+      toast.success(`Chuyển sang Khóa ${newCourse}!`);
     } catch (e) {
       toast.error(e.message || 'Có lỗi xảy ra!');
     } finally {
@@ -92,7 +94,6 @@ const ClassDetail = () => {
 
   return (
     <MainLayout title="Chi tiết lớp học">
-      {/* Header */}
       <div className="flex items-start gap-4 mb-5">
         <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0">🎵</div>
         <div className="flex-1 min-w-0">
@@ -109,7 +110,6 @@ const ClassDetail = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        {/* Thông tin lớp */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-sm font-bold text-gray-700 mb-3">📚 Thông tin lớp</p>
           {[
@@ -129,7 +129,6 @@ const ClassDetail = () => {
           ))}
         </div>
 
-        {/* Lương giáo viên */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-sm font-bold text-gray-700 mb-3">💰 Lương giáo viên</p>
           <div className="flex flex-col gap-3">
@@ -161,7 +160,6 @@ const ClassDetail = () => {
         </div>
       </div>
 
-      {/* Lịch dạy chi tiết */}
       {classSchedules.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-4">
           <p className="text-sm font-bold text-gray-700 mb-3">📅 Lịch dạy ({classSchedules.length} buổi/tuần)</p>
@@ -178,11 +176,12 @@ const ClassDetail = () => {
           </div>
         </div>
       )}
-      {cls.type === 'group' && (
+
+      {isGroup && (
         <GroupSalaryRates classId={cls.id} totalStudents={students?.length || 3} />
       )}
-      {/* Danh sách học viên */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 mt-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-bold text-gray-700">👨‍🎓 Học viên ({students.length}{cls.max_students > 1 ? `/${cls.max_students}` : ''})</p>
           <p className="text-xs text-gray-400">Nhấn vào học viên để xem lịch sử khóa học</p>
@@ -281,10 +280,7 @@ const ClassDetail = () => {
         </div>
       </div>
 
-      <div className="mt-4">
-        <Button variant="secondary" onClick={() => navigate(-1)}>← Quay lại</Button>
-      </div>
-      {cls.type === 'group' && (
+      {isGroup && (
         <div className="bg-white rounded-2xl border border-gray-100 p-5 mt-4">
           <p className="text-sm font-bold text-gray-700 mb-3">👥 Xếp lịch vãng lai cho HV</p>
           <select onChange={e => setGuestTarget(e.target.value)} value={guestTarget || ''} className="input-field mb-3">
@@ -294,6 +290,10 @@ const ClassDetail = () => {
           {guestTarget && <GuestScheduler studentId={guestTarget} studentName={students.find(s => s.id === guestTarget)?.name} />}
         </div>
       )}
+
+      <div className="mt-4">
+        <Button variant="secondary" onClick={() => navigate(-1)}>← Quay lại</Button>
+      </div>
     </MainLayout>
   );
 };
