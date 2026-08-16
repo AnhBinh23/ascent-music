@@ -260,7 +260,13 @@ const SalaryManage = ({ embedded = false }) => {
                                     </td>
                                     <td className="py-1.5 px-2 text-center font-bold text-gray-800">{c.sessions}</td>
                                     <td className="py-1.5 px-2 text-right text-gray-600">
-                                      {fmt(c.teacher_salary)}
+                                      <span className="cursor-pointer hover:text-blue-600 hover:underline" onClick={() => {
+                                        const newSalary = prompt(`Lương/buổi cho ${c.class_name}:`, c.teacher_salary);
+                                        if (newSalary === null) return;
+                                        api.put(`/classes/${c.class_id}`, { teacher_salary: Number(newSalary) })
+                                          .then(() => { toast.success('Đã cập nhật lương!'); loadData(); })
+                                          .catch(e => toast.error(e.message));
+                                      }}>{fmt(c.teacher_salary)} ✏️</span>
                                       {c.class_type === 'group' && c.teacher_salary_partial > 0 && c.sessions_partial > 0 && (
                                         <span className="block text-xs text-orange-500">vắng {c.sessions_partial} buổi: {fmt(c.teacher_salary_partial)}</span>
                                       )}
