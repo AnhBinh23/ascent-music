@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 
-const fmt = n => Number(n || 0).toLocaleString('vi-VN') + 'đ';
+
 
 const GroupSalaryRates = ({ classId, totalStudents }) => {
   const [rates, setRates] = useState([]);
