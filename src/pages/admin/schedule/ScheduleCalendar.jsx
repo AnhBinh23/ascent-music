@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+﻿import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../../components/layout/MainLayout';
 import Button from '../../../components/ui/Button';
@@ -7,9 +7,9 @@ import { toast } from 'react-toastify';
 
 const DAYS       = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
 const DAY_MAP    = [2,3,4,5,6,7,1];
-const START_HOUR = 7;
-const END_HOUR   = 21;
-const SH         = 80;
+const START_HOUR = 6;
+const END_HOUR   = 23;
+const SH         = 60;
 const SNAP       = 30;
 
 const COLORS = [

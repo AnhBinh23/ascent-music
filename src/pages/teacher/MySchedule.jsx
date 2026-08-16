@@ -11,7 +11,7 @@ const DAYS_OPT = [
   {value:2,label:'Thứ 2'},{value:3,label:'Thứ 3'},{value:4,label:'Thứ 4'},
   {value:5,label:'Thứ 5'},{value:6,label:'Thứ 6'},{value:7,label:'Thứ 7'},{value:1,label:'Chủ nhật'},
 ];
-const START_HOUR = 7, END_HOUR = 21, SH = 80;
+const START_HOUR = 6, END_HOUR = 23, SH = 60;
 const COLORS = [
   {bg:'#dbeafe',border:'#93c5fd',text:'#1e40af'},
   {bg:'#dcfce7',border:'#86efac',text:'#166534'},
@@ -545,16 +545,14 @@ const MySchedule = () => {
                                 borderStyle: s.is_override?'dashed':'solid',
                                 zIndex:5,
                               }}>
-                              <div className="px-1.5 py-1 h-full flex flex-col">
-                                <p className="text-xs font-bold leading-tight truncate"
-                                  style={{color:s.is_override?'#c2410c':c.text}}>
-                                  {s.is_override&&'⚡'}{getLabel(s)}
+                              <div className="px-1.5 py-0.5 h-full flex flex-col overflow-hidden">
+                                <p className="text-[11px] font-bold leading-tight truncate"
+                                  style={{color: s.is_override ? '#c2410c' : c.text}}>
+                                  {s.is_override && '⚡'}{getLabel(s)}
                                 </p>
-                                {h0>34&&<p className="text-xs" style={{color:s.is_override?'#ea580c':c.text,opacity:0.8}}>
-                                  {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)}
-                                </p>}
-                                {h0>50&&<p className="text-xs truncate" style={{color:s.is_override?'#ea580c':c.text,opacity:0.7}}>
-                                  {s.room_name}
+                                {h0>28&&<p className="text-[10px] truncate"
+                                  style={{color: s.is_override ? '#ea580c' : c.text, opacity:0.7}}>
+                                  🚪 {s.room_name||'Chưa xếp phòng'}
                                 </p>}
                               </div>
                             </div>
@@ -622,7 +620,7 @@ const MySchedule = () => {
                         className={`p-3 rounded-xl border cursor-pointer active:scale-95 ${CARD_COLORS[j%CARD_COLORS.length]}`}>
                         <p className="text-sm font-bold text-gray-800">{getLabel(s)}</p>
                         <p className="text-xs text-gray-600">
-                          {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · {s.room_name||''}
+                          {s.time_start?.slice(0,5)}–{s.time_end?.slice(0,5)} · 🚪 {s.room_name||'Chưa xếp phòng'}
                         </p>
                       </div>
                     ))}
