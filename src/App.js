@@ -69,6 +69,7 @@ import TeacherMaterials from './pages/teacher/Materials';
 import MySchedule       from './pages/teacher/MySchedule';
 import CheckIn          from './pages/teacher/CheckIn';
 import SendNotification from './pages/teacher/SendNotification';
+import FlexibleAttendance from './pages/teacher/FlexibleAttendance';
 
 // Student
 import StudentDashboard  from './pages/student/Dashboard';
@@ -164,6 +165,7 @@ function App() {
               <Route path="notifications"     element={<SendNotification />} />
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai"               element={<TeacherAIChat />} />
+              <Route path="flexible-attendance" element={<FlexibleAttendance />} />
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
