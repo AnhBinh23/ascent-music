@@ -9,23 +9,23 @@ const GroupSalaryRates = ({ classId, totalStudents }) => {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
+ useEffect(() => {
     if (!classId) return;
     const load = async () => {
       try {
         const res = await api.get(`/group-salary/rates/${classId}`);
         const existing = res.rows || [];
         const total = Number(totalStudents) || 3;
-        if (existing.length && existing[0].total_count === total) {
-          setRates(existing.map(r => ({
+        const filtered = existing.filter(r => r.present_count < r.total_count);
+        if (filtered.length && existing[0].total_count === total) {
+          setRates(filtered.map(r => ({
             present_count: r.present_count,
             total_count: r.total_count,
             amount: r.amount || '',
           })));
         } else {
-          const total = totalStudents || 3;
           const generated = [];
-          for (let i = total; i >= 1; i--) {
+          for (let i = total - 1; i >= 1; i--) {
             generated.push({ present_count: i, total_count: total, amount: '' });
           }
           setRates(generated);
@@ -53,7 +53,7 @@ const GroupSalaryRates = ({ classId, totalStudents }) => {
 
   return (
     <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-2xl">
-      <p className="text-sm font-bold text-orange-700 mb-3">💰 Bảng lương nhóm theo số HV có mặt</p>
+      <p className="text-sm font-bold text-orange-700 mb-3">💰 Bảng lương khi có HV vắng</p>
       <div className="flex flex-col gap-2">
         {rates.map((r, i) => (
           <div key={i} className="flex items-center gap-3">
