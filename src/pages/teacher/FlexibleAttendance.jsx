@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 
 const fmt = n => n ? Number(n).toLocaleString('vi-VN') + 'đ' : '—';
 
 const FlexibleAttendance = () => {
-  const { user } = useAuth();
   const [classes, setClasses]     = useState([]);
   const [selectedCls, setSelectedCls] = useState(null);
   const [date, setDate]           = useState(new Date().toISOString().split('T')[0]);
