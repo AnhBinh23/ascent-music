@@ -2,30 +2,40 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 
-
-
 const GroupSalaryRates = ({ classId, totalStudents }) => {
   const [rates, setRates] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
- useEffect(() => {
+  useEffect(() => {
     if (!classId) return;
     const load = async () => {
       try {
         const res = await api.get(`/group-salary/rates/${classId}`);
         const existing = res.rows || [];
         const total = Number(totalStudents) || 3;
-        const filtered = existing.filter(r => r.present_count < r.total_count);
-        if (filtered.length && existing[0].total_count === total) {
-          setRates(filtered.map(r => ({
-            present_count: r.present_count,
-            total_count: r.total_count,
-            amount: r.amount || '',
-          })));
+
+        if (existing.length && existing[0].total_count === total) {
+          // Load từ DB: chỉ lấy các dòng có present_count < total
+          const mapped = existing
+            .filter(r => r.present_count < r.total_count)
+            .map(r => ({
+              present_count: r.present_count,
+              total_count: r.total_count,
+              amount: r.amount || '',
+            }));
+          // Bổ sung dòng còn thiếu từ (total-1) → 0
+          for (let i = total - 1; i >= 0; i--) {
+            if (!mapped.find(r => r.present_count === i)) {
+              mapped.push({ present_count: i, total_count: total, amount: '' });
+            }
+          }
+          mapped.sort((a, b) => b.present_count - a.present_count);
+          setRates(mapped);
         } else {
+          // Sinh mới: từ (total-1) → 0
           const generated = [];
-          for (let i = total - 1; i >= 1; i--) {
+          for (let i = total - 1; i >= 0; i--) {
             generated.push({ present_count: i, total_count: total, amount: '' });
           }
           setRates(generated);
@@ -53,12 +63,17 @@ const GroupSalaryRates = ({ classId, totalStudents }) => {
 
   return (
     <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-2xl">
-      <p className="text-sm font-bold text-orange-700 mb-3">💰 Bảng lương khi có HV vắng</p>
+      <p className="text-sm font-bold text-orange-700 mb-1">💰 Lương theo số HV có mặt</p>
+      <p className="text-xs text-orange-500 mb-3">Nhập mức lương cho từng trường hợp số HV đi học</p>
       <div className="flex flex-col gap-2">
         {rates.map((r, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-700 w-16">{r.present_count}/{r.total_count}</span>
-            <span className="text-xs text-gray-500">HV đi học →</span>
+          <div key={i} className={`flex items-center gap-3 ${r.present_count === 0 ? 'opacity-80' : ''}`}>
+            <span className={`text-sm font-semibold w-16 ${r.present_count === 0 ? 'text-red-500' : 'text-gray-700'}`}>
+              {r.present_count}/{r.total_count}
+            </span>
+            <span className={`text-xs w-28 ${r.present_count === 0 ? 'text-red-400 font-medium' : 'text-gray-500'}`}>
+              {r.present_count === 0 ? '🚫 Cả lớp vắng →' : 'HV đi học →'}
+            </span>
             <input
               type="number"
               value={r.amount}
