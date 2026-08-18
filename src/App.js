@@ -124,8 +124,9 @@ function App() {
               <Route path="reports"           element={<ReportPage />} />
               <Route path="settings"          element={<AccountManage />} />
               <Route path="checkin"           element={<CheckInManage />} />
-              <Route path="attendance"        element={<AttendanceManage />} />
-              <Route path="notifications"     element={<NotificationPage />} />
+              <Route path="attendance"             element={<AttendanceManage />} />
+              <Route path="flexible-attendance"    element={<FlexibleAttendance />} />
+              <Route path="notifications"          element={<NotificationPage />} />
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai"               element={<AIAssistant />} />
               <Route path="profile"           element={<ProfilePage />} />
@@ -179,6 +180,7 @@ function App() {
               <Route path="materials"         element={<StudentMaterials />} />
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai"               element={<AIChat />} />
+              <Route path="flexible-booking"    element={<FlexibleBooking />} />
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 

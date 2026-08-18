@@ -14,7 +14,8 @@ const menus = {
   
     { path: '/admin/schedule',      icon: '📅', label: 'Lịch học'        },
     { path: '/admin/tuition',       icon: '💰', label: 'Học phí'         },
-    { path: '/admin/attendance',    icon: '✅', label: 'Điểm danh HV'    },
+    { path: '/admin/attendance',          icon: '✅', label: 'Điểm danh HV'    },
+    { path: '/admin/flexible-attendance', icon: '🔄', label: 'Lớp linh hoạt'   },
     
     
     { path: '/admin/reports',       icon: '📊', label: 'Báo cáo'         },
@@ -42,8 +43,9 @@ const menus = {
     { path: '/teacher',               icon: '🏠', label: 'Tổng quan'      },
     { path: '/teacher/classes',       icon: '🎵', label: 'Lớp của tôi'   },
     { path: '/teacher/schedule',      icon: '📅', label: 'Lịch dạy'      },
-    { path: '/teacher/attendance',    icon: '✅', label: 'Điểm danh'     },
-    { path: '/teacher/lesson-log',    icon: '📝', label: 'Nhật ký học'   },
+    { path: '/teacher/attendance',          icon: '✅', label: 'Điểm danh'     },
+    { path: '/teacher/flexible-attendance', icon: '🔄', label: 'Lớp linh hoạt' },
+    { path: '/teacher/lesson-log',          icon: '📝', label: 'Nhật ký học'   },
     { path: '/teacher/checkin',       icon: '📋', label: 'Chấm công'     },
     { path: '/teacher/notifications', icon: '📨', label: 'Gửi thông báo' },
     { path: '/teacher/materials',     icon: '📁', label: 'Tài liệu'      },
@@ -97,7 +99,7 @@ const Sidebar = () => {
     >
       {/* Logo */}
       <div className="flex-shrink-0 flex items-center gap-3 px-5 py-5 border-b border-gray-100">
-        <img src="/icons/logo.png" alt="Logo" className="w-9 h-9 object-contain"/>
+        <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain"/>
         <div>
           <p className="font-bold text-gray-800 text-sm leading-tight">ASCENT</p>
           <p className="text-xs text-gray-400">Music Studio</p>
