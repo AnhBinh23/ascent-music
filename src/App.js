@@ -180,7 +180,6 @@ function App() {
               <Route path="materials"         element={<StudentMaterials />} />
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai"               element={<AIChat />} />
-              <Route path="flexible-booking"    element={<FlexibleBooking />} />
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
