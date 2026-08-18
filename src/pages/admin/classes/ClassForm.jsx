@@ -29,6 +29,7 @@ const EMPTY_CLASS = {
   status: 'Đang học', note: '',
   teacher_salary: '',
   teacher_salary_partial: '',
+  is_flexible: 0,
 };
 const EMPTY_SLOT = { day_of_week: 2, time_start: '08:00', time_end: '09:00', room_id: '' };
 
@@ -56,8 +57,8 @@ const ClassForm = () => {
 
   // ── Học viên ──
   const [allStudents, setAllStudents]           = useState([]);
-  const [selectedStudents, setSelectedStudents] = useState([]); // [{id, name, instrument}]
-  const [originalStudentIds, setOriginalStudentIds] = useState([]); // để sync khi edit
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [originalStudentIds, setOriginalStudentIds] = useState([]);
   const [studentSearch, setStudentSearch]       = useState('');
   const [showDropdown, setShowDropdown]         = useState(false);
 
@@ -90,6 +91,7 @@ const ClassForm = () => {
           note:                   c.note              || '',
           teacher_salary:         c.teacher_salary         || '',
           teacher_salary_partial: c.teacher_salary_partial || '',
+          is_flexible:            c.is_flexible       || 0,
         });
         const existing = (sched.rows || []).filter(s => s.class_id === id);
         if (existing.length > 0) {
@@ -101,7 +103,6 @@ const ClassForm = () => {
             room_id:     s.room_id || '',
           })));
         }
-        // Học viên hiện có
         const curStudents = stu.rows || [];
         setSelectedStudents(curStudents.map(s => ({ id: s.id, name: s.name, instrument: s.instrument })));
         setOriginalStudentIds(curStudents.map(s => s.id));
@@ -122,6 +123,7 @@ const ClassForm = () => {
     }
     if (name === 'type') {
       next.max_students = value === '1v1' ? 1 : next.max_students < 2 ? 5 : next.max_students;
+      next.is_flexible  = value === 'flexible' ? 1 : 0;
     }
     if (name === 'sessions_per_week') {
       const count = Number(value) || 1;
@@ -146,6 +148,7 @@ const ClassForm = () => {
     sl.map(s => `${DAY_LABEL[s.day_of_week]} ${s.time_start}-${s.time_end}`).join(', ');
 
   const spw = Number(form.sessions_per_week) || 1;
+  const isGroup = form.type === 'group' || form.type === 'flexible';
 
   // ── Học viên handlers ──
   const addStudent = (s) => {
@@ -175,7 +178,8 @@ const ClassForm = () => {
       const payload = {
         name:                   form.name,
         instrument:             form.instrument,
-        type:                   form.type,
+        type:                   form.type === 'flexible' ? 'group' : form.type,
+        is_flexible:            form.type === 'flexible' ? 1 : 0,
         teacher_id:             form.teacher_id,
         level:                  form.level,
         schedule:               buildScheduleText(slots),
@@ -203,7 +207,6 @@ const ClassForm = () => {
       }
 
       if (classId) {
-        // Lịch học
         if (isEdit) {
           const cur      = await api.get('/schedules');
           const existing = (cur.rows || []).filter(s => s.class_id === id);
@@ -222,17 +225,14 @@ const ClassForm = () => {
           }).catch(() => {})
         ));
 
-        // ── Sync học viên ──
         const selectedIds = selectedStudents.map(s => s.id);
-        // Thêm mới (có trong selected, chưa có trong original)
         const toAdd = selectedIds.filter(sid => !originalStudentIds.includes(sid));
-        // Xóa (có trong original, không còn trong selected) — chỉ khi edit
         const toRemove = isEdit ? originalStudentIds.filter(sid => !selectedIds.includes(sid)) : [];
 
         await Promise.all([
           ...toAdd.map(sid =>
-  api.post(`/classes/${classId}/students`, { student_id: sid, course_number: 1, total_sessions: Number(form.total_sessions) || 16 }).catch(() => {})
-),
+            api.post(`/classes/${classId}/students`, { student_id: sid, course_number: 1, total_sessions: Number(form.total_sessions) || 16 }).catch(() => {})
+          ),
           ...toRemove.map(sid =>
             api.delete(`/classes/${classId}/students/${sid}`).catch(() => {})
           ),
@@ -278,8 +278,14 @@ const ClassForm = () => {
               <label className="text-sm font-medium text-gray-700">Hình thức</label>
               <select name="type" value={form.type} onChange={handleChange} className="input-field">
                 <option value="1v1">1 kèm 1</option>
-                <option value="group">Nhóm</option>
+                <option value="group">Nhóm cố định</option>
+                <option value="flexible">🔄 Nhóm linh hoạt</option>
               </select>
+              {form.type === 'flexible' && (
+                <p className="text-xs text-blue-500 mt-1">
+                  💡 Admin/GV xếp lịch từng buổi cho HV — lương GV tính theo số HV có mặt thực tế
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1">
@@ -297,13 +303,11 @@ const ClassForm = () => {
               </select>
             </div>
 
-            {/* ✅ ── CHỌN HỌC VIÊN (ngay dưới Giáo viên) ── */}
+            {/* Học viên */}
             <div className="sm:col-span-2 flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700">
-                👨‍🎓 Học viên ({selectedStudents.length}{form.type === 'group' ? `/${maxStu}` : ''})
+                👨‍🎓 Học viên ({selectedStudents.length}{isGroup ? `/${maxStu}` : ''})
               </label>
-
-              {/* Search box */}
               <div className="relative">
                 <input
                   type="text"
@@ -321,11 +325,8 @@ const ClassForm = () => {
                       <p className="text-sm text-gray-400 p-3 text-center">Không tìm thấy học viên</p>
                     ) : (
                       studentResults.slice(0, 20).map(s => (
-                        <div
-                          key={s.id}
-                          onMouseDown={() => addStudent(s)}
-                          className="flex items-center gap-2.5 p-2.5 hover:bg-primary-50 cursor-pointer border-b border-gray-50 last:border-0"
-                        >
+                        <div key={s.id} onMouseDown={() => addStudent(s)}
+                          className="flex items-center gap-2.5 p-2.5 hover:bg-primary-50 cursor-pointer border-b border-gray-50 last:border-0">
                           <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-xs font-bold text-primary-600 flex-shrink-0">
                             {s.name?.charAt(0).toUpperCase()}
                           </div>
@@ -339,20 +340,13 @@ const ClassForm = () => {
                   </div>
                 )}
               </div>
-
-              {/* Chips học viên đã chọn */}
               {selectedStudents.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {selectedStudents.map(s => (
-                    <div key={s.id}
-                      className="flex items-center gap-1.5 pl-3 pr-2 py-1.5 bg-primary-50 border border-primary-200 rounded-xl">
+                    <div key={s.id} className="flex items-center gap-1.5 pl-3 pr-2 py-1.5 bg-primary-50 border border-primary-200 rounded-xl">
                       <span className="text-sm text-primary-700 font-medium">{s.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeStudent(s.id)}
-                        className="w-5 h-5 flex items-center justify-center rounded-full text-primary-400 hover:bg-red-100 hover:text-red-500 text-base leading-none"
-                        title="Xóa khỏi lớp"
-                      >
+                      <button type="button" onClick={() => removeStudent(s.id)}
+                        className="w-5 h-5 flex items-center justify-center rounded-full text-primary-400 hover:bg-red-100 hover:text-red-500 text-base leading-none">
                         ×
                       </button>
                     </div>
@@ -363,7 +357,7 @@ const ClassForm = () => {
               )}
             </div>
 
-            {/* ✅ Gói khóa học */}
+            {/* Gói khóa học */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">📦 Gói khóa học</label>
               <select name="total_sessions" value={form.total_sessions} onChange={handleChange} className="input-field">
@@ -385,7 +379,7 @@ const ClassForm = () => {
             <Input label="Học phí cả khóa (đ)" name="tuition_fee" type="number"
               value={form.tuition_fee} onChange={handleChange} placeholder="VD: 4800000" />
 
-            {form.type === 'group' && (
+            {isGroup && (
               <Input label="Sĩ số tối đa" name="max_students" type="number"
                 value={form.max_students} onChange={handleChange} />
             )}
@@ -433,22 +427,14 @@ const ClassForm = () => {
               <label className="text-sm font-medium text-gray-700">
                 💰 Lương/buổi {form.type === '1v1' ? '(1 kèm 1)' : '(nhóm đủ HV)'}
               </label>
-              <input
-                type="number"
-                name="teacher_salary"
-                value={form.teacher_salary}
-                onChange={handleChange}
-                placeholder="VD: 200000"
-                className="input-field"
-              />
+              <input type="number" name="teacher_salary" value={form.teacher_salary}
+                onChange={handleChange} placeholder="VD: 200000" className="input-field" />
               {form.teacher_salary > 0 && (
-                <p className="text-xs text-green-600 mt-0.5">
-                  ✅ {fmt(form.teacher_salary)}/buổi
-                </p>
+                <p className="text-xs text-green-600 mt-0.5">✅ {fmt(form.teacher_salary)}/buổi</p>
               )}
             </div>
 
-            {form.type === 'group' && (
+            {isGroup && (
               <div className="flex flex-col gap-1 sm:col-span-2">
                 <label className="text-sm font-medium text-gray-700">💰 Lương theo số HV có mặt</label>
                 <p className="text-xs text-gray-400 mb-2">Nhập mức lương cho từng trường hợp số HV đi học</p>
@@ -458,18 +444,12 @@ const ClassForm = () => {
             )}
           </div>
 
-          {/* Preview tổng lương cả khóa */}
           {form.teacher_salary > 0 && form.total_sessions > 0 && (
             <div className="mt-4 p-3 bg-blue-50 rounded-xl">
               <p className="text-xs font-semibold text-blue-700 mb-1">📊 Dự tính lương cả khóa</p>
               <p className="text-sm text-blue-600">
                 {form.total_sessions} buổi × {fmt(form.teacher_salary)} = <strong>{fmt(Number(form.teacher_salary) * Number(form.total_sessions))}</strong>
               </p>
-              {form.type === 'group' && form.teacher_salary_partial > 0 && (
-                <p className="text-xs text-orange-500 mt-1">
-                  Nếu có HV vắng: {fmt(form.teacher_salary_partial)}/buổi
-                </p>
-              )}
             </div>
           )}
         </div>
@@ -503,8 +483,7 @@ const ClassForm = () => {
           {slots.length === 0 ? (
             <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl">
               <p className="text-gray-400 text-sm">Chưa có lịch học</p>
-              <button type="button" onClick={addSlot}
-                className="mt-2 text-primary-600 text-sm font-medium">
+              <button type="button" onClick={addSlot} className="mt-2 text-primary-600 text-sm font-medium">
                 + Thêm khung giờ
               </button>
             </div>
