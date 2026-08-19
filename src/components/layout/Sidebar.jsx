@@ -99,7 +99,7 @@ const Sidebar = () => {
     >
       {/* Logo */}
       <div className="flex-shrink-0 flex items-center gap-3 px-5 py-5 border-b border-gray-100">
-        <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain"/>
+        <img src="/icons/logo.png" alt="Logo" className="w-9 h-9 object-contain"/>
         <div>
           <p className="font-bold text-gray-800 text-sm leading-tight">ASCENT</p>
           <p className="text-xs text-gray-400">Music Studio</p>
