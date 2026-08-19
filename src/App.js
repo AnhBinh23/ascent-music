@@ -8,24 +8,18 @@ import { AppProvider } from './context/AppContext';
 import PrivateRoute from './components/layout/PrivateRoute';
 import ScrollToTop from './components/shared/ScrollToTop';
 
-// Auth
 import LoginPage       from './pages/auth/LoginPage';
 import RegisterPage    from './pages/auth/RegisterPage';
 import ForgotPassword  from './pages/auth/ForgotPassword';
 import TrialRegister   from './pages/auth/TrialRegister';
 
-// Profile
 import ProfilePage from './pages/profile/ProfilePage';
-
-// Chat
 import ChatPage from './pages/chat/ChatPage';
 
-// AI
 import AIAssistant   from './pages/admin/AIAssistant';
 import TeacherAIChat from './pages/teacher/TeacherAIChat';
 import AIChat        from './pages/student/AIChat';
 
-// Admin
 import AdminDashboard     from './pages/admin/Dashboard';
 import StudentManage      from './pages/admin/StudentManage';
 import StudentList        from './pages/admin/students/StudentList';
@@ -40,6 +34,7 @@ import SalaryManage       from './pages/admin/teachers/SalaryManage';
 import ClassList          from './pages/admin/classes/ClassList';
 import ClassDetail        from './pages/admin/classes/ClassDetail';
 import ClassForm          from './pages/admin/classes/ClassForm';
+import FlexibleManage     from './pages/admin/classes/FlexibleManage';
 import ScheduleCalendar   from './pages/admin/schedule/ScheduleCalendar';
 import ScheduleForm       from './pages/admin/schedule/ScheduleForm';
 import TuitionList        from './pages/admin/tuition/TuitionList';
@@ -53,14 +48,12 @@ import AttendanceManage   from './pages/admin/AttendanceManage';
 import NotificationPage   from './pages/admin/notifications/NotificationPage';
 import ImportExcelPage    from './pages/admin/ImportExcelPage';
 
-// Staff
 import StaffDashboard      from './pages/staff/Dashboard';
 import StaffTuitionCollect from './pages/staff/TuitionCollect';
 import InvoicePage         from './pages/staff/InvoicePage';
 import EnrollmentPage      from './pages/staff/EnrollmentPage';
 import CheckInView         from './pages/staff/CheckInView';
 
-// Teacher
 import TeacherDashboard from './pages/teacher/Dashboard';
 import MyClasses        from './pages/teacher/MyClasses';
 import Attendance       from './pages/teacher/Attendance';
@@ -71,7 +64,6 @@ import CheckIn          from './pages/teacher/CheckIn';
 import SendNotification from './pages/teacher/SendNotification';
 import FlexibleAttendance from './pages/teacher/FlexibleAttendance';
 
-// Student
 import StudentDashboard  from './pages/student/Dashboard';
 import StudentMySchedule from './pages/student/MySchedule';
 import MyTuition         from './pages/student/MyTuition';
@@ -88,14 +80,12 @@ function App() {
           <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover theme="light" />
           <Routes>
 
-            {/* Public */}
             <Route path="/"                element={<Navigate to="/login" replace />} />
             <Route path="/login"           element={<LoginPage />} />
             <Route path="/register"        element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/trial-register"  element={<TrialRegister />} />
 
-            {/* Admin Routes */}
             <Route path="/admin" element={<PrivateRoute roles={['admin']} />}>
               <Route index                    element={<AdminDashboard />} />
               <Route path="students"          element={<StudentManage />} />
@@ -125,7 +115,7 @@ function App() {
               <Route path="settings"          element={<AccountManage />} />
               <Route path="checkin"           element={<CheckInManage />} />
               <Route path="attendance"             element={<AttendanceManage />} />
-              <Route path="flexible-attendance"    element={<FlexibleAttendance />} />
+              <Route path="flexible-attendance"    element={<FlexibleManage />} />
               <Route path="notifications"          element={<NotificationPage />} />
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai"               element={<AIAssistant />} />
@@ -133,7 +123,6 @@ function App() {
               <Route path="import-excel"      element={<ImportExcelPage />} />
             </Route>
 
-            {/* Staff Routes */}
             <Route path="/staff" element={<PrivateRoute roles={['staff']} />}>
               <Route index                    element={<StaffDashboard />} />
               <Route path="students"          element={<StudentList />} />
@@ -154,7 +143,6 @@ function App() {
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
-            {/* Teacher Routes */}
             <Route path="/teacher" element={<PrivateRoute roles={['teacher']} />}>
               <Route index                    element={<TeacherDashboard />} />
               <Route path="classes"           element={<MyClasses />} />
@@ -170,7 +158,6 @@ function App() {
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
-            {/* Student Routes */}
             <Route path="/student" element={<PrivateRoute roles={['student']} />}>
               <Route index                    element={<StudentDashboard />} />
               <Route path="schedule"          element={<StudentMySchedule />} />
@@ -183,7 +170,6 @@ function App() {
               <Route path="profile"           element={<ProfilePage />} />
             </Route>
 
-            {/* 404 */}
             <Route path="*" element={<Navigate to="/login" replace />} />
 
           </Routes>
