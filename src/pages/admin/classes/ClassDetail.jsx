@@ -6,7 +6,7 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import GroupSalaryRates from '../../../components/ui/GroupSalaryRates';
-import GuestScheduler from '../../../components/ui/GuestScheduler';
+
 
 const STATUS_VARIANT = { 'Đang học':'green', 'Tạm nghỉ':'orange', 'Đã kết thúc':'gray' };
 const STATUS_TUITION = {
