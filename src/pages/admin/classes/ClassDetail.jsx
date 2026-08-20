@@ -6,7 +6,7 @@ import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import GroupSalaryRates from '../../../components/ui/GroupSalaryRates';
-
+import GuestScheduler from '../../../components/ui/GuestScheduler';
 
 const STATUS_VARIANT = { 'Đang học':'green', 'Tạm nghỉ':'orange', 'Đã kết thúc':'gray' };
 const STATUS_TUITION = {
@@ -31,7 +31,7 @@ const ClassDetail = () => {
   const [expandedId, setExpandedId]   = useState(null);
   const [loading, setLoading]         = useState(true);
   const [updating, setUpdating]       = useState(null);
-
+  const [guestTarget, setGuestTarget] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -210,10 +210,18 @@ const ClassDetail = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {s.cs_level && <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">{s.cs_level}</span>}
                         {s.instrument && <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">{s.instrument}</span>}
-                        {s.attendance_rate > 0 && <span className="text-xs text-gray-400">Điểm danh: {s.attendance_rate}%</span>}
+                        {s.cs_tuition_fee > 0 && <span className="text-xs text-gray-400">{fmt(s.cs_tuition_fee)}</span>}
+                        {s.cs_total_sessions > 0 && <span className="text-xs text-gray-400">{s.cs_total_sessions} buổi</span>}
+                        {s.attendance_rate > 0 && <span className="text-xs text-gray-400">ĐD: {s.attendance_rate}%</span>}
                         <Badge label={s.status === 'active' ? 'Đang học' : s.status === 'paused' ? 'Tạm nghỉ' : 'Nghỉ'} variant={s.status === 'active' ? 'green' : 'gray'} dot />
                       </div>
+                      {(s.cs_start_date || s.cs_end_date) && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {s.cs_start_date && fmtDate(s.cs_start_date)}{s.cs_end_date && ` → ${fmtDate(s.cs_end_date)}`}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="px-3 py-1 bg-primary-600 text-white rounded-full text-sm font-bold">Khóa {courseNum}</span>
@@ -280,7 +288,16 @@ const ClassDetail = () => {
         </div>
       </div>
 
-      
+      {isGroup && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 mt-4">
+          <p className="text-sm font-bold text-gray-700 mb-3">👥 Xếp lịch vãng lai cho HV</p>
+          <select onChange={e => setGuestTarget(e.target.value)} value={guestTarget || ''} className="input-field mb-3">
+            <option value="">Chọn học viên...</option>
+            {students.map(s => <option key={s.id} value={s.id}>{s.name}{s.nickname ? ` (${s.nickname})` : ''}</option>)}
+          </select>
+          {guestTarget && <GuestScheduler studentId={guestTarget} studentName={students.find(s => s.id === guestTarget)?.name} />}
+        </div>
+      )}
 
       <div className="mt-4">
         <Button variant="secondary" onClick={() => navigate(-1)}>← Quay lại</Button>
