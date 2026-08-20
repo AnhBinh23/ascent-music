@@ -288,17 +288,6 @@ const ClassDetail = () => {
         </div>
       </div>
 
-      {isGroup && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 mt-4">
-          <p className="text-sm font-bold text-gray-700 mb-3">👥 Xếp lịch vãng lai cho HV</p>
-          <select onChange={e => setGuestTarget(e.target.value)} value={guestTarget || ''} className="input-field mb-3">
-            <option value="">Chọn học viên...</option>
-            {students.map(s => <option key={s.id} value={s.id}>{s.name}{s.nickname ? ` (${s.nickname})` : ''}</option>)}
-          </select>
-          
-        </div>
-      )}
-
       <div className="mt-4">
         <Button variant="secondary" onClick={() => navigate(-1)}>← Quay lại</Button>
       </div>
