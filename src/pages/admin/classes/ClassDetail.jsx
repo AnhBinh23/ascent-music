@@ -7,7 +7,6 @@ import Button from '../../../components/ui/Button';
 import api from '../../../services/api';
 import GroupSalaryRates from '../../../components/ui/GroupSalaryRates';
 
-
 const STATUS_VARIANT = { 'Đang học':'green', 'Tạm nghỉ':'orange', 'Đã kết thúc':'gray' };
 const STATUS_TUITION = {
   'Đã thanh toán':     { label:'Đã thanh toán',     bg:'bg-green-100',  text:'text-green-700' },
@@ -31,7 +30,6 @@ const ClassDetail = () => {
   const [expandedId, setExpandedId]   = useState(null);
   const [loading, setLoading]         = useState(true);
   const [updating, setUpdating]       = useState(null);
-
 
   const load = useCallback(async () => {
     try {
@@ -116,11 +114,6 @@ const ClassDetail = () => {
             ['Giáo viên',      cls.teacher_name || '—'],
             ['Nhạc cụ',        cls.instrument],
             ['Lịch học',       scheduleText],
-            ['Trình độ',       cls.level || '—'],
-            ['Gói khóa học',   cls.total_sessions ? `${cls.total_sessions} buổi` : '—'],
-            ['Ngày bắt đầu',   fmtDate(cls.start_date)],
-            ['Ngày kết thúc',  fmtDate(cls.end_date)],
-            ['Học phí cả khóa', fmt(cls.tuition_fee)],
           ].map(([label, value]) => (
             <div key={label} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
               <span className="text-sm text-gray-500">{label}</span>
@@ -146,14 +139,6 @@ const ClassDetail = () => {
                   <p className="text-lg font-bold text-orange-600">{fmt(cls.teacher_salary_partial)}<span className="text-xs font-normal text-gray-400 ml-1">/buổi</span></p>
                 </div>
                 <span className="text-2xl">⚠️</span>
-              </div>
-            )}
-            {cls.teacher_salary > 0 && cls.total_sessions > 0 && (
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <p className="text-xs text-gray-500 mb-1">Dự tính lương cả khóa</p>
-                <p className="text-sm font-semibold text-blue-700">
-                  {cls.total_sessions} buổi × {fmt(cls.teacher_salary)} = <strong>{fmt(cls.teacher_salary * cls.total_sessions)}</strong>
-                </p>
               </div>
             )}
           </div>
