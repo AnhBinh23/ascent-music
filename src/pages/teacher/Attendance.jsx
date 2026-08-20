@@ -20,12 +20,14 @@ const Attendance = () => {
   const [todayClasses, setTodayClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [students, setStudents]         = useState([]);
+  const [flexStudents, setFlexStudents] = useState([]);
   const [attendance, setAttendance]     = useState({});
   const [notes, setNotes]               = useState({});
   const [existing, setExisting]         = useState([]);
   const [loading, setLoading]           = useState(true);
   const [saving, setSaving]             = useState(false);
   const [date, setDate]                 = useState(new Date().toISOString().split('T')[0]);
+  const [teacherId, setTeacherId]       = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -33,6 +35,7 @@ const Attendance = () => {
         const tRes = await api.get(`/teachers/by-user/${user?.id}`);
         const tid = tRes?.row?.id;
         if (!tid) { toast.error('Không tìm thấy giáo viên'); return; }
+        setTeacherId(tid);
         const schedRes = await api.get(`/schedules?teacher_id=${tid}`);
         const todayDow = jsDayToDb(new Date().getDay());
         const todayList = (schedRes.rows || []).filter(s => Number(s.day_of_week) === todayDow);
@@ -45,15 +48,19 @@ const Attendance = () => {
   }, [user]);
 
   const loadClassData = useCallback(async () => {
-    if (!selectedClass) return;
+    if (!selectedClass || !teacherId) return;
     try {
       const classId = selectedClass.class_id || selectedClass.id;
-      const [stuRes, attRes] = await Promise.all([
+      const [stuRes, attRes, flexRes] = await Promise.all([
         api.get(`/classes/${classId}/students`),
         api.get(`/attendance/class/${classId}`),
+        api.get(`/flexible-sessions/merged?teacher_id=${teacherId}&date=${date}&class_id=${classId}`).catch(() => ({ rows: [] })),
       ]);
       const stuList = stuRes.rows || [];
       setStudents(stuList);
+
+      const flexList = (flexRes.rows || []).filter(f => !stuList.find(s => s.id === f.student_id));
+      setFlexStudents(flexList);
 
       const todayAtt = (attRes.rows || []).filter(a => a.date === date);
       setExisting(todayAtt);
@@ -65,10 +72,15 @@ const Attendance = () => {
         attMap[s.id] = found ? found.status : 'present';
         noteMap[s.id] = found ? found.note || '' : '';
       });
+      flexList.forEach(f => {
+        const found = todayAtt.find(a => a.student_id === f.student_id);
+        attMap[f.student_id] = found ? found.status : 'present';
+        noteMap[f.student_id] = found ? found.note || '' : '';
+      });
       setAttendance(attMap);
       setNotes(noteMap);
     } catch (err) { console.error(err.message); }
-  }, [selectedClass, date]);
+  }, [selectedClass, date, teacherId]);
 
   useEffect(() => { loadClassData(); }, [loadClassData]);
 
@@ -77,21 +89,33 @@ const Attendance = () => {
   };
 
   const handleSave = async () => {
-    if (!selectedClass || !students.length) return;
+    if (!selectedClass || (!students.length && !flexStudents.length)) return;
     setSaving(true);
     try {
       const classId = selectedClass.class_id || selectedClass.id;
-      const attendanceList = students.map(s => ({
+      const regularList = students.map(s => ({
         class_id: classId,
         student_id: s.id,
         date,
         status: attendance[s.id] || 'present',
         note: notes[s.id] || '',
+        is_flexible: 0,
       }));
+      const flexList = flexStudents.map(f => ({
+        class_id: classId,
+        student_id: f.student_id,
+        date,
+        status: attendance[f.student_id] || 'present',
+        note: notes[f.student_id] || '',
+        is_flexible: 1,
+        flex_session_id: f.id,
+      }));
+      const attendanceList = [...regularList, ...flexList];
       await api.post('/attendance/save', { attendanceList });
 
-      const presentCount = students.filter(s => attendance[s.id] === 'present' || attendance[s.id] === 'late').length;
-      toast.success(`Đã lưu điểm danh! ${presentCount}/${students.length} có mặt`);
+      const allIds = [...students.map(s => s.id), ...flexStudents.map(f => f.student_id)];
+      const presentCount = allIds.filter(id => attendance[id] === 'present' || attendance[id] === 'late').length;
+      toast.success(`Đã lưu! ${presentCount}/${allIds.length} có mặt`);
       await loadClassData();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
@@ -99,8 +123,9 @@ const Attendance = () => {
 
   const isToday = date === new Date().toISOString().split('T')[0];
   const hasSaved = existing.length > 0;
-  const presentCount = students.filter(s => attendance[s.id] === 'present' || attendance[s.id] === 'late').length;
-  const absentCount = students.filter(s => attendance[s.id] === 'absent' || attendance[s.id] === 'excused').length;
+  const allIds = [...students.map(s => s.id), ...flexStudents.map(f => f.student_id)];
+  const presentCount = allIds.filter(id => attendance[id] === 'present' || attendance[id] === 'late').length;
+  const absentCount = allIds.filter(id => attendance[id] === 'absent' || attendance[id] === 'excused').length;
 
   if (loading) return <MainLayout title="Điểm danh"><p className="text-center text-gray-400 py-20">Đang tải...</p></MainLayout>;
 
@@ -154,14 +179,14 @@ const Attendance = () => {
                 <div>
                   <p className="text-sm font-bold text-gray-700">{selectedClass.class_name}</p>
                   <p className="text-xs text-gray-500">
-                    {students.length} học viên
+                    {students.length} cố định{flexStudents.length > 0 ? ` + ${flexStudents.length} linh hoạt` : ''}
                     {' · '}{String(selectedClass.time_start||'').slice(0,5)} – {String(selectedClass.time_end||'').slice(0,5)}
                   </p>
                 </div>
                 {hasSaved && <Badge label="✅ Đã điểm danh" variant="green" />}
               </div>
 
-              {students.length === 0 ? (
+              {students.length === 0 && flexStudents.length === 0 ? (
                 <p className="text-center text-gray-400 py-8">Lớp chưa có học viên</p>
               ) : (
                 <>
@@ -201,6 +226,50 @@ const Attendance = () => {
                         </div>
                       );
                     })}
+
+                    {flexStudents.length > 0 && (
+                      <div className="mt-1 mb-1 flex items-center gap-2">
+                        <div className="flex-1 h-px bg-orange-200"/>
+                        <span className="text-xs text-orange-500 font-semibold">🔄 HV linh hoạt ({flexStudents.length})</span>
+                        <div className="flex-1 h-px bg-orange-200"/>
+                      </div>
+                    )}
+
+                    {flexStudents.map((f, i) => {
+                      const status = attendance[f.student_id] || 'present';
+                      const statusCfg = STATUS_OPTIONS.find(o => o.key === status);
+                      return (
+                        <div key={f.student_id} className={`p-3 rounded-2xl border-2 border-dashed transition-all ${statusCfg?.color || 'bg-white border-gray-100'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center text-sm font-bold text-orange-600">
+                                L{i + 1}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold">{f.student_name}</p>
+                                <span className="text-xs text-orange-500">🔄 Linh hoạt · {f.flex_class_name}</span>
+                              </div>
+                            </div>
+                            <span className="text-xl">{statusCfg?.icon}</span>
+                          </div>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {STATUS_OPTIONS.map(opt => (
+                              <button key={opt.key}
+                                onClick={() => handleStatusChange(f.student_id, opt.key)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${status === opt.key ? 'bg-white shadow-sm border-gray-300 font-bold' : 'bg-white/40 border-transparent hover:bg-white/60'}`}>
+                                {opt.icon} {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                          {(status === 'absent' || status === 'excused' || status === 'late') && (
+                            <input type="text" placeholder="Ghi chú..."
+                              value={notes[f.student_id] || ''}
+                              onChange={e => setNotes(prev => ({ ...prev, [f.student_id]: e.target.value }))}
+                              className="mt-2 w-full bg-white/60 border border-white/80 rounded-xl px-3 py-1.5 text-xs outline-none" />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <div className="mt-4 flex gap-3">
@@ -211,7 +280,7 @@ const Attendance = () => {
 
                   <div className="mt-3 flex gap-3 justify-center flex-wrap">
                     {STATUS_OPTIONS.map(opt => {
-                      const count = students.filter(s => attendance[s.id] === opt.key).length;
+                      const count = allIds.filter(id => attendance[id] === opt.key).length;
                       if (!count) return null;
                       return (
                         <span key={opt.key} className="text-xs text-gray-500">
