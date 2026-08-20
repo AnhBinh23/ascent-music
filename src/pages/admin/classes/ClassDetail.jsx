@@ -31,7 +31,7 @@ const ClassDetail = () => {
   const [expandedId, setExpandedId]   = useState(null);
   const [loading, setLoading]         = useState(true);
   const [updating, setUpdating]       = useState(null);
-  const [guestTarget, setGuestTarget] = useState(null);
+
 
   const load = useCallback(async () => {
     try {
@@ -295,7 +295,7 @@ const ClassDetail = () => {
             <option value="">Chọn học viên...</option>
             {students.map(s => <option key={s.id} value={s.id}>{s.name}{s.nickname ? ` (${s.nickname})` : ''}</option>)}
           </select>
-          {guestTarget && <GuestScheduler studentId={guestTarget} studentName={students.find(s => s.id === guestTarget)?.name} />}
+          
         </div>
       )}
 
