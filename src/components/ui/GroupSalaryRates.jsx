@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
-
+import MoneyInput from './MoneyInput';
 const GroupSalaryRates = ({ classId, totalStudents }) => {
   const [rates, setRates] = useState([]);
   const [saving, setSaving] = useState(false);
