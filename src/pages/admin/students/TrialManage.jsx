@@ -27,7 +27,6 @@ const ScheduleModal = ({ trial, teachers, rooms, onClose, onSave, onCreate }) =>
   });
   const [saving, setSaving] = useState(false);
 
-  const isNew = !trial?.id;
   const handleSave = async () => {
     if (isNew && !form.name) { toast.error('Nhập tên HV!'); return; }
     if (!form.teacher_id || !form.trial_date) { toast.error('Chọn giáo viên và ngày!'); return; }
