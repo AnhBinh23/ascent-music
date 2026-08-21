@@ -10,13 +10,19 @@ import studentService from '../../../services/studentService';
 
 const INSTRUMENTS = ['Piano', 'Guitar', 'Violin', 'Thanh nhạc'];
 const LEVELS      = ['Sơ cấp', 'Trung cấp', 'Nâng cao'];
+const COURSE_PACKAGES = [
+  { sessions: 16, label: 'Khóa 16 buổi' },
+  { sessions: 24, label: 'Khóa 24 buổi' },
+];
 
 const EMPTY = {
   name: '', dob: '', gender: 'Nam', phone: '', email: '',
   address: '', instrument: 'Piano', level: 'Sơ cấp',
   parentName: '', parentPhone: '', note: '', status: 'active',
-  total_sessions: 0,
+  total_sessions: 16, tuition_fee: '', start_date: '', end_date: '',
 };
+
+const fmt = (n) => n ? Number(n).toLocaleString('vi-VN') + 'đ' : '';
 
 const StudentForm = () => {
   const { id }   = useParams();
@@ -37,7 +43,10 @@ const StudentForm = () => {
         if (data) setForm({
           ...data,
           dob: data.dob ? data.dob.slice(0, 10) : '',
-          total_sessions: data.total_sessions || 0,
+          start_date: data.start_date ? data.start_date.slice(0, 10) : '',
+          end_date: data.end_date ? data.end_date.slice(0, 10) : '',
+          total_sessions: data.total_sessions || 16,
+          tuition_fee: data.tuition_fee || '',
         });
       } catch {
         toast.error('Không tải được dữ liệu');
@@ -48,7 +57,21 @@ const StudentForm = () => {
     load();
   }, [id, isEdit]);
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = e => {
+    const { name, value } = e.target;
+    const next = { ...form, [name]: value };
+    if (name === 'start_date' || name === 'total_sessions') {
+      const startDate = name === 'start_date' ? value : next.start_date;
+      const total = Number(name === 'total_sessions' ? value : next.total_sessions) || 16;
+      if (startDate) {
+        const weeks = Math.ceil(total / 1);
+        const end = new Date(startDate);
+        end.setDate(end.getDate() + weeks * 7);
+        next.end_date = end.toISOString().split('T')[0];
+      }
+    }
+    setForm(next);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,9 +82,12 @@ const StudentForm = () => {
     setLoading(true);
     try {
       const payload = {
-        ...form,
-        dob:            form.dob ? form.dob.slice(0, 10) : null,
+...form,
+        dob: form.dob ? form.dob.slice(0, 10) : null,
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
         total_sessions: Number(form.total_sessions) || 0,
+        tuition_fee: Number(form.tuition_fee) || 0,
       };
       if (isEdit) {
         await studentService.update(id, payload);
@@ -89,7 +115,6 @@ const StudentForm = () => {
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-          {/* Thông tin cá nhân */}
           <Card title="Thông tin cá nhân">
             <div className="flex flex-col gap-4">
               <Input label="Họ và tên" name="name" value={form.name}
@@ -110,7 +135,6 @@ const StudentForm = () => {
             </div>
           </Card>
 
-          {/* Thông tin học tập */}
           <Card title="Thông tin học tập">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
@@ -124,29 +148,38 @@ const StudentForm = () => {
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Trình độ</label>
                 <select name="level" value={form.level} onChange={handleChange} className="input-field">
-                  {LEVELS.map(l => <option key={l}>{l}</option>)}
+{LEVELS.map(l => <option key={l}>{l}</option>)}
                 </select>
               </div>
-
-              {/* ← THÊM MỚI: Số buổi học */}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Số buổi học (khóa) 🎯
-                </label>
-                <input
-                  type="number"
-                  name="total_sessions"
-                  value={form.total_sessions}
-                  onChange={handleChange}
-                  min="0"
-                  placeholder="VD: 16, 24, 32..."
-                  className="input-field"
-                />
-                <p className="text-xs text-gray-400">
-                  Dùng để theo dõi tiến độ và cảnh báo sắp hết khóa
-                </p>
+                <label className="text-sm font-medium text-gray-700">📦 Gói khóa học</label>
+                <select name="total_sessions" value={form.total_sessions} onChange={handleChange} className="input-field">
+                  {COURSE_PACKAGES.map(p => <option key={p.sessions} value={p.sessions}>{p.label}</option>)}
+                </select>
               </div>
-
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">💰 Học phí (đ)</label>
+                <input type="number" name="tuition_fee" value={form.tuition_fee}
+                  onChange={handleChange} placeholder="VD: 4800000" className="input-field" />
+                {form.tuition_fee > 0 && (
+                  <p className="text-xs text-green-600 mt-0.5">{fmt(form.tuition_fee)}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">📅 Ngày bắt đầu</label>
+                <input type="date" name="start_date" value={form.start_date}
+                  onChange={handleChange} className="input-field" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">📅 Ngày kết thúc</label>
+                <input type="date" name="end_date" value={form.end_date}
+                  onChange={handleChange} className="input-field bg-gray-50" />
+                {form.start_date && form.end_date && (
+                  <p className="text-xs text-primary-500 mt-0.5">
+                    📦 {form.total_sessions} buổi · ~{Math.ceil(Number(form.total_sessions)/1)} tuần
+                  </p>
+                )}
+              </div>
               <Input label="Tên phụ huynh" name="parentName" value={form.parentName}
                 onChange={handleChange} placeholder="Nguyễn Thị B" />
               <Input label="SĐT phụ huynh (2)" name="parentPhone" value={form.parentPhone}
@@ -162,7 +195,7 @@ const StudentForm = () => {
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Ghi chú</label>
                 <textarea name="note" value={form.note} onChange={handleChange}
-                  rows={3} placeholder="Ghi chú thêm..."
+rows={3} placeholder="Ghi chú thêm..."
                   className="input-field resize-none" />
               </div>
             </div>
