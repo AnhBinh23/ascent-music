@@ -11,8 +11,13 @@ const STATUS_LABEL   = { pending: '⏳ Chờ xử lý', contacted: '📞 Đã li
 
 const TIME_OPTIONS = Array.from({length:34},(_,j)=>{const h=Math.floor(j/2)+6;const m=j%2*30;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;});
 
-const ScheduleModal = ({ trial, teachers, rooms, onClose, onSave }) => {
+const ScheduleModal = ({ trial, teachers, rooms, onClose, onSave, onCreate }) => {
+      const isNew = !trial?.id;
   const [form, setForm] = useState({
+    name: trial?.name || '',
+    phone: trial?.phone || '',
+    instrument: trial?.instrument || 'Piano',
+    age: trial?.age || '',
     teacher_id: trial?.teacher_id || '',
     trial_date: trial?.trial_date?.slice(0,10) || '',
     time_start: trial?.time_start?.slice(0,5) || '08:00',
@@ -22,15 +27,26 @@ const ScheduleModal = ({ trial, teachers, rooms, onClose, onSave }) => {
   });
   const [saving, setSaving] = useState(false);
 
+  const isNew = !trial?.id;
   const handleSave = async () => {
+    if (isNew && !form.name) { toast.error('Nhập tên HV!'); return; }
     if (!form.teacher_id || !form.trial_date) { toast.error('Chọn giáo viên và ngày!'); return; }
     setSaving(true);
-    await onSave(trial.id, {
-      ...form,
-      status: 'contacted',
-      time_start: form.time_start + ':00',
-      time_end: form.time_end + ':00',
-    });
+    if (isNew) {
+      await onCreate({
+        name: form.name, phone: form.phone, instrument: form.instrument,
+        age: form.age, note: form.note, time: `${form.trial_date} ${form.time_start}`,
+      }, {
+        teacher_id: form.teacher_id, trial_date: form.trial_date,
+        time_start: form.time_start + ':00', time_end: form.time_end + ':00',
+        room_id: form.room_id, status: 'contacted',
+      });
+    } else {
+      await onSave(trial.id, {
+        ...form, status: 'contacted',
+        time_start: form.time_start + ':00', time_end: form.time_end + ':00',
+      });
+    }
     setSaving(false);
     onClose();
   };
@@ -41,12 +57,34 @@ const ScheduleModal = ({ trial, teachers, rooms, onClose, onSave }) => {
       <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-5 shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-gray-800">🧪 Xếp lịch học thử</h3>
+            <h3 className="text-base font-bold text-gray-800">{isNew ? '🧪 Tạo HV học thử' : '🧪 Xếp lịch học thử'}</h3>
             <p className="text-xs text-gray-400 mt-0.5">{trial?.name} · {trial?.instrument}</p>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">✕</button>
         </div>
         <div className="flex flex-col gap-3">
+                    {isNew && (<>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600">Tên học viên *</label>
+              <input type="text" value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="Nguyễn Văn A" className="input-field text-sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">SĐT</label>
+                <input type="text" value={form.phone} onChange={e => setForm(p => ({...p, phone: e.target.value}))} placeholder="0901234567" className="input-field text-sm" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">Nhạc cụ</label>
+                <select value={form.instrument} onChange={e => setForm(p => ({...p, instrument: e.target.value}))} className="input-field text-sm">
+                  <option>Piano</option><option>Guitar</option><option>Violin</option><option>Thanh nhạc</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-600">Tuổi / Năm sinh</label>
+              <input type="text" value={form.age} onChange={e => setForm(p => ({...p, age: e.target.value}))} placeholder="VD: 8 tuổi" className="input-field text-sm" />
+            </div>
+          </>)}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-600">Giáo viên dạy thử *</label>
             <select value={form.teacher_id} onChange={e => setForm(p => ({...p, teacher_id: e.target.value}))} className="input-field text-sm">
@@ -121,7 +159,18 @@ const TrialManage = () => {
   };
 
   useEffect(() => { loadData(); }, []);
-
+    const createTrial = async (trialData, scheduleData) => {
+    try {
+      const res = await api.post('/trials', trialData);
+      if (res.success) {
+        const trials = await api.get('/trials');
+        const newest = (trials.rows || [])[0];
+        if (newest) await api.put(`/trials/${newest.id}`, scheduleData);
+      }
+      toast.success('Đã tạo HV học thử!');
+      await loadData();
+    } catch (err) { toast.error(err.message); }
+  };
   const updateTrial = async (id, data) => {
     try {
       await api.put(`/trials/${id}`, data);
@@ -148,7 +197,7 @@ const TrialManage = () => {
     <MainLayout title="🧪 Quản lý học viên học thử">
       {scheduleTarget && (
         <ScheduleModal trial={scheduleTarget} teachers={teachers} rooms={rooms}
-          onClose={() => setScheduleTarget(null)} onSave={updateTrial} />
+          onClose={() => setScheduleTarget(null)} onSave={updateTrial} onCreate={createTrial} />
       )}
 
       <div className="grid grid-cols-3 gap-4 mb-5">
@@ -165,7 +214,9 @@ const TrialManage = () => {
           <p className="text-xs text-gray-500 mt-1">Đã nhập học</p>
         </div>
       </div>
-
+      <div className="flex justify-end mb-4">
+        <Button icon="➕" onClick={() => setScheduleTarget({})}>Tạo HV học thử</Button>
+      </div>
       {loading ? (
         <p className="text-center text-gray-400 py-10">Đang tải...</p>
       ) : trials.length === 0 ? (
