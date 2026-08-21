@@ -5,31 +5,13 @@ import { useApp } from '../../context/AppContext';
 
 const MainLayout = ({ children, title }) => {
   const { sidebarOpen, toggleSidebar } = useApp();
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
 
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(deltaX) < Math.abs(deltaY)) return;
-    if (deltaX > 60 && !sidebarOpen) toggleSidebar();
-    if (deltaX < -60 && sidebarOpen) toggleSidebar();
-    touchStartX.current = null;
-    touchStartY.current = null;
-  };
 
   return (
     <div
       className="flex bg-gray-50 overflow-hidden"
       style={{ height: '100dvh' }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+
     >
       {/* Sidebar — desktop */}
       <div className="hidden md:flex">
