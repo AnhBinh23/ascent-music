@@ -235,6 +235,7 @@ const MySchedule = () => {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({class_id:'',day_of_week:2,time_start:'08:00',time_end:'09:00',room_id:''});
   const [makeups, setMakeups] = useState([]);
+  const [trialSessions, setTrialSessions] = useState([]);
   const [students, setStudents] = useState([]);
   const [showMakeup, setShowMakeup] = useState(false);
   const [savingMakeup, setSavingMakeup] = useState(false);
@@ -262,16 +263,18 @@ const MySchedule = () => {
       const tid = tRes?.row?.id;
       if (!tid) return;
       setTeacherId(tid);
-      const [schedRes, classRes, roomRes, mkRes] = await Promise.all([
+      const [schedRes, classRes, roomRes, mkRes, trialRes] = await Promise.all([
         api.get(`/schedules/teacher/${tid}`),
         api.get(`/classes?teacher_id=${tid}`),
         api.get('/rooms'),
         api.get('/makeup').catch(() => ({ rows: [] })),
+        api.get(`/trials/by-teacher?teacher_id=${tid}`).catch(() => ({ rows: [] })),
       ]);
       setSchedules(schedRes.rows||[]);
       setMyClasses((classRes.rows||[]).filter(c=>c.status==='Đang học'));
       setRooms(roomRes.rows||[]);
       setMakeups(mkRes.rows||[]);
+      setTrialSessions(trialRes.rows||[]);
     } catch (err) { console.error(err.message); }
     finally { setLoading(false); }
   },[user]);
@@ -381,12 +384,43 @@ const MySchedule = () => {
   };
 
   const weekSchedules = mergeWithOverrides(schedules,overrides,weekDates);
+
+  const trialWeekEvents = trialSessions
+    .filter(t => t.trial_date && t.time_start && t.time_end)
+    .filter(t => {
+      const td = new Date(t.trial_date);
+      return td >= weekDates[0] && td <= weekDates[6];
+    })
+    .map(t => {
+      const td = new Date(t.trial_date);
+      const jsDay = td.getDay();
+      const dbDay = jsDay === 0 ? 1 : jsDay + 1;
+      return {
+        id: `trial-${t.id}`, class_id: `trial-${t.id}`,
+        day_of_week: dbDay,
+        time_start: t.time_start, time_end: t.time_end,
+        class_name: `🧪 ${t.name}`,
+        student_name: t.name, instrument: t.instrument,
+        room_name: t.room_name, class_type: '1v1',
+        is_trial: true, is_override: false,
+        actual_date: t.trial_date?.slice(0,10),
+      };
+    });
+
+  const allWeekEvents = [...weekSchedules, ...trialWeekEvents];
+
   const hours = Array.from({length:END_HOUR-START_HOUR},(_,i)=>START_HOUR+i);
   const totalH = hours.length*SH;
   const cmap = {};
+  const TRIAL_COLOR = {bg:'#fef9c3',border:'#facc15',text:'#854d0e'};
   schedules.forEach(s=>{if(!cmap[s.class_id])cmap[s.class_id]=COLORS[Object.keys(cmap).length%COLORS.length];});
-  const byDay = DAY_MAP.map(d=>layoutEvs(weekSchedules.filter(s=>s.day_of_week===d)));
-  const byDate = schedules.filter(s=>s.day_of_week===dow(selDate));
+  const byDay = DAY_MAP.map(d=>layoutEvs(allWeekEvents.filter(s=>s.day_of_week===d)));
+  const trialForDate = trialSessions.filter(t => t.trial_date?.slice(0,10) === selDate);
+  const byDate = [...schedules.filter(s=>s.day_of_week===dow(selDate)), ...trialForDate.map(t => ({
+    id: `trial-${t.id}`, class_name: `🧪 ${t.name}`, student_name: t.name,
+    time_start: t.time_start, time_end: t.time_end, room_name: t.room_name,
+    instrument: t.instrument, is_trial: true, class_type: '1v1',
+  }))];
 
   if(loading) return <MainLayout title="Lịch dạy"><p className="text-center text-gray-400 py-20">Đang tải...</p></MainLayout>;
 
@@ -524,7 +558,7 @@ const MySchedule = () => {
                         ))}
                         {isToday&&<div className="absolute inset-0 bg-primary-500/5 pointer-events-none"/>}
                         {byDay[di].map(s=>{
-                          const c=cmap[s.class_id]||COLORS[0];
+                          const c=s.is_trial?TRIAL_COLOR:(cmap[s.class_id]||COLORS[0]);
                           const t0=topPx(s.time_start);
                           const h0=Math.max(hpx(s.time_start,s.time_end),28);
                           const{lane=0,total=1}=s;
@@ -561,7 +595,7 @@ const MySchedule = () => {
             </div>
           </div>
 
-          {!weekSchedules.length&&(
+          {!allWeekEvents.length&&(
             <div className="text-center py-16">
               <p className="text-4xl mb-3">📅</p>
               <p className="text-gray-400">Chưa có lịch dạy nào</p>

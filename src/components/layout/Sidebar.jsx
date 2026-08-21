@@ -8,9 +8,8 @@ const menus = {
   admin: [
     { path: '/admin',               icon: '🏠', label: 'Tổng quan'       },
     { path: '/admin/students',      icon: '🎓', label: 'Học viên'        },
-    
     { path: '/admin/teachers',      icon: '👨‍🏫', label: 'Giáo viên'       },
-
+    { path: '/admin/trials', icon: '🧪', label: 'Học thử' },
   
     { path: '/admin/schedule',      icon: '📅', label: 'Lịch học'        },
     { path: '/admin/tuition',       icon: '💰', label: 'Học phí'         },
