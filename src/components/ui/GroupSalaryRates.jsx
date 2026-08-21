@@ -74,8 +74,7 @@ const GroupSalaryRates = ({ classId, totalStudents }) => {
             <span className={`text-xs w-28 ${r.present_count === 0 ? 'text-red-400 font-medium' : 'text-gray-500'}`}>
               {r.present_count === 0 ? '🚫 Cả lớp vắng →' : 'HV đi học →'}
             </span>
-            <input
-              type="number"
+            <MoneyInput
               value={r.amount}
               onChange={e => handleChange(i, e.target.value)}
               placeholder="Nhập số tiền..."

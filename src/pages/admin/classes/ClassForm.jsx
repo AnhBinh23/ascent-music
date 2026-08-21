@@ -7,7 +7,7 @@ import Input from '../../../components/ui/Input';
 import api from '../../../services/api';
 import teacherService from '../../../services/teacherService';
 import GroupSalaryRates from '../../../components/ui/GroupSalaryRates';
-
+import MoneyInput from '../../../components/ui/MoneyInput';
 const INSTRUMENTS = ['Piano', 'Guitar', 'Violin', 'Thanh nhạc'];
 const LEVELS      = ['Sơ cấp', 'Trung cấp', 'Nâng cao'];
 const DAYS        = [
@@ -393,7 +393,7 @@ const ClassForm = () => {
                           </div>
                           <div className="flex flex-col gap-1">
                             <label className="text-xs font-medium text-gray-600">Học phí (đ)</label>
-                            <input type="number" value={info.tuition_fee} placeholder="VD: 4800000"
+                            <MoneyInput value={info.tuition_fee} placeholder="4.800.000"
                               onChange={e => updateStudentInfo(s.id, 'tuition_fee', e.target.value)} className="input-field text-sm" />
                           </div>
                           <div className="flex flex-col gap-1">
@@ -424,8 +424,7 @@ const ClassForm = () => {
               <label className="text-sm font-medium text-gray-700">
                 💰 Lương/buổi {form.type === '1v1' ? '(1 kèm 1)' : '(nhóm đủ HV)'}
               </label>
-              <input type="number" name="teacher_salary" value={form.teacher_salary}
-                onChange={handleChange} placeholder="VD: 200000" className="input-field" />
+              <MoneyInput name="teacher_salary" value={form.teacher_salary} onChange={handleChange} placeholder="200.000" />
               {form.teacher_salary > 0 && (
                 <p className="text-xs text-green-600 mt-0.5">✅ {fmt(form.teacher_salary)}/buổi</p>
               )}

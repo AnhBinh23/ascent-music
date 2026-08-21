@@ -7,7 +7,7 @@ import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Loading from '../../../components/ui/Loading';
 import studentService from '../../../services/studentService';
-
+import MoneyInput from '../../../components/ui/MoneyInput';
 const INSTRUMENTS = ['Piano', 'Guitar', 'Violin', 'Thanh nhạc'];
 const LEVELS      = ['Sơ cấp', 'Trung cấp', 'Nâng cao'];
 const COURSE_PACKAGES = [
@@ -159,8 +159,7 @@ const StudentForm = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">💰 Học phí (đ)</label>
-                <input type="number" name="tuition_fee" value={form.tuition_fee}
-                  onChange={handleChange} placeholder="VD: 4800000" className="input-field" />
+                <MoneyInput name="tuition_fee" value={form.tuition_fee} onChange={handleChange} />
                 {form.tuition_fee > 0 && (
                   <p className="text-xs text-green-600 mt-0.5">{fmt(form.tuition_fee)}</p>
                 )}
