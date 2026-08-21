@@ -19,7 +19,7 @@ const EMPTY = {
   name: '', dob: '', gender: 'Nam', phone: '', email: '',
   address: '', instrument: 'Piano', level: 'Sơ cấp',
   parentName: '', parentPhone: '', note: '', status: 'active',
-  total_sessions: 16, tuition_fee: '', start_date: '', end_date: '',
+    total_sessions: 16, tuition_fee: '', start_date: '', end_date: '', bonus_sessions: 0,
 };
 
 const fmt = (n) => n ? Number(n).toLocaleString('vi-VN') + 'đ' : '';
@@ -46,6 +46,7 @@ const StudentForm = () => {
           start_date: data.start_date ? data.start_date.slice(0, 10) : '',
           end_date: data.end_date ? data.end_date.slice(0, 10) : '',
           total_sessions: data.total_sessions || 16,
+          bonus_sessions: data.bonus_sessions || 0,
           tuition_fee: data.tuition_fee || '',
         });
       } catch {
@@ -154,6 +155,16 @@ const StudentForm = () => {
                 <select name="total_sessions" value={form.total_sessions} onChange={handleChange} className="input-field">
                   {COURSE_PACKAGES.map(p => <option key={p.sessions} value={p.sessions}>{p.label}</option>)}
                 </select>
+              </div>
+                            <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">🎁 Buổi tặng thêm</label>
+                <input type="number" name="bonus_sessions" value={form.bonus_sessions || 0}
+                  onChange={handleChange} min="0" className="input-field" />
+                {form.bonus_sessions > 0 && (
+                  <p className="text-xs text-green-600 mt-0.5">
+                    Tổng: {Number(form.total_sessions||0) + Number(form.bonus_sessions||0)} buổi ({form.total_sessions} + {form.bonus_sessions} tặng)
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">💰 Học phí (đ)</label>

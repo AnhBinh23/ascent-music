@@ -177,7 +177,8 @@ const StudentDetail = () => {
 
   if (loading) return <MainLayout title="Chi tiết học viên"><Loading /></MainLayout>;
 
-  const total = Number(student?.total_sessions || 0);
+  const total = Number(student?.total_sessions || 0) + Number(student?.bonus_sessions || 0);
+  const bonus = Number(student?.bonus_sessions || 0);
   const attended = Number(student?.attended || 0);
   const remaining = total > 0 ? total - attended : null;
   const pct = total > 0 ? Math.min(Math.round(attended / total * 100), 100) : 0;
@@ -246,7 +247,7 @@ const StudentDetail = () => {
               <span className="text-sm font-medium text-gray-800">
                 {total > 0 ? (
                   <span className="flex items-center gap-1.5">
-                    <span>{total} buổi</span>
+                    <span>{total} buổi{bonus > 0 ? ` (${total - bonus} + ${bonus} tặng)` : ''}</span>
                     {remaining !== null && remaining <= 0 && (
                       <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">🔴 Hết khóa</span>
                     )}
