@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useApp } from '../../context/AppContext';
