@@ -67,6 +67,9 @@ const StudentList = () => {
     { key: 'level', label: 'Trình độ',
       render: (val) => <Badge label={val} variant={levelVariant[val] || 'gray'} />
     },
+    { key: 'tuition_fee', label: 'Học phí',
+      render: (val) => val > 0 ? <span>{Number(val).toLocaleString('vi-VN')}đ</span> : <span className="text-gray-400">—</span>
+    },
     { key: 'gender', label: 'Giới tính' },
     { key: 'status', label: 'Trạng thái',
       render: (val) => <Badge label={val === 'active' ? 'Đang học' : 'Nghỉ học'} variant={val === 'active' ? 'green' : 'gray'} dot />
