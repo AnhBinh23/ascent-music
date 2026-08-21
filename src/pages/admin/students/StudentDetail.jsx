@@ -226,9 +226,8 @@ const StudentDetail = () => {
         <Card title="Thông tin cá nhân">
           <Row label="Ngày sinh" value={student?.dob?.slice(0,10)} />
           <Row label="Giới tính" value={student?.gender} />
-          <Row label="SĐT" value={student?.phone} />
-          <Row label="Địa chỉ" value={student?.address} />
-          <Row label="Tên phụ huynh" value={student?.parentName || student?.parent_name} />
+          <Row label="Số điện thoại" value={student?.phone} />
+          
           <Row label="SĐT phụ huynh (2)" value={student?.parentPhone || student?.parent_phone} />
         </Card>
 

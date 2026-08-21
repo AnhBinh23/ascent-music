@@ -128,10 +128,8 @@ const StudentForm = () => {
                   <option>Nữ</option>
                 </select>
               </div>
-              <Input label="SĐT phụ huynh" name="phone" value={form.phone}
+              <Input label="Số điện thoại *" name="phone" value={form.phone}
                 onChange={handleChange} required placeholder="0901234567" />
-              <Input label="Địa chỉ" name="address" value={form.address}
-                onChange={handleChange} placeholder="Số nhà, đường, phường..." />
             </div>
           </Card>
 
@@ -179,10 +177,7 @@ const StudentForm = () => {
                   </p>
                 )}
               </div>
-              <Input label="Tên phụ huynh" name="parentName" value={form.parentName}
-                onChange={handleChange} placeholder="Nguyễn Thị B" />
-              <Input label="SĐT phụ huynh (2)" name="parentPhone" value={form.parentPhone}
-                onChange={handleChange} placeholder="0912345678" />
+
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Trạng thái</label>
                 <select name="status" value={form.status} onChange={handleChange} className="input-field">
