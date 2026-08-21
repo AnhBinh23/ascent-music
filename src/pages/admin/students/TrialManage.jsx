@@ -8,10 +8,7 @@ import { toast } from 'react-toastify';
 
 const STATUS_VARIANT = { pending: 'orange', contacted: 'blue', enrolled: 'green', cancelled: 'gray' };
 const STATUS_LABEL   = { pending: '⏳ Chờ xử lý', contacted: '📞 Đã liên hệ', enrolled: '✅ Đã nhập học', cancelled: '❌ Không tiếp tục' };
-const DAYS_OPT = [
-  {value:2,label:'Thứ 2'},{value:3,label:'Thứ 3'},{value:4,label:'Thứ 4'},
-  {value:5,label:'Thứ 5'},{value:6,label:'Thứ 6'},{value:7,label:'Thứ 7'},{value:1,label:'Chủ nhật'},
-];
+
 const TIME_OPTIONS = Array.from({length:34},(_,j)=>{const h=Math.floor(j/2)+6;const m=j%2*30;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;});
 
 const ScheduleModal = ({ trial, teachers, rooms, onClose, onSave }) => {
