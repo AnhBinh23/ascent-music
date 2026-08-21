@@ -134,7 +134,6 @@ const StudentManage = () => {
     },
     { key: 'teacher_name', label: 'Giáo viên' },
     { key: 'schedule', label: 'Lịch học' },
-    { key: 'tuition_fee', label: 'Học phí', render: (val) => <span>{Number(val||0).toLocaleString('vi-VN')}đ</span> },
     { key: 'status', label: 'Trạng thái', render: (val) => <Badge label={val} variant={STATUS_VARIANT[val] || 'gray'} dot /> },
     { key: 'id', label: '',
       render: (val) => (
