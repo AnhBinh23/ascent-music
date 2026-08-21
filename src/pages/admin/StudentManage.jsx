@@ -109,6 +109,7 @@ const StudentManage = () => {
     { key: 'current_course', label: 'Khóa',
       render: (val) => val ? <Badge label={`K${val}`} variant="blue" /> : <span className="text-xs text-gray-400">—</span>
     },
+        { key: 'tuition_fee', label: 'Học phí', render: (val) => val > 0 ? <span>{Number(val).toLocaleString('vi-VN')}đ</span> : <span className="text-gray-400">—</span> },
     { key: 'gender', label: 'Giới tính' },
     { key: 'status', label: 'Trạng thái',
       render: (val) => <Badge label={val === 'active' ? 'Đang học' : val === 'paused' ? 'Tạm nghỉ' : 'Nghỉ học'} variant={val === 'active' ? 'green' : val === 'paused' ? 'orange' : 'gray'} dot />
