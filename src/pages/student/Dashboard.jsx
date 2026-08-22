@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import AnnouncementBanner from '../../components/shared/AnnouncementBanner';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import useRealtimeEvent from '../../hooks/useRealtimeEvent';
+import { toast } from 'react-toastify';
 
 const INSTRUMENT_ICON = { 'Piano': '🎹', 'Guitar': '🎸', 'Violin': '🎻', 'Thanh nhạc': '🎤' };
 const DAY_LABEL = { 1: 'CN', 2: 'T2', 3: 'T3', 4: 'T4', 5: 'T5', 6: 'T6', 7: 'T7' };
@@ -39,28 +41,33 @@ const StudentDashboard = () => {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  useEffect(() => {
-    const load = async () => {
-      if (!user?.id) { setLoading(false); return; }
-      try {
-        const stuRes    = await api.get(`/students/by-user/${user.id}`);
-        const studentId = stuRes.row?.id || stuRes.rows?.[0]?.id;
-        if (!studentId) { setLoading(false); return; }
+  const load = useCallback(async () => {
+    if (!user?.id) { setLoading(false); return; }
+    try {
+      const stuRes    = await api.get(`/students/by-user/${user.id}`);
+      const studentId = stuRes.row?.id || stuRes.rows?.[0]?.id;
+      if (!studentId) { setLoading(false); return; }
 
-        const [schedRes, tuitionRes] = await Promise.all([
-          api.get(`/schedules/student/${studentId}`),
-          api.get('/tuition'),
-        ]);
-        setSchedules(schedRes.rows || []);
-        setTuition((tuitionRes.rows || []).filter(t => t.student_id === studentId));
-      } catch {
-        setSchedules([]); setTuition([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+      const [schedRes, tuitionRes] = await Promise.all([
+        api.get(`/schedules/student/${studentId}`),
+        api.get(`/tuition?student_id=${studentId}`),
+      ]);
+      setSchedules(schedRes.rows || []);
+      setTuition(tuitionRes.rows || []);
+    } catch {
+      setSchedules([]); setTuition([]);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── Real-time: admin sửa lịch / GV điểm danh / admin thu học phí ──
+  useRealtimeEvent('schedule:updated', () => { load(); });
+  useRealtimeEvent('notification:new', (data) => {
+    toast.info(`🔔 ${data.title}`, { autoClose: 5000 });
+  });
 
   const unpaid    = tuition.filter(t => t.status !== 'Đã thanh toán');
   const paid      = tuition.filter(t => t.status === 'Đã thanh toán');

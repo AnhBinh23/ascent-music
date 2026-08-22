@@ -71,6 +71,7 @@ import MyTuition         from './pages/student/MyTuition';
 import MyAttendance      from './pages/student/MyAttendance';
 import MyProgress        from './pages/student/MyProgress';
 import StudentMaterials  from './pages/student/Materials';
+import MyNotifications   from './pages/student/MyNotifications';
 
 function App() {
   return (
@@ -167,6 +168,7 @@ function App() {
               <Route path="attendance"        element={<MyAttendance />} />
               <Route path="progress"          element={<MyProgress />} />
               <Route path="materials"         element={<StudentMaterials />} />
+              <Route path="notifications"    element={<MyNotifications />} />
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai"               element={<AIChat />} />
               <Route path="profile"           element={<ProfilePage />} />

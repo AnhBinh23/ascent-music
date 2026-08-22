@@ -58,7 +58,8 @@ const menus = {
     { path: '/student/tuition',    icon: '💰', label: 'Học phí'        },
     { path: '/student/attendance', icon: '✅', label: 'Điểm danh'      },
     { path: '/student/progress',   icon: '📈', label: 'Tiến độ'        },
-    { path: '/student/materials',  icon: '📁', label: 'Tài liệu'       },
+    { path: '/student/materials',      icon: '📁', label: 'Tài liệu'       },
+    { path: '/student/notifications', icon: '🔔', label: 'Thông báo'      },
     { path: '/student/chat',       icon: '💬', label: 'Tin nhắn'       },
     { path: '/student/ai',         icon: '🤖', label: 'Hỏi AI'         },
     { path: '/student/profile',    icon: '👤', label: 'Hồ sơ của tôi' },
@@ -147,4 +148,4 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar;;
+export default Sidebar;

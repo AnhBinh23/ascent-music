@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import useRealtimeEvent from '../../hooks/useRealtimeEvent';
+import { toast } from 'react-toastify';
 
 // DAYS theo thứ tự hiển thị: T2..CN. day_of_week trong DB: 1=CN, 2=T2..7=T7
 const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -19,25 +21,29 @@ const MySchedule = () => {
   const [loading, setLoading]     = useState(true);
   const [view, setView]           = useState('week');
 
-  useEffect(() => {
-    const load = async () => {
-      if (!user?.id) { setLoading(false); return; }
-      try {
-        // user.id (student-xxx) -> students.id (hv-xxx)
-        const stuRes    = await api.get(`/students/by-user/${user.id}`);
-        const studentId = stuRes.row?.id || stuRes.rows?.[0]?.id;
-        if (!studentId) { setSchedules([]); return; }
+  const load = useCallback(async () => {
+    if (!user?.id) { setLoading(false); return; }
+    try {
+      const stuRes    = await api.get(`/students/by-user/${user.id}`);
+      const studentId = stuRes.row?.id || stuRes.rows?.[0]?.id;
+      if (!studentId) { setSchedules([]); return; }
 
-        const res = await api.get(`/schedules/student/${studentId}`);
-        setSchedules(res.rows || []);
-      } catch {
-        setSchedules([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+      const res = await api.get(`/schedules/student/${studentId}`);
+      setSchedules(res.rows || []);
+    } catch {
+      setSchedules([]);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── Real-time: admin sửa lịch → tự cập nhật ──
+  useRealtimeEvent('schedule:updated', (data) => {
+    toast.info(`📅 Lịch học đã được cập nhật`, { autoClose: 4000 });
+    load();
+  });
 
   // index của hôm nay trong DAYS (getDay: 0=CN,1=T2..6=T7)
   const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;

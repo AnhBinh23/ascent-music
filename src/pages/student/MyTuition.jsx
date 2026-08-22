@@ -24,11 +24,9 @@ const MyTuition = () => {
         const studentId  = studentRes?.row?.id;
         if (!studentId) return;
 
-        // Bước 2: Lấy tất cả tuition filter theo student_id
-        const res  = await api.get('/tuition');
-        const all  = res.rows || [];
-        const mine = all.filter(t => t.student_id === studentId);
-        setInvoices(mine);
+        // Bước 2: Lấy tuition theo student_id
+        const res  = await api.get(`/tuition?student_id=${studentId}`);
+        setInvoices(res.rows || []);
       } catch (err) {
         console.error(err.message);
       } finally {

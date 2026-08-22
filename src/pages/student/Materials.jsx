@@ -19,7 +19,6 @@ const StudentMaterials = () => {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [filterType, setFilterType] = useState('all');
-  
 
   useEffect(() => {
     const fetch = async () => {
