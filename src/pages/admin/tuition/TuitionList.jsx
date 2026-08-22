@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import MainLayout from '../../../components/layout/MainLayout';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
+import Pagination, { PAGE_SIZE } from '../../../components/ui/Pagination';
 import api from '../../../services/api';
 
 const fmt = (n) => n != null ? Number(n).toLocaleString('vi-VN') + 'đ' : '0đ';
@@ -35,6 +36,7 @@ const TuitionList = () => {
   const [payAmount, setPayAmount]     = useState('');
   const [payMethod, setPayMethod]     = useState('Tiền mặt');
   const [paying, setPaying]           = useState(false);
+  const [pageTuition, setPageTuition] = useState(1);
 
   // ── Tái khóa state ──
   const [predictions, setPredictions] = useState([]);
@@ -78,12 +80,22 @@ const TuitionList = () => {
   useEffect(() => { if (mainTab === 'renewal') loadRenewal(); }, [mainTab, loadRenewal]);
 
   // ── Học phí handlers ──
-  const filtered = tuitions.filter(t => {
+  const sorted = useMemo(() => {
     const q = search.toLowerCase();
-    const matchSearch = !search || t.student_name?.toLowerCase().includes(q) || t.class_name?.toLowerCase().includes(q);
-    const matchStatus = filterStatus === 'all' || t.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+    return tuitions
+      .filter(t => {
+        const matchSearch = !search || t.student_name?.toLowerCase().includes(q) || t.class_name?.toLowerCase().includes(q);
+        const matchStatus = filterStatus === 'all' || t.status === filterStatus;
+        return matchSearch && matchStatus;
+      })
+      .sort((a, b) => (a.student_name || '').localeCompare(b.student_name || '', 'vi'));
+  }, [tuitions, search, filterStatus]);
+
+  const pagedTuition = sorted.slice((pageTuition - 1) * PAGE_SIZE, pageTuition * PAGE_SIZE);
+
+  // Reset page khi tìm kiếm hoặc đổi filter
+  useEffect(() => { setPageTuition(1); }, [search, filterStatus]);
+
   const countByStatus = (status) => tuitions.filter(t => t.status === status).length;
   const openPay = (t) => { setPayModal(t); setPayAmount(String(Number(t.amount||0)-Number(t.paid||0))); setPayMethod('Tiền mặt'); };
   const handlePay = async () => {
@@ -186,10 +198,11 @@ const TuitionList = () => {
             </div>
           </div>
           {loading ? <div className="text-center py-20 text-gray-400">⏳ Đang tải...</div>
-          : filtered.length === 0 ? <div className="text-center py-20 text-gray-400"><p className="text-4xl mb-2">💰</p><p className="text-sm">Không có dữ liệu</p></div>
+          : sorted.length === 0 ? <div className="text-center py-20 text-gray-400"><p className="text-4xl mb-2">💰</p><p className="text-sm">Không có dữ liệu</p></div>
           : (
+            <>
             <div className="flex flex-col gap-3">
-              {filtered.map(t => {
+              {pagedTuition.map(t => {
                 const remaining = Number(t.amount||0) - Number(t.paid||0);
                 const pct = t.amount > 0 ? Math.min(100, Math.round((Number(t.paid||0)/Number(t.amount))*100)) : 0;
                 const statusCfg = STATUS_CONFIG[t.status] || STATUS_CONFIG['Chưa thanh toán'];
@@ -224,6 +237,8 @@ const TuitionList = () => {
                 );
               })}
             </div>
+            <Pagination page={pageTuition} totalItems={sorted.length} onPageChange={setPageTuition} />
+            </>
           )}
         </>
       )}

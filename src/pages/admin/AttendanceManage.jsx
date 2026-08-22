@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Badge from '../../components/ui/Badge';
+import Pagination, { PAGE_SIZE } from '../../components/ui/Pagination';
 import api from '../../services/api';
 import useRealtimeEvent from '../../hooks/useRealtimeEvent';
 import { toast } from 'react-toastify';
@@ -277,6 +278,7 @@ const AttendanceManage = () => {
   const [viewTab, setViewTab]                 = useState('date');
   const [searchName, setSearchName]           = useState('');
   const [filterWarning, setFilterWarning]     = useState(false);
+  const [pageOverview, setPageOverview]       = useState(1);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [selectedClassName, setSelectedClassName] = useState('');
@@ -308,11 +310,20 @@ const AttendanceManage = () => {
       .catch(err => console.error(err.message));
   }, [selectedClass]);
 
-  const filteredProgress = progress.filter(p =>
-    (!searchName || p.student_name?.toLowerCase().includes(searchName.toLowerCase())) &&
-    (!filterWarning || getWarning(p.attended, p.total_sessions))
-  );
+  const sortedProgress = useMemo(() => {
+    return progress
+      .filter(p =>
+        (!searchName || p.student_name?.toLowerCase().includes(searchName.toLowerCase())) &&
+        (!filterWarning || getWarning(p.attended, p.total_sessions))
+      )
+      .sort((a, b) => (a.student_name || '').localeCompare(b.student_name || '', 'vi'));
+  }, [progress, searchName, filterWarning]);
+
+  const pagedProgress = sortedProgress.slice((pageOverview - 1) * PAGE_SIZE, pageOverview * PAGE_SIZE);
   const warningCount = progress.filter(p => getWarning(p.attended, p.total_sessions)).length;
+
+  // Reset page khi tìm kiếm
+  useEffect(() => { setPageOverview(1); }, [searchName, filterWarning]);
 
   const filteredRecords =
     viewTab === 'date'  ? records.filter(r => r.date === date) :
@@ -370,8 +381,8 @@ const AttendanceManage = () => {
             </button>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            {filteredProgress.length === 0 ? <p className="text-center text-gray-400 py-10">Không có dữ liệu</p>
-              : filteredProgress.map((p, i) => {
+            {sortedProgress.length === 0 ? <p className="text-center text-gray-400 py-10">Không có dữ liệu</p>
+              : pagedProgress.map((p, i) => {
                 // eslint-disable-next-line no-unused-vars
               const warning  = getWarning(p.attended, p.total_sessions);
               const pct      = p.total_sessions > 0 ? Math.round(p.attended/p.total_sessions*100) : 0;
@@ -402,6 +413,7 @@ const AttendanceManage = () => {
               );
             })}
           </div>
+          <Pagination page={pageOverview} totalItems={sortedProgress.length} onPageChange={setPageOverview} />
         </>
       )}
 
