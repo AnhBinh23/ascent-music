@@ -44,9 +44,11 @@ import RoomList           from './pages/admin/rooms/RoomList';
 import InstrumentList     from './pages/admin/rooms/InstrumentList';
 import ReportPage         from './pages/admin/reports/ReportPage';
 import AccountManage      from './pages/admin/settings/AccountManage';
+import PendingApprovals   from './pages/admin/settings/PendingApprovals';
 import CheckInManage      from './pages/admin/CheckInManage';
 import AttendanceManage   from './pages/admin/AttendanceManage';
 import NotificationPage   from './pages/admin/notifications/NotificationPage';
+import AnnouncementManage from './pages/admin/announcements/AnnouncementManage';
 import ImportExcelPage    from './pages/admin/ImportExcelPage';
 
 import StaffDashboard      from './pages/staff/Dashboard';
@@ -120,6 +122,8 @@ function App() {
               <Route path="attendance"             element={<AttendanceManage />} />
               <Route path="flexible-attendance"    element={<FlexibleManage />} />
               <Route path="notifications"          element={<NotificationPage />} />
+              <Route path="announcements"         element={<AnnouncementManage />} />
+              <Route path="pending"               element={<PendingApprovals />} />
               <Route path="chat"              element={<ChatPage />} />
               <Route path="ai"               element={<AIAssistant />} />
               <Route path="profile"           element={<ProfilePage />} />

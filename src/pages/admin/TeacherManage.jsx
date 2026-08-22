@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
@@ -7,6 +7,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import SearchBar from '../../components/shared/SearchBar';
 import Loading from '../../components/ui/Loading';
+import Pagination, { PAGE_SIZE } from '../../components/ui/Pagination';
 import SalaryManage from './teachers/SalaryManage';
 import teacherService from '../../services/teacherService';
 import api from '../../services/api';
@@ -24,14 +25,15 @@ const TeacherManage = () => {
 
   // ── GV ──
   const [teachers, setTeachers] = useState([]);
-  const [filtered, setFiltered] = useState([]);
   const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(true);
+  const [pageTeacher, setPageTeacher] = useState(1);
 
   // ── Chấm công ──
   const [checkins, setCheckins]       = useState([]);
   const [loadingCk, setLoadingCk]     = useState(true);
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [pageCk, setPageCk]           = useState(1);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -59,19 +61,21 @@ const TeacherManage = () => {
           };
         });
         setTeachers(merged);
-        setFiltered(merged);
       } catch (err) { toast.error(err.message); }
       finally { setLoading(false); }
     };
     fetchAll();
   }, []);
 
-  useEffect(() => {
+  const sortedTeachers = useMemo(() => {
     const q = search.toLowerCase();
-    setFiltered(teachers.filter(t =>
-      t.name?.toLowerCase().includes(q) || t.phone?.includes(q) || t.instrument?.toLowerCase().includes(q)
-    ));
+    return teachers
+      .filter(t => t.name?.toLowerCase().includes(q) || t.phone?.includes(q) || t.instrument?.toLowerCase().includes(q))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'vi'));
   }, [search, teachers]);
+
+  const pagedTeachers = sortedTeachers.slice((pageTeacher - 1) * PAGE_SIZE, pageTeacher * PAGE_SIZE);
+  useEffect(() => { setPageTeacher(1); }, [search]);
 
   useEffect(() => {
     if (tab !== 'checkin') return;
@@ -86,7 +90,15 @@ const TeacherManage = () => {
     fetchCheckins();
   }, [tab]);
 
-  const filteredCheckins = checkins.filter(c => c.date?.slice(0, 7) === filterMonth);
+  const filteredCheckins = useMemo(() => {
+    return checkins
+      .filter(c => c.date?.slice(0, 7) === filterMonth)
+      .sort((a, b) => (a.teacher_name || '').localeCompare(b.teacher_name || '', 'vi'));
+  }, [checkins, filterMonth]);
+
+  const pagedCheckins = filteredCheckins.slice((pageCk - 1) * PAGE_SIZE, pageCk * PAGE_SIZE);
+  useEffect(() => { setPageCk(1); }, [filterMonth]);
+
   const availableMonths = [...new Set(checkins.map(c => c.date?.slice(0, 7)).filter(Boolean))].sort((a,b) => b.localeCompare(a));
 
   const columns = [
@@ -140,9 +152,12 @@ const TeacherManage = () => {
             </div>
             <Button icon="➕" onClick={() => navigate(`${basePath}/teachers/new`)}>Thêm giáo viên</Button>
           </div>
-          <Card subtitle={`${filtered.length} giáo viên`}>
+          <Card subtitle={`${sortedTeachers.length} giáo viên · A → Z`}>
             {loading ? <Loading /> : (
-              <Table columns={columns} data={filtered} onRowClick={(row) => navigate(`${basePath}/teachers/${row.id}`)} />
+              <>
+                <Table columns={columns} data={pagedTeachers} onRowClick={(row) => navigate(`${basePath}/teachers/${row.id}`)} />
+                <Pagination page={pageTeacher} totalItems={sortedTeachers.length} onPageChange={setPageTeacher} />
+              </>
             )}
           </Card>
         </>
@@ -175,8 +190,9 @@ const TeacherManage = () => {
           {loadingCk ? <Loading /> : filteredCheckins.length === 0 ? (
             <Card><p className="text-center text-gray-400 py-10">Chưa có dữ liệu chấm công tháng này</p></Card>
           ) : (
+            <>
             <div className="flex flex-col gap-2">
-              {filteredCheckins.map((c, i) => (
+              {pagedCheckins.map((c, i) => (
                 <div key={i} className="bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-sm font-bold text-primary-700">
                     {String(c.time||'').slice(0,5) || '—'}
@@ -192,6 +208,8 @@ const TeacherManage = () => {
                 </div>
               ))}
             </div>
+            <Pagination page={pageCk} totalItems={filteredCheckins.length} onPageChange={setPageCk} />
+            </>
           )}
         </>
       )}

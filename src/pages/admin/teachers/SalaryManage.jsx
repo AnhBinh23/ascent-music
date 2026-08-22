@@ -94,8 +94,6 @@ const SalaryManage = ({ embedded = false }) => {
   };
 
   const totalSalary = teacherData.reduce((sum, t) => sum + getTotalSalary(t), 0);
-  // eslint-disable-next-line no-unused-vars
-  const totalPaid   = Object.keys(paidMap).length;
 
   const handlePay = async (t) => {
     setPaying(prev => ({ ...prev, [t.id]: true }));

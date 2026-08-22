@@ -83,7 +83,7 @@ const StudentForm = () => {
     setLoading(true);
     try {
       const payload = {
-...form,
+        ...form,
         dob: form.dob ? form.dob.slice(0, 10) : null,
         start_date: form.start_date || null,
         end_date: form.end_date || null,

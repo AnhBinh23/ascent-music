@@ -19,8 +19,10 @@ const menus = {
     
     { path: '/admin/reports',       icon: '📊', label: 'Báo cáo'         },
     { path: '/admin/import-excel',  icon: '📥', label: 'Import Excel'    },
- 
+    { path: '/admin/rooms',         icon: '🏠', label: 'Phòng học'       },
+    { path: '/admin/instruments',   icon: '🎼', label: 'Nhạc cụ'        },
     { path: '/admin/notifications', icon: '📨', label: 'Gửi thông báo'   },
+    { path: '/admin/announcements', icon: '📢', label: 'Banner thông báo' },
     { path: '/admin/chat',          icon: '💬', label: 'Tin nhắn'        },
     { path: '/admin/ai',            icon: '🤖', label: 'Trợ lý AI'       },
     { path: '/admin/settings',      icon: '⚙️', label: 'Tài khoản'       },
