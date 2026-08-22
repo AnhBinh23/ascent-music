@@ -8,6 +8,7 @@ const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
+  const [token, setToken]     = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export const AuthProvider = ({ children }) => {
     const savedToken = localStorage.getItem('ascent_token');
     if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
+      setToken(savedToken);
     }
     setLoading(false);
   }, []);
@@ -40,6 +42,7 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem('ascent_token', data.token);
       localStorage.setItem('ascent_user',  JSON.stringify(data.user));
+      setToken(data.token);
       setUser(data.user);
       return data.user;
     } finally {
@@ -49,6 +52,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     localStorage.removeItem('ascent_user');
     localStorage.removeItem('ascent_token');
   };
@@ -73,6 +77,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user,
+      token,
       loading,
       login,
       logout,

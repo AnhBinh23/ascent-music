@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import ConnectionStatus from '../shared/ConnectionStatus';
+import useRealtimeEvent from '../../hooks/useRealtimeEvent';
 
 const TYPE_ICON = {
   checkin:         '📋',
@@ -45,7 +47,7 @@ const Header = ({ title = '' }) => {
   const notifRef   = useRef(null);
   const profileRef = useRef(null);
 
-  const loadNotifs = async () => {
+  const loadNotifs = useCallback(async () => {
     try {
       const endpoint = user?.role === 'admin' ? '/notifications/history' : '/notifications';
       const data = await api.get(endpoint);
@@ -75,14 +77,24 @@ const Header = ({ title = '' }) => {
         .slice(0, 20);
       setNotifications(all);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     loadNotifs();
     const interval = setInterval(loadNotifs, 30000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [loadNotifs]);
+
+  // ── Real-time: nhận notification → auto refresh danh sách ──
+  useRealtimeEvent('notification:new', () => {
+    loadNotifs();
+  });
+  useRealtimeEvent('attendance:saved', () => {
+    loadNotifs();
+  });
+  useRealtimeEvent('checkin:created', () => {
+    loadNotifs();
+  });
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -144,6 +156,7 @@ const Header = ({ title = '' }) => {
           ☰
         </button>
         <h1 className="text-base font-semibold text-gray-800">{title}</h1>
+        <ConnectionStatus />
       </div>
 
       <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@ import MainLayout from '../../components/layout/MainLayout';
 import Badge from '../../components/ui/Badge';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import useRealtimeEvent from '../../hooks/useRealtimeEvent';
 
 const CheckInManage = () => {
   const [history, setHistory]         = useState([]);
@@ -33,6 +34,17 @@ const CheckInManage = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // ── Real-time: GV chấm công → auto refresh ──
+  useRealtimeEvent('checkin:created', (data) => {
+    toast.info(`✅ ${data.teacherName || 'GV'} chấm công: ${data.className}`, { autoClose: 4000 });
+    loadData();
+  });
+
+  // ── Real-time: GV điểm danh → cập nhật số lượng present/absent ──
+  useRealtimeEvent('attendance:saved', () => {
+    loadData();
+  });
 
   // Lọc dữ liệu
   const filtered = history.filter(h => {

@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import api from '../../services/api';
+import useRealtimeEvent from '../../hooks/useRealtimeEvent';
+import { toast } from 'react-toastify';
 
 const fmt = n => Number(n || 0).toLocaleString('vi-VN') + 'đ';
 
@@ -13,36 +15,47 @@ const Dashboard = () => {
   const [nearEnd, setNearEnd]           = useState([]);
   const [loading, setLoading]           = useState(true);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [studentsRes, teachersRes, classesRes, schedRes, unpaidRes, progressRes] = await Promise.all([
-          api.get('/students'),
-          api.get('/teachers'),
-          api.get('/classes'),
-          api.get('/schedules'),
-          api.get('/tuition'),
-          api.get('/attendance/course-progress'),
-        ]);
+  const loadData = useCallback(async () => {
+    try {
+      const [studentsRes, teachersRes, classesRes, schedRes, unpaidRes, progressRes] = await Promise.all([
+        api.get('/students'),
+        api.get('/teachers'),
+        api.get('/classes'),
+        api.get('/schedules'),
+        api.get('/tuition'),
+        api.get('/attendance/course-progress'),
+      ]);
 
-        const activeStudents = (studentsRes.rows || []).filter(s => s.status === 'active');
-        const activeClasses  = (classesRes.rows || []).filter(c => c.status === 'Đang học');
-        setStats({
-          students: activeStudents.length,
-          teachers: (teachersRes.rows || []).length,
-          classes:  activeClasses.length,
-        });
+      const activeStudents = (studentsRes.rows || []).filter(s => s.status === 'active');
+      const activeClasses  = (classesRes.rows || []).filter(c => c.status === 'Đang học');
+      setStats({
+        students: activeStudents.length,
+        teachers: (teachersRes.rows || []).length,
+        classes:  activeClasses.length,
+      });
 
-        const todayDow = new Date().getDay() === 0 ? 1 : new Date().getDay() + 1;
-        setTodaySchedule((schedRes.rows || []).filter(s => Number(s.day_of_week) === todayDow));
+      const todayDow = new Date().getDay() === 0 ? 1 : new Date().getDay() + 1;
+      setTodaySchedule((schedRes.rows || []).filter(s => Number(s.day_of_week) === todayDow));
 
-        setUnpaid((unpaidRes.rows || []).filter(t => t.status !== 'Đã thanh toán'));
-        setNearEnd((progressRes.rows || []).filter(p => p.total_sessions > 0 && p.attended >= p.total_sessions - 3));
-      } catch (err) { console.error(err.message); }
-      finally { setLoading(false); }
-    };
-    loadData();
+      setUnpaid((unpaidRes.rows || []).filter(t => t.status !== 'Đã thanh toán'));
+      setNearEnd((progressRes.rows || []).filter(p => p.total_sessions > 0 && p.attended >= p.total_sessions - 3));
+    } catch (err) { console.error(err.message); }
+    finally { setLoading(false); }
   }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // ── Real-time: GV điểm danh → tự cập nhật dashboard ──
+  useRealtimeEvent('attendance:saved', (data) => {
+    toast.info(`📋 ${data.teacherName || 'GV'} đã điểm danh lớp ${data.className}: ${data.presentCount}/${data.totalCount} có mặt`, { autoClose: 4000 });
+    loadData();
+  });
+
+  // ── Real-time: GV chấm công → tự cập nhật dashboard ──
+  useRealtimeEvent('checkin:created', (data) => {
+    toast.info(`✅ ${data.teacherName || 'GV'} chấm công: ${data.className}`, { autoClose: 4000 });
+    loadData();
+  });
 
   if (loading) return <MainLayout title="Tổng quan"><p className="text-center text-gray-400 py-20">Đang tải...</p></MainLayout>;
 

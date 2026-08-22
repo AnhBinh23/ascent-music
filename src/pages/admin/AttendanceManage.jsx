@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Badge from '../../components/ui/Badge';
 import api from '../../services/api';
+import useRealtimeEvent from '../../hooks/useRealtimeEvent';
+import { toast } from 'react-toastify';
 
 const STATUS_CONFIG = {
   present: { label: 'Có mặt',   variant: 'green',  icon: '✅', bg: '#fed7aa', text: '#9a3412' },
@@ -292,6 +294,12 @@ const AttendanceManage = () => {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  // ── Real-time: GV điểm danh → auto refresh ──
+  useRealtimeEvent('attendance:saved', (data) => {
+    toast.info(`📋 ${data.teacherName || 'GV'} điểm danh: ${data.className} (${data.presentCount}/${data.totalCount})`, { autoClose: 4000 });
+    loadAll();
+  });
 
   useEffect(() => {
     if (!selectedClass || selectedClass === 'all') return;

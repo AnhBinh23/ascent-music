@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { checkUpcomingClasses, getTimeUntil } from '../../services/notificationService';
+import useRealtimeEvent from '../../hooks/useRealtimeEvent';
+import { toast } from 'react-toastify';
 
 const jsDayToDb = d => d === 0 ? 1 : d + 1;
 
@@ -16,31 +18,33 @@ const TeacherDashboard = () => {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Bước 1: Lấy teachers.id từ user.id
-        const teacherRes = await api.get(`/teachers/by-user/${user?.id}`);
-        const teacherId  = teacherRes?.row?.id;
-        if (!teacherId) return;
+  const fetchData = useCallback(async () => {
+    try {
+      const teacherRes = await api.get(`/teachers/by-user/${user?.id}`);
+      const teacherId  = teacherRes?.row?.id;
+      if (!teacherId) return;
 
-        // Bước 2: Lấy schedules filter theo teacherId
-        const schedulesRes = await api.get(`/schedules?teacher_id=${teacherId}`);
-        const schedules    = schedulesRes.rows || [];
+      const schedulesRes = await api.get(`/schedules?teacher_id=${teacherId}`);
+      const schedules    = schedulesRes.rows || [];
 
-        // Bước 3: Filter đúng ngày hôm nay
-        const todayDbDay = jsDayToDb(new Date().getDay());
-        const data = schedules.filter(s => Number(s.day_of_week) === todayDbDay);
+      const todayDbDay = jsDayToDb(new Date().getDay());
+      const data = schedules.filter(s => Number(s.day_of_week) === todayDbDay);
 
-        setTodayClasses(data);
-        checkUpcomingClasses(data, 'teacher', user?.name);
-      } catch (err) {
-        console.error(err.message);
-      }
-    };
-
-    if (user?.id) fetchData();
+      setTodayClasses(data);
+      checkUpcomingClasses(data, 'teacher', user?.name);
+    } catch (err) {
+      console.error(err.message);
+    }
   }, [user]);
+
+  useEffect(() => { if (user?.id) fetchData(); }, [user, fetchData]);
+
+  // ── Real-time: Admin sửa lịch → GV tự cập nhật ──
+  useRealtimeEvent('schedule:updated', (data) => {
+    const actionText = data.action === 'created' ? 'thêm mới' : data.action === 'deleted' ? 'xóa' : 'cập nhật';
+    toast.info(`📅 Lịch ${data.className} đã được ${data.updatedBy} ${actionText}`, { autoClose: 5000 });
+    fetchData();
+  });
 
   // Nhắc lịch mỗi phút
   useEffect(() => {

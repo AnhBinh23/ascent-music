@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import useRealtimeEvent from '../../hooks/useRealtimeEvent';
 
 const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
 const DAY_MAP = [2,3,4,5,6,7,1];
@@ -293,6 +294,14 @@ const MySchedule = () => {
 
   useEffect(()=>{if(user?.id) loadData();},[user,loadData]);
   useEffect(()=>{loadOverrides();},[loadOverrides]);
+
+  // ── Real-time: Admin sửa lịch → GV tự cập nhật ──
+  useRealtimeEvent('schedule:updated', (data) => {
+    const actionText = data.action === 'created' ? 'thêm mới' : data.action === 'deleted' ? 'xóa' : 'cập nhật';
+    toast.info(`📅 Lịch ${data.className} đã được ${data.updatedBy} ${actionText}`, { autoClose: 5000 });
+    loadData();
+    loadOverrides();
+  });
 
   const handleSave = useCallback(async (event,f,applyTo) => {
     const ns = f.time_start.length===5?f.time_start+':00':f.time_start;

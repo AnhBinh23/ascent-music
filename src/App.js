@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import { AuthProvider } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
+import { SocketProvider } from './context/SocketContext';
 import PrivateRoute from './components/layout/PrivateRoute';
 import ScrollToTop from './components/shared/ScrollToTop';
 
@@ -76,6 +77,7 @@ function App() {
     <Router>
       <ScrollToTop />
       <AuthProvider>
+        <SocketProvider>
         <AppProvider>
           <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover theme="light" />
           <Routes>
@@ -174,6 +176,7 @@ function App() {
 
           </Routes>
         </AppProvider>
+        </SocketProvider>
       </AuthProvider>
     </Router>
   );
