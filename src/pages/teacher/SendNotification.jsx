@@ -34,7 +34,7 @@ const SendNotification = () => {
         for (const cls of myClasses) {
           const data = await api.get(`/classes/${cls.id}/students`);
           (data.rows || []).forEach(s => {
-            if (!studentSet.has(s.id)) {
+            if (s.user_id && !studentSet.has(s.id)) {
               studentSet.add(s.id);
               studentList.push({ ...s, class_name: cls.name });
             }
@@ -65,7 +65,10 @@ const SendNotification = () => {
         title,
         message,
         recipient:    'specific',
-        specific_ids: selected,
+        specific_ids: selected.map(sid => {
+          const stu = students.find(s => s.id === sid);
+          return stu?.user_id || sid;
+        }),
       });
       toast.success(`✅ Đã gửi thông báo cho ${selected.length} học viên!`);
       setTitle('');

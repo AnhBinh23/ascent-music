@@ -49,7 +49,7 @@ const LessonLog = () => {
         setTeacherId(tid);
 
         const [classData, logData] = await Promise.all([
-          api.get('/classes'),
+          api.get(`/classes?teacher_id=${tid}`),
           api.get(`/lesson-logs/teacher/${tid}`),
         ]);
         setClasses(classData.rows || []);

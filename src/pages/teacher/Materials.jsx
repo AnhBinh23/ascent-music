@@ -109,7 +109,7 @@ const Materials = () => {
   const [teacherId, setTeacherId]   = useState(null);
 
   const loadMaterials = async (tid) => {
-    const data = await api.get('/materials');
+    const data = await api.get(`/materials?teacher_id=${tid}`);
     setMaterials(data.rows || []);
   };
 
@@ -121,7 +121,7 @@ const Materials = () => {
         setTeacherId(tid);
 
         const [classData] = await Promise.all([
-          api.get('/classes'),
+          api.get(`/classes?teacher_id=${tid}`),
         ]);
         setClasses(classData.rows || []);
         await loadMaterials(tid);
