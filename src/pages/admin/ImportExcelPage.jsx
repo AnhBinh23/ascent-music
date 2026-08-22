@@ -134,11 +134,14 @@ const ImportExcelPage = () => {
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-green-100 rounded-2xl flex items-center justify-center text-xl">
-              {activeTab==='attendance'?'📊':'💰'}
+              {activeTab==='attendance'?'📊':activeTab==='tuition'?'💰':activeTab==='checkin'?'📋':'🔍'}
             </div>
             <div>
               <p className="font-bold text-gray-800">
-                {activeTab==='attendance' ? 'Import điểm danh từ Excel' : 'Import học phí từ Excel'}
+                {activeTab==='attendance' ? 'Import điểm danh từ Excel'
+                  : activeTab==='tuition' ? 'Import học phí từ Excel'
+                  : activeTab==='checkin' ? 'Import chấm công GV từ Excel'
+                  : 'Kiểm tra danh sách HV'}
               </p>
               <p className="text-xs text-gray-500">Xuất Google Sheet ra .xlsx rồi tải lên</p>
             </div>
@@ -227,7 +230,7 @@ const ImportExcelPage = () => {
                   {notFound.map((n,i) => <span key={i} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">{n}</span>)}
                 </div>
                 <p className="text-xs text-red-500 mb-2">Các HV này sẽ bị bỏ qua khi import.</p>
-                {(activeTab === 'attendance' || activeTab === 'tuition' || activeTab === 'checkin') && (
+                {(activeTab === 'attendance' || activeTab === 'tuition') && (
                   <button onClick={handleCreateStudents} disabled={creating}
                     className="w-full py-2 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition-all">
                     {creating ? '⏳ Đang tạo...' : `➕ Tự động tạo ${notFound.length} học viên mới rồi import lại`}
