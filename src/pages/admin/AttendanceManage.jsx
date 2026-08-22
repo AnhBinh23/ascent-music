@@ -383,10 +383,9 @@ const AttendanceManage = () => {
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             {sortedProgress.length === 0 ? <p className="text-center text-gray-400 py-10">Không có dữ liệu</p>
               : pagedProgress.map((p, i) => {
-                // eslint-disable-next-line no-unused-vars
-              const warning  = getWarning(p.attended, p.total_sessions);
               const pct      = p.total_sessions > 0 ? Math.round(p.attended/p.total_sessions*100) : 0;
               const barColor = pct>=100?'#dc2626':pct>=80?'#ea580c':'#16a34a';
+              const warning  = getWarning(p.attended, p.total_sessions);
               return (
                 <div key={i} onClick={() => { setSelectedStudent(p); setSelectedClassId(p.class_id); setSelectedClassName(p.class_name); }}
                   className="flex items-center gap-3 p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer active:bg-gray-100 transition-colors">
@@ -397,6 +396,11 @@ const AttendanceManage = () => {
                       {p.current_course && (
                         <span className="text-xs bg-primary-50 text-primary-600 px-1.5 py-0.5 rounded-full border border-primary-100 font-medium">
                           K{p.current_course}
+                        </span>
+                      )}
+                      {warning && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${warning.color}`}>
+                          {warning.icon} {warning.label}
                         </span>
                       )}
                     </div>
