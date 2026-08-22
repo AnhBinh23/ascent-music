@@ -111,7 +111,6 @@ const TeacherManage = () => {
       )
     },
     { key: 'instrument', label: 'Chuyên môn', render: (val) => <Badge label={val} variant={INSTRUMENT_VARIANT[val]||'gray'} /> },
-    { key: 'salary_amount', label: 'Lương/buổi', render: (val) => <span className="font-medium">{fmt(val)}</span> },
     { key: 'status', label: 'Trạng thái',
       render: (val) => <Badge label={val==='active'?'Đang dạy':'Nghỉ'} variant={val==='active'?'green':'gray'} dot />
     },
